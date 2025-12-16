@@ -1,0 +1,40 @@
+# Build directory
+build/
+
+# Vendored dependencies
+subprojects/wlroots/
+subprojects/libdisplay-info/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compiled files
+*.o
+*.so
+*.a
+leviathan
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/

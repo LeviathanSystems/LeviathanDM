@@ -1,0 +1,17 @@
+# Configuration file for LeviathanDM
+
+# Border width in pixels
+border_width 2
+
+# Gap size between windows in pixels
+gap_size 10
+
+# Border colors (hex format: #RRGGBB or 0xRRGGBB)
+border_focused #5e81ac
+border_unfocused #3b4252
+
+# Number of workspaces
+workspace_count 9
+
+# Focus follows mouse pointer
+focus_follows_mouse true

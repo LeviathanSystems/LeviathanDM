@@ -1,0 +1,44 @@
+[2025-12-16 16:27:17.137] [info] [:] Logger initialized - writing to console and leviathan.log
+[2025-12-16 16:27:17.137] [info] [:] LeviathanDM - Wayland Compositor
+[2025-12-16 16:27:17.137] [info] [:] Starting compositor...
+[2025-12-16 16:27:17.190] [info] [:] Created red background rectangle for testing
+[2025-12-16 16:27:17.190] [info] [:] Created window layer for views
+[2025-12-16 16:27:17.190] [info] [:] Tag '1' visibility changed to: false
+[2025-12-16 16:27:17.190] [debug] [:] Tag has 0 clients
+[2025-12-16 16:27:17.190] [info] [:] Tag '1' visibility changed to: true
+[2025-12-16 16:27:17.190] [debug] [:] Tag has 0 clients
+[2025-12-16 16:27:17.190] [info] [:] IPC server listening on /run/user/1000/leviathan-ipc.sock
+[2025-12-16 16:27:17.190] [info] [:] New input device: wayland-keyboard-seat0
+[2025-12-16 16:27:17.193] [info] [:] New input device: wayland-touch-seat0
+[2025-12-16 16:27:17.193] [info] [:] New output: WL-1
+[2025-12-16 16:27:17.195] [info] [:] Created scene output for 'WL-1' at 0x564f88402f00
+[2025-12-16 16:27:17.195] [info] [:] Connected output 'WL-1' to scene layout
+[2025-12-16 16:27:17.195] [info] [:] Registered frame listener for output 'WL-1'
+[2025-12-16 16:27:17.195] [info] [:] Output 'WL-1' fully configured and enabled
+[2025-12-16 16:27:17.195] [debug] [:] TileViews() called
+[2025-12-16 16:27:17.195] [debug] [:] TileViews: Active tag has 0 clients
+[2025-12-16 16:27:17.195] [debug] [:] TileViews: 0 tiled views after filtering
+[2025-12-16 16:27:17.195] [debug] [:] TileViews: No tiled views, returning
+[2025-12-16 16:27:17.195] [info] [:] New input device: wayland-pointer-seat0
+[2025-12-16 16:27:17.195] [info] [:] Running compositor on WAYLAND_DISPLAY=wayland-1
+[2025-12-16 16:27:17.195] [info] [:] Frame handler called! (count=1) for output WL-1
+[2025-12-16 16:27:17.196] [debug] [:] Successfully committed scene output
+[2025-12-16 16:27:17.204] [info] [:] Frame handler called! (count=2) for output WL-1
+[2025-12-16 16:27:17.204] [debug] [:] Successfully committed scene output
+[2025-12-16 16:27:25.017] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:27:31.961] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:27:38.443] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:27:44.215] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:28:00.194] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:28:05.835] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:28:11.149] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:28:16.295] [debug] [:] IPC client connected (fd=38)
+[2025-12-16 16:28:16.295] [info] [:] Tag '1' visibility changed to: false
+[2025-12-16 16:28:16.333] [debug] [:] Tag has 0 clients
+[2025-12-16 16:28:16.333] [info] [:] Tag '3' visibility changed to: true
+[2025-12-16 16:28:16.333] [debug] [:] Tag has 0 clients
+[2025-12-16 16:28:16.333] [debug] [:] TileViews() called
+[2025-12-16 16:28:16.333] [debug] [:] TileViews: Active tag has 0 clients
+[2025-12-16 16:28:16.333] [debug] [:] TileViews: 0 tiled views after filtering
+[2025-12-16 16:28:16.333] [debug] [:] TileViews: No tiled views, returning
+[2025-12-16 16:28:30.917] [debug] [:] IPC client connected (fd=38)
