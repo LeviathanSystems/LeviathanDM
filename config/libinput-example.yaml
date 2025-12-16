@@ -1,0 +1,21 @@
+# libinput-specific configuration
+# This file can be included from the main config
+
+libinput:
+  mouse:
+    # Adjust this value to your preference
+    # -1.0 = very slow, 0.0 = default, 1.0 = very fast
+    speed: 0.7
+    natural_scroll: false
+    accel_profile: adaptive
+  
+  touchpad:
+    speed: 0.3
+    natural_scroll: true
+    tap_to_click: true
+    tap_and_drag: true
+    accel_profile: adaptive
+  
+  keyboard:
+    repeat_rate: 30
+    repeat_delay: 300

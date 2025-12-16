@@ -32,6 +32,7 @@ public:
     static void HandleKeyboardDestroy(struct wl_listener* listener, void* data);
     
     static void HandleCursorMotion(struct wl_listener* listener, void* data);
+    static void HandleCursorMotionAbsolute(struct wl_listener* listener, void* data);
     static void HandleCursorButton(struct wl_listener* listener, void* data);
     static void HandleCursorAxis(struct wl_listener* listener, void* data);
     static void HandleCursorFrame(struct wl_listener* listener, void* data);

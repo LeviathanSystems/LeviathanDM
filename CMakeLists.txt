@@ -161,12 +161,16 @@ pkg_check_modules(WAYLAND_SERVER REQUIRED wayland-server)
 pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
 pkg_check_modules(XKB REQUIRED xkbcommon)
 pkg_check_modules(PIXMAN REQUIRED pixman-1)
+pkg_check_modules(LIBINPUT REQUIRED libinput)
+pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
 
 # Common dependencies (always from system)
 pkg_check_modules(WAYLAND_SERVER REQUIRED wayland-server)
 pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
 pkg_check_modules(XKB REQUIRED xkbcommon)
 pkg_check_modules(PIXMAN REQUIRED pixman-1)
+pkg_check_modules(LIBINPUT REQUIRED libinput)
+pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
 
 # Include directories
 include_directories(
@@ -195,6 +199,7 @@ set(SOURCES
     # Utilities
     src/TilingLayout.cpp
     src/Config.cpp
+    src/ConfigParser.cpp
     src/KeyBindings.cpp
     # IPC
     src/IPC.cpp
@@ -215,6 +220,7 @@ set(HEADERS
     # Utilities
     include/TilingLayout.hpp
     include/Config.hpp
+    include/ConfigParser.hpp
     include/KeyBindings.hpp
     include/Types.hpp
     include/IPC.hpp
@@ -230,6 +236,8 @@ target_link_libraries(leviathan
     ${XKB_LIBRARIES}
     ${PIXMAN_LIBRARIES}
     ${DISPLAY_INFO_LIBRARIES}
+    ${LIBINPUT_LIBRARIES}
+    ${YAMLCPP_LIBRARIES}
     spdlog::spdlog
     nlohmann_json::nlohmann_json
 )

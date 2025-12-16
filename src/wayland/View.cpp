@@ -73,14 +73,14 @@ View::~View() {
 static void view_handle_commit(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, commit);
     
-    LOG_DEBUG("Commit handler called! view={}, xdg_toplevel={}, base={}", 
-              static_cast<void*>(view),
-              static_cast<void*>(view->xdg_toplevel),
-              static_cast<void*>(view->xdg_toplevel->base));
-    LOG_DEBUG("  initial_commit={}, initialized={}, mapped={}", 
-              view->xdg_toplevel->base->initial_commit,
-              view->xdg_toplevel->base->initialized,
-              view->mapped);
+    //LOG_DEBUG("Commit handler called! view={}, xdg_toplevel={}, base={}", 
+    //          static_cast<void*>(view),
+    //          static_cast<void*>(view->xdg_toplevel),
+    //          static_cast<void*>(view->xdg_toplevel->base));
+    //LOG_DEBUG("  initial_commit={}, initialized={}, mapped={}", 
+    //          view->xdg_toplevel->base->initial_commit,
+    //          view->xdg_toplevel->base->initialized,
+    //          view->mapped);
     
     // Check if this is the initial commit
     // The compositor MUST send a configure event in response to initial_commit
@@ -91,7 +91,7 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
         // Send configure with size 0,0 to let the client pick its own dimensions
         wlr_xdg_toplevel_set_size(view->xdg_toplevel, 0, 0);
     } else {
-        LOG_DEBUG("Not initial commit, skipping configure");
+        //LOG_DEBUG("Not initial commit, skipping configure");
     }
 }
 
@@ -107,6 +107,12 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
         wlr_scene_node_raise_to_top(&view->scene_tree->node);
         wlr_scene_node_set_enabled(&view->scene_tree->node, true);
         LOG_DEBUG("Raised scene tree to top and enabled it");
+    }
+    
+    // Give keyboard focus to the newly mapped view
+    if (view->server) {
+        view->server->FocusView(view);
+        LOG_DEBUG("Gave keyboard focus to newly mapped view");
     }
     
     // Trigger tiling layout update

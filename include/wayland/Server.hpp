@@ -4,6 +4,7 @@
 #include "Types.hpp"
 #include "TilingLayout.hpp"
 #include "Config.hpp"
+#include "ConfigParser.hpp"
 #include "KeyBindings.hpp"
 #include "IPC.hpp"
 #include "core/Seat.hpp"
@@ -69,6 +70,7 @@ public:
     const std::vector<View*>& GetViews() const { return views; }
     const std::vector<Core::Client*>& GetClients() const { return clients_; }
     TilingLayout* GetLayoutEngine() { return layout_engine_.get(); }
+    ConfigParser* GetConfigParser() { return config_parser_.get(); }
     
     // IPC command processor
     IPC::Response ProcessIPCCommand(const std::string& command_json);
@@ -77,18 +79,29 @@ public:
     struct wl_list keyboards;
     struct wl_list pointers;
     struct wlr_cursor* cursor;
+    struct wlr_seat* seat;
     
     // Public for C callback access
     struct wl_listener new_output;
     struct wl_listener new_xdg_surface;
     struct wl_listener new_xdg_toplevel;
     struct wl_listener new_input;
+    struct wl_listener session_active;  // For VT switching
+    struct wl_listener cursor_motion;
+    struct wl_listener cursor_motion_absolute;
+    struct wl_listener cursor_button;
+    struct wl_listener cursor_axis;
+    struct wl_listener cursor_frame;
     
     // Callbacks (must be public for C callbacks)
     void OnNewOutput(struct wlr_output* output);
     void OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface);
     void OnNewXdgToplevel(struct wlr_xdg_toplevel* toplevel);
     void OnNewInput(struct wlr_input_device* device);
+    void OnSessionActive(bool active);
+    
+    // Auto-launch application
+    void LaunchDefaultTerminal();
     
 private:
     Server();
@@ -102,6 +115,7 @@ private:
     struct wl_display* wl_display;
     struct wl_event_loop* wl_event_loop;
     struct wlr_backend* backend;
+    struct wlr_session* session;  // Session for VT switching (may be NULL if nested)
     struct wlr_renderer* renderer;
     struct wlr_allocator* allocator;
     struct wlr_compositor* compositor;
@@ -123,7 +137,6 @@ private:
     
     // Input
     struct wlr_xcursor_manager* cursor_mgr;
-    struct wlr_seat* seat;
     struct wl_listener request_cursor;
     struct wl_listener request_set_selection;
     
@@ -134,7 +147,11 @@ private:
     
     std::unique_ptr<TilingLayout> layout_engine_;
     std::unique_ptr<Config> config_;
+    std::unique_ptr<ConfigParser> config_parser_;
     std::unique_ptr<KeyBindings> keybindings_;
+    
+    // Wayland socket name (for child processes)
+    std::string wayland_socket_name_;
     
     // IPC server
     std::unique_ptr<IPC::Server> ipc_server_;

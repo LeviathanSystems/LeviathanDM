@@ -19,28 +19,25 @@ Output::~Output() {
 }
 
 void OutputManager::HandleFrame(struct wl_listener* listener, void* data) {
-    // Frame callback - use wlr_scene_output_commit which handles everything
+    // Frame callback - render and notify clients
     Output* output = wl_container_of(listener, output, frame);
-    
-    // Log EVERY frame to diagnose the issue
-    static int frame_count = 0;
-    frame_count++;
-    LOG_INFO("Frame handler called! (count={}) for output {}", 
-              frame_count, output->wlr_output->name);
     
     if (!output->scene_output) {
         LOG_ERROR("scene_output is NULL in frame handler!");
         return;
     }
     
-    // wlr_scene_output_commit handles rendering, committing, and frame done events
-    // Pass NULL for default options
+    // Render the scene if needed and commit the output
     if (!wlr_scene_output_commit(output->scene_output, nullptr)) {
-        LOG_ERROR("Failed to commit scene output for {}", output->wlr_output->name);
-        return;
+        // Scene is clean, nothing needs to be rendered
+        // Still need to send frame_done to keep clients updated
     }
     
-    LOG_DEBUG("Successfully committed scene output");
+    // CRITICAL: Send frame_done to all surfaces so they know we're ready for next frame
+    // Without this, clients will render once and then freeze waiting for us
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    wlr_scene_output_send_frame_done(output->scene_output, &now);
 }
 
 void OutputManager::HandleDestroy(struct wl_listener* listener, void* data) {

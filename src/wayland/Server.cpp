@@ -8,6 +8,7 @@
 extern "C" {
 #include <wlr/backend.h>
 #include <wlr/backend/wayland.h>
+#include <wlr/backend/session.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/allocator.h>
 #include <wlr/types/wlr_compositor.h>
@@ -23,6 +24,8 @@ extern "C" {
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include <unistd.h>  // For fork(), execlp(), setenv()
+#include <sys/types.h>  // For pid_t
 
 namespace Leviathan {
 namespace Wayland {
@@ -48,10 +51,37 @@ static void handle_new_input(struct wl_listener* listener, void* data) {
     server->OnNewInput(static_cast<struct wlr_input_device*>(data));
 }
 
+static void handle_session_active(struct wl_listener* listener, void* data) {
+    Server* server = wl_container_of(listener, server, session_active);
+    struct wlr_session* session = static_cast<struct wlr_session*>(data);
+    server->OnSessionActive(session->active);
+}
+
+static void handle_cursor_motion(struct wl_listener* listener, void* data) {
+    InputManager::HandleCursorMotion(listener, data);
+}
+
+static void handle_cursor_motion_absolute(struct wl_listener* listener, void* data) {
+    InputManager::HandleCursorMotionAbsolute(listener, data);
+}
+
+static void handle_cursor_button(struct wl_listener* listener, void* data) {
+    InputManager::HandleCursorButton(listener, data);
+}
+
+static void handle_cursor_axis(struct wl_listener* listener, void* data) {
+    InputManager::HandleCursorAxis(listener, data);
+}
+
+static void handle_cursor_frame(struct wl_listener* listener, void* data) {
+    InputManager::HandleCursorFrame(listener, data);
+}
+
 Server::Server()
     : wl_display(nullptr)
     , wl_event_loop(nullptr)
     , backend(nullptr)
+    , session(nullptr)
     , renderer(nullptr)
     , allocator(nullptr)
     , compositor(nullptr)
@@ -109,8 +139,8 @@ bool Server::Initialize() {
     
     wl_event_loop = wl_display_get_event_loop(wl_display);
     
-    // Create backend
-    backend = wlr_backend_autocreate(wl_event_loop, nullptr);
+    // Create backend and get session if available
+    backend = wlr_backend_autocreate(wl_event_loop, &session);
     if (!backend) {
         std::cerr << "Failed to create backend\n";
         return false;
@@ -144,9 +174,12 @@ bool Server::Initialize() {
     scene = wlr_scene_create();
     scene_layout = wlr_scene_attach_output_layout(scene, output_layout);
     
-    // Create a red background to test rendering
+    // Create a large red background for testing
+    // Using a very large size to cover multiple outputs
     float red[4] = {1.0f, 0.0f, 0.0f, 1.0f}; // RGBA red
-    wlr_scene_rect_create(&scene->tree, 10000, 10000, red);
+    struct wlr_scene_rect* bg_rect = wlr_scene_rect_create(&scene->tree, 100000, 100000, red);
+    // Position at origin
+    wlr_scene_node_set_position(&bg_rect->node, 0, 0);
     LOG_INFO("Created red background rectangle for testing");
     
     // Create window layer above background
@@ -169,13 +202,29 @@ bool Server::Initialize() {
     new_xdg_toplevel.notify = handle_new_xdg_toplevel;
     wl_signal_add(&xdg_shell->events.new_toplevel, &new_xdg_toplevel);
     
-    // Create cursor for input tracking ONLY - don't attach to output layout
-    // This prevents the nested backend cursor rendering issues
+    // Create cursor for input tracking
     cursor = wlr_cursor_create();
-    // NOTE: NOT calling wlr_cursor_attach_output_layout() to avoid cursor rendering conflicts
+    wlr_cursor_attach_output_layout(cursor, output_layout);
     
-    // Don't create cursor manager - causes issues with nested backends
-    cursor_mgr = nullptr;
+    // Create cursor manager with a default theme
+    cursor_mgr = wlr_xcursor_manager_create(NULL, 24);
+    wlr_xcursor_manager_load(cursor_mgr, 1);
+    
+    // Setup cursor event listeners
+    cursor_motion.notify = handle_cursor_motion;
+    wl_signal_add(&cursor->events.motion, &cursor_motion);
+    
+    cursor_motion_absolute.notify = handle_cursor_motion_absolute;
+    wl_signal_add(&cursor->events.motion_absolute, &cursor_motion_absolute);
+    
+    cursor_button.notify = handle_cursor_button;
+    wl_signal_add(&cursor->events.button, &cursor_button);
+    
+    cursor_axis.notify = handle_cursor_axis;
+    wl_signal_add(&cursor->events.axis, &cursor_axis);
+    
+    cursor_frame.notify = handle_cursor_frame;
+    wl_signal_add(&cursor->events.frame, &cursor_frame);
     
     // Create seat
     seat = wlr_seat_create(wl_display, "seat0");
@@ -184,8 +233,43 @@ bool Server::Initialize() {
     new_input.notify = handle_new_input;
     wl_signal_add(&backend->events.new_input, &new_input);
     
+    // Setup session listener for VT switching (if running in TTY)
+    if (session) {
+        LOG_INFO("Session detected - VT switching will be available");
+        session_active.notify = handle_session_active;
+        wl_signal_add(&session->events.active, &session_active);
+    } else {
+        LOG_INFO("No session (probably nested) - VT switching unavailable");
+    }
+    
     // Initialize components
     config_ = std::make_unique<Config>();
+    config_parser_ = std::make_unique<ConfigParser>();
+    
+    // Load configuration from standard locations
+    const char* home = getenv("HOME");
+    const char* xdg_config = getenv("XDG_CONFIG_HOME");
+    std::string config_dir = xdg_config ? std::string(xdg_config) : 
+                             (home ? std::string(home) + "/.config" : "");
+    
+    std::vector<std::string> config_paths;
+    if (!config_dir.empty()) {
+        config_paths.push_back(config_dir + "/leviathan/leviathan.yaml");
+    }
+    config_paths.push_back("/etc/leviathan/leviathan.yaml");
+    
+    bool config_loaded = false;
+    for (const auto& path : config_paths) {
+        if (config_parser_->LoadWithIncludes(path)) {
+            config_loaded = true;
+            break;
+        }
+    }
+    
+    if (!config_loaded) {
+        LOG_INFO("No configuration file found, using defaults");
+    }
+    
     layout_engine_ = std::make_unique<TilingLayout>();
     keybindings_ = std::make_unique<KeyBindings>(this);
     
@@ -227,6 +311,9 @@ void Server::Run() {
         return;
     }
     
+    // Save socket name for child processes
+    wayland_socket_name_ = socket;
+    
     // Start backend
     if (!wlr_backend_start(backend)) {
         LOG_ERROR("Failed to start backend");
@@ -246,6 +333,9 @@ void Server::Run() {
     
     setenv("WAYLAND_DISPLAY", socket, true);
     LOG_INFO("Running compositor on WAYLAND_DISPLAY={}", socket);
+    
+    // Launch default terminal
+    LaunchDefaultTerminal();
     
     // Run event loop with IPC handling
     while (wl_display_get_destroy_listener(wl_display, nullptr) == nullptr) {
@@ -321,8 +411,10 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     
     LOG_INFO("Output '{}' fully configured and enabled", wlr_output->name);
     
-    // Note: Cursor rendering is handled automatically by wlr_scene
-    // Don't manually load cursor themes as it causes issues with nested backends
+    // Set cursor image for this output
+    if (cursor_mgr) {
+        wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
+    }
     
     TileViews();
 }
@@ -407,6 +499,39 @@ void Server::OnNewInput(struct wlr_input_device* device) {
     InputManager::HandleNewInput(this, device);
 }
 
+void Server::LaunchDefaultTerminal() {
+    pid_t pid = fork();
+    
+    if (pid < 0) {
+        LOG_ERROR("Failed to fork process for terminal");
+        return;
+    }
+    
+    if (pid == 0) {
+        // Child process
+        // Set environment variable so terminal knows which display to use
+        setenv("WAYLAND_DISPLAY", wayland_socket_name_.c_str(), 1);
+        // Execute terminal - try kitty, then fallback
+        execlp("kitty", "kitty", nullptr);
+
+        // If we get here, exec failed
+        _exit(EXIT_FAILURE);
+    }
+    
+    // Parent process
+    LOG_INFO("Launched alacritty terminal (PID: {})", pid);
+}
+
+void Server::OnSessionActive(bool active) {
+    if (active) {
+        LOG_INFO("Session became active - compositor regained VT");
+        // When we switch back to this VT, outputs should automatically resume
+    } else {
+        LOG_INFO("Session became inactive - VT switched away");
+        // When VT switches away, wlroots automatically pauses output
+    }
+}
+
 void Server::FocusView(View* view) {
     if (!view || !view->mapped) {
         return;
@@ -419,8 +544,18 @@ void Server::FocusView(View* view) {
     
     // Set keyboard focus
     if (view->surface) {
+        // Get the keyboard from the seat (if one exists)
+        struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
+        if (keyboard) {
+            // Set this keyboard as the active one for the seat
+            wlr_seat_set_keyboard(seat, keyboard);
+        }
+        
+        // Notify the surface it has keyboard focus
         wlr_seat_keyboard_notify_enter(seat, view->surface,
-            nullptr, 0, nullptr);
+            keyboard ? keyboard->keycodes : nullptr,
+            keyboard ? keyboard->num_keycodes : 0,
+            keyboard ? &keyboard->modifiers : nullptr);
     }
 }
 
