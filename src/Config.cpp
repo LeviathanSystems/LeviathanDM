@@ -11,7 +11,7 @@ Config::Config() {
 
 void Config::SetDefaults() {
     border_width_ = 2;
-    gap_size_ = 10;
+    gap_size_ = 0;  // No gaps by default - windows tile edge-to-edge
     border_focused_ = 0x5e81ac;    // Nord blue
     border_unfocused_ = 0x3b4252;  // Nord dark gray
     workspace_count_ = 9;

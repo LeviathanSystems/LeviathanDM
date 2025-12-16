@@ -9,22 +9,8 @@
 #include "IPC.hpp"
 #include "core/Seat.hpp"
 #include "core/Client.hpp"
-
-extern "C" {
-#include <wayland-server-core.h>
-#include <wlr/backend.h>
-#include <wlr/render/wlr_renderer.h>
-#include <wlr/render/allocator.h>
-#include <wlr/types/wlr_compositor.h>
-#include <wlr/types/wlr_subcompositor.h>
-#include <wlr/types/wlr_data_device.h>
-#include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_scene.h>
-#include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/types/wlr_cursor.h>
-#include <wlr/types/wlr_xcursor_manager.h>
-#include <wlr/types/wlr_seat.h>
-}
+#include "wayland/LayerManager.hpp"
+#include "wayland/WaylandTypes.hpp"
 
 #include <memory>
 #include <vector>
@@ -71,6 +57,7 @@ public:
     const std::vector<Core::Client*>& GetClients() const { return clients_; }
     TilingLayout* GetLayoutEngine() { return layout_engine_.get(); }
     ConfigParser* GetConfigParser() { return config_parser_.get(); }
+    LayerManager* GetLayerManager() { return layer_manager_.get(); }
     
     // IPC command processor
     IPC::Response ProcessIPCCommand(const std::string& command_json);
@@ -85,6 +72,7 @@ public:
     struct wl_listener new_output;
     struct wl_listener new_xdg_surface;
     struct wl_listener new_xdg_toplevel;
+    struct wl_listener new_xdg_decoration;
     struct wl_listener new_input;
     struct wl_listener session_active;  // For VT switching
     struct wl_listener cursor_motion;
@@ -97,6 +85,7 @@ public:
     void OnNewOutput(struct wlr_output* output);
     void OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface);
     void OnNewXdgToplevel(struct wlr_xdg_toplevel* toplevel);
+    void OnNewXdgDecoration(struct wlr_xdg_toplevel_decoration_v1* decoration);
     void OnNewInput(struct wlr_input_device* device);
     void OnSessionActive(bool active);
     
@@ -126,6 +115,7 @@ private:
     struct wlr_scene* scene;
     struct wlr_scene_output_layout* scene_layout;
     struct wlr_scene_tree* window_layer;  // Layer for windows (above background)
+    std::unique_ptr<LayerManager> layer_manager_;  // Layer management
     
     // Output management
     struct wlr_output_layout* output_layout;
@@ -133,6 +123,7 @@ private:
     
     // XDG shell
     struct wlr_xdg_shell* xdg_shell;
+    struct wlr_xdg_decoration_manager_v1* xdg_decoration_mgr;
     std::vector<View*> views;
     
     // Input

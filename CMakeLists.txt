@@ -191,6 +191,7 @@ set(SOURCES
     src/wayland/Output.cpp
     src/wayland/View.cpp
     src/wayland/Input.cpp
+    src/wayland/LayerManager.cpp
     # Core layer
     src/core/Seat.cpp
     src/core/Screen.cpp
@@ -212,6 +213,7 @@ set(HEADERS
     include/wayland/Output.hpp
     include/wayland/View.hpp
     include/wayland/Input.hpp
+    include/wayland/LayerManager.hpp
     # Core layer
     include/core/Seat.hpp
     include/core/Screen.hpp

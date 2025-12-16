@@ -50,6 +50,7 @@ class Server;
 // View (window) information structure
 struct View {
     struct wlr_xdg_toplevel* xdg_toplevel;
+    struct wlr_xdg_toplevel_decoration_v1* decoration;  // XDG decoration object
     struct wlr_surface* surface;
     struct wlr_scene_tree* scene_tree;
     Server* server;  // Reference to server for callbacks
@@ -68,6 +69,7 @@ struct View {
     struct wl_listener request_resize;
     struct wl_listener request_maximize;
     struct wl_listener request_fullscreen;
+    struct wl_listener decoration_request_mode;  // Decoration mode request
     
     View(struct wlr_xdg_toplevel* toplevel, Server* server);
     ~View();

@@ -46,6 +46,11 @@ static void handle_new_xdg_toplevel(struct wl_listener* listener, void* data) {
     server->OnNewXdgToplevel(static_cast<struct wlr_xdg_toplevel*>(data));
 }
 
+static void handle_new_xdg_decoration(struct wl_listener* listener, void* data) {
+    Server* server = wl_container_of(listener, server, new_xdg_decoration);
+    server->OnNewXdgDecoration(static_cast<struct wlr_xdg_toplevel_decoration_v1*>(data));
+}
+
 static void handle_new_input(struct wl_listener* listener, void* data) {
     Server* server = wl_container_of(listener, server, new_input);
     server->OnNewInput(static_cast<struct wlr_input_device*>(data));
@@ -174,17 +179,12 @@ bool Server::Initialize() {
     scene = wlr_scene_create();
     scene_layout = wlr_scene_attach_output_layout(scene, output_layout);
     
-    // Create a large red background for testing
-    // Using a very large size to cover multiple outputs
-    float red[4] = {1.0f, 0.0f, 0.0f, 1.0f}; // RGBA red
-    struct wlr_scene_rect* bg_rect = wlr_scene_rect_create(&scene->tree, 100000, 100000, red);
-    // Position at origin
-    wlr_scene_node_set_position(&bg_rect->node, 0, 0);
-    LOG_INFO("Created red background rectangle for testing");
+    // Initialize layer manager
+    layer_manager_ = std::make_unique<LayerManager>(scene);
     
-    // Create window layer above background
-    window_layer = wlr_scene_tree_create(&scene->tree);
-    LOG_INFO("Created window layer for views");
+    // Get window layer from layer manager
+    window_layer = layer_manager_->GetLayer(Layer::WorkingArea);
+    LOG_INFO("Using layer manager's working area for windows");
     
     // Setup output listener
     new_output.notify = handle_new_output;
@@ -192,6 +192,11 @@ bool Server::Initialize() {
     
     // Create XDG shell
     xdg_shell = wlr_xdg_shell_create(wl_display, 3);
+    
+    // Create XDG decoration manager (for server-side decorations)
+    xdg_decoration_mgr = wlr_xdg_decoration_manager_v1_create(wl_display);
+    new_xdg_decoration.notify = handle_new_xdg_decoration;
+    wl_signal_add(&xdg_decoration_mgr->events.new_toplevel_decoration, &new_xdg_decoration);
     
     // NOTE: Don't listen to new_surface - tinywl doesn't do this
     // Only listen to new_toplevel and new_popup
@@ -918,6 +923,28 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
     }
     
     return response;
+}
+
+void Server::OnNewXdgDecoration(struct wlr_xdg_toplevel_decoration_v1* decoration) {
+    LOG_INFO("New XDG decoration request for toplevel={}", 
+             static_cast<void*>(decoration->toplevel));
+    
+    // Find the view for this toplevel
+    View* view = nullptr;
+    for (auto* v : views) {
+        if (v->xdg_toplevel == decoration->toplevel) {
+            view = v;
+            break;
+        }
+    }
+    
+    if (view) {
+        view->decoration = decoration;
+        LOG_INFO("Associated decoration with view={}, will set mode after surface init", 
+                 static_cast<void*>(view));
+    } else {
+        LOG_WARN("Could not find view for decoration");
+    }
 }
 
 } // namespace Wayland

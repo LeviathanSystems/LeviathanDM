@@ -23,6 +23,7 @@ static void view_handle_request_fullscreen(struct wl_listener* listener, void* d
 
 View::View(struct wlr_xdg_toplevel* toplevel, Server* srv)
     : xdg_toplevel(toplevel)
+    , decoration(nullptr)
     , surface(toplevel->base->surface)
     , scene_tree(nullptr)
     , server(srv)
@@ -88,8 +89,21 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
     if (view->xdg_toplevel->base->initial_commit) {
         LOG_INFO("Initial commit received for view={}, sending configure", 
                  static_cast<void*>(view));
+        
+        // Disable client-side decorations (no titlebar)
+        wlr_xdg_toplevel_set_tiled(view->xdg_toplevel, 
+                                   WLR_EDGE_TOP | WLR_EDGE_BOTTOM | 
+                                   WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+        
         // Send configure with size 0,0 to let the client pick its own dimensions
         wlr_xdg_toplevel_set_size(view->xdg_toplevel, 0, 0);
+        
+        // If we have a decoration object, set it to server-side mode now
+        if (view->decoration) {
+            wlr_xdg_toplevel_decoration_v1_set_mode(view->decoration,
+                WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+            LOG_INFO("Set decoration mode to SERVER_SIDE (no client decorations)");
+        }
     } else {
         //LOG_DEBUG("Not initial commit, skipping configure");
     }
