@@ -1,5 +1,5 @@
 #include "wayland/Server.hpp"
-#include "ConfigParser.hpp"
+#include "config/ConfigParser.hpp"
 #include "ui/WidgetPluginManager.hpp"
 #include "ui/CompositorState.hpp"
 #include "Logger.hpp"

@@ -1,7 +1,7 @@
 #include "wayland/View.hpp"
 #include "Logger.hpp"
 #include "wayland/Server.hpp"
-#include "ConfigParser.hpp"
+#include "config/ConfigParser.hpp"
 #include <algorithm>
 
 extern "C" {

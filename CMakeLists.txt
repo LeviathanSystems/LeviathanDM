@@ -200,8 +200,9 @@ set(SOURCES
     src/core/Screen.cpp
     src/core/Tag.cpp
     src/core/Client.cpp
+    # Config
+    src/config/ConfigParser.cpp
     # Utilities
-    src/ConfigParser.cpp
     src/KeyBindings.cpp
     # Layout
     src/layout/TilingLayout.cpp
@@ -229,8 +230,9 @@ set(HEADERS
     include/core/Screen.hpp
     include/core/Tag.hpp
     include/core/Client.hpp
+    # Config
+    include/config/ConfigParser.hpp
     # Utilities
-    include/ConfigParser.hpp
     include/KeyBindings.hpp
     include/Types.hpp
     # Layout

@@ -1,6 +1,6 @@
 #include "wayland/Input.hpp"
 #include "wayland/Server.hpp"
-#include "ConfigParser.hpp"
+#include "config/ConfigParser.hpp"
 #include "Logger.hpp"
 
 extern "C" {

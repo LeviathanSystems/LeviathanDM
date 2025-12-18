@@ -3,7 +3,7 @@
 
 #include "Types.hpp"
 #include "layout/TilingLayout.hpp"
-#include "ConfigParser.hpp"
+#include "config/ConfigParser.hpp"
 #include "KeyBindings.hpp"
 #include "ipc/IPC.hpp"
 #include "core/Seat.hpp"
