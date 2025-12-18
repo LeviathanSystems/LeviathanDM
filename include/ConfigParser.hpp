@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <optional>
 #include <yaml-cpp/yaml.h>
 
@@ -33,12 +34,31 @@ struct GeneralConfig {
     std::string terminal = "alacritty";
     bool auto_launch_terminal = true;
     int border_width = 2;
-    std::string border_color = "#ff0000";
+    std::string border_color_focused = "#5E81AC";     // Nord blue
+    std::string border_color_unfocused = "#3B4252";   // Nord dark gray
+    int gap_size = 0;
+    int workspace_count = 9;
+    bool focus_follows_mouse = true;
+    bool click_to_focus = true;
+    bool remove_client_titlebars = true;
+};
+
+// Plugin configuration
+struct PluginConfig {
+    std::string name;                                    // Plugin name (e.g., "ClockWidget")
+    std::map<std::string, std::string> config;          // Plugin-specific config key-value pairs
+};
+
+// Plugins configuration
+struct PluginsConfig {
+    std::vector<std::string> plugin_paths;              // Directories to search for plugins
+    std::vector<PluginConfig> plugins;                  // List of plugins to load with their configs
 };
 
 struct ConfigParser {
     LibInputConfig libinput;
     GeneralConfig general;
+    PluginsConfig plugins;
     
     // Load configuration from file
     bool Load(const std::string& config_path);
@@ -46,13 +66,28 @@ struct ConfigParser {
     // Load with includes support
     bool LoadWithIncludes(const std::string& main_config);
     
+    // Utility: Convert hex color string to RGBA floats (0.0-1.0)
+    static void HexToRGBA(const std::string& hex, float rgba[4]);
+    
+    // Global instance access
+    static ConfigParser& Instance();
+    
 private:
     void ParseLibInput(const YAML::Node& node);
     void ParseGeneral(const YAML::Node& node);
+    void ParsePlugins(const YAML::Node& node);
     void ProcessIncludes(const YAML::Node& node, const std::string& base_path);
     
     std::vector<std::string> loaded_files_;  // Track loaded files to prevent circular includes
+    
+    // Private constructor for singleton
+    ConfigParser() = default;
 };
+
+// Global convenience accessor
+inline ConfigParser& Config() {
+    return ConfigParser::Instance();
+}
 
 } // namespace Leviathan
 

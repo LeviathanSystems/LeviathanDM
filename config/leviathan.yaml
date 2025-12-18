@@ -9,8 +9,29 @@
 general:
   terminal: alacritty
   auto_launch_terminal: true
+  
+  # Window appearance
   border_width: 2
-  border_color: "#ff0000"
+  gap_size: 0  # Pixels between windows (0 = no gaps)
+  
+  # Border colors (hex format: #RRGGBB or #RRGGBBAA)
+  border_color_focused: "#5E81AC"     # Nord blue for focused window
+  border_color_unfocused: "#3B4252"   # Nord dark gray for unfocused windows
+  
+  # Workspace/Tag settings
+  workspace_count: 9
+  
+  # Focus behavior
+  # focus_follows_mouse: Window gains focus when you hover over it with mouse (sloppy focus)
+  # click_to_focus: Window gains focus when you click on it
+  # Both can be enabled simultaneously
+  focus_follows_mouse: true
+  click_to_focus: true
+  
+  # Remove client-side decorations (titlebars)
+  # Set to true to force server-side decorations (no titlebars)
+  # Set to false to allow client-side decorations
+  remove_client_titlebars: true
 
 libinput:
   mouse:
@@ -36,3 +57,46 @@ libinput:
     
     # Delay before key repeat starts (milliseconds)
     repeat_delay: 600
+
+# Widget Plugins Configuration
+plugins:
+  # Directories to search for plugin .so files (OPTIONAL)
+  # If not specified, defaults to:
+  #   1. ~/.config/leviathan/plugins (or $XDG_CONFIG_HOME/leviathan/plugins)
+  #   2. /usr/local/lib/leviathan/plugins
+  #   3. /usr/lib/leviathan/plugins
+  # 
+  # Uncomment to override defaults:
+  # plugin_paths:
+  #   - ~/.config/leviathan/plugins
+  #   - /usr/local/lib/leviathan/plugins
+  #   - /custom/path/to/plugins
+  
+  # List of plugins to load with their configurations
+  list:
+    # Example: Clock Widget
+    - name: ClockWidget
+      config:
+        format: "%H:%M:%S"           # Time format (strftime)
+        update_interval: "1"         # Update every 1 second
+        font_size: "12"              # Font size in pixels
+    
+    # Example: Another instance with different config
+    # - name: ClockWidget
+    #   config:
+    #     format: "%I:%M %p"         # 12-hour format
+    #     update_interval: "60"      # Update every minute
+    #     font_size: "14"
+    
+    # Add more plugins here:
+    # - name: CPUWidget
+    #   config:
+    #     update_interval: "2"
+    #     show_percentage: "true"
+    
+    # - name: WeatherWidget
+    #   config:
+    #     city: "London"
+    #     api_key: "your_api_key"
+    #     update_interval: "1800"    # 30 minutes
+

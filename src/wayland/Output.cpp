@@ -1,6 +1,7 @@
 #include "wayland/Output.hpp"
 #include "Types.hpp"
 #include "Logger.hpp"
+#include "ui/StatusBar.hpp"
 
 extern "C" {
 #include <wlr/types/wlr_output.h>
@@ -12,10 +13,13 @@ namespace Leviathan {
 namespace Wayland {
 
 Output::Output(struct wlr_output* output)
-    : wlr_output(output), scene_output(nullptr) {
+    : wlr_output(output), scene_output(nullptr), status_bar(nullptr) {
 }
 
 Output::~Output() {
+    if (status_bar) {
+        delete status_bar;
+    }
 }
 
 void OutputManager::HandleFrame(struct wl_listener* listener, void* data) {

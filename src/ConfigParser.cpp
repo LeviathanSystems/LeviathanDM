@@ -6,6 +6,11 @@
 
 namespace Leviathan {
 
+ConfigParser& ConfigParser::Instance() {
+    static ConfigParser instance;
+    return instance;
+}
+
 bool ConfigParser::Load(const std::string& config_path) {
     try {
         YAML::Node config = YAML::LoadFile(config_path);
@@ -16,6 +21,10 @@ bool ConfigParser::Load(const std::string& config_path) {
         
         if (config["general"]) {
             ParseGeneral(config["general"]);
+        }
+        
+        if (config["plugins"]) {
+            ParsePlugins(config["plugins"]);
         }
         
         LOG_INFO("Loaded configuration from: {}", config_path);
@@ -54,6 +63,10 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
         
         if (config["general"]) {
             ParseGeneral(config["general"]);
+        }
+        
+        if (config["plugins"]) {
+            ParsePlugins(config["plugins"]);
         }
         
         LOG_INFO("Loaded configuration with includes from: {}", main_config);
@@ -162,8 +175,170 @@ void ConfigParser::ParseGeneral(const YAML::Node& node) {
     if (node["border_width"]) {
         general.border_width = node["border_width"].as<int>();
     }
+    if (node["border_color_focused"]) {
+        general.border_color_focused = node["border_color_focused"].as<std::string>();
+    }
+    if (node["border_color_unfocused"]) {
+        general.border_color_unfocused = node["border_color_unfocused"].as<std::string>();
+    }
+    // Legacy support for old config
     if (node["border_color"]) {
-        general.border_color = node["border_color"].as<std::string>();
+        general.border_color_focused = node["border_color"].as<std::string>();
+    }
+    if (node["gap_size"]) {
+        general.gap_size = node["gap_size"].as<int>();
+    }
+    if (node["workspace_count"]) {
+        general.workspace_count = node["workspace_count"].as<int>();
+    }
+    if (node["focus_follows_mouse"]) {
+        general.focus_follows_mouse = node["focus_follows_mouse"].as<bool>();
+    }
+    if (node["click_to_focus"]) {
+        general.click_to_focus = node["click_to_focus"].as<bool>();
+    }
+    if (node["remove_client_titlebars"]) {
+        general.remove_client_titlebars = node["remove_client_titlebars"].as<bool>();
+    }
+}
+
+void ConfigParser::ParsePlugins(const YAML::Node& node) {
+    // Set default plugin paths if none configured
+    if (!node["plugin_paths"] || 
+        (node["plugin_paths"].IsSequence() && node["plugin_paths"].size() == 0)) {
+        
+        // Default search paths (in priority order)
+        plugins.plugin_paths.clear();
+        
+        // 1. User config directory
+        const char* home = getenv("HOME");
+        const char* xdg_config = getenv("XDG_CONFIG_HOME");
+        if (xdg_config) {
+            plugins.plugin_paths.push_back(std::string(xdg_config) + "/leviathan/plugins");
+        } else if (home) {
+            plugins.plugin_paths.push_back(std::string(home) + "/.config/leviathan/plugins");
+        }
+        
+        // 2. System-wide local plugins
+        plugins.plugin_paths.push_back("/usr/local/lib/leviathan/plugins");
+        
+        // 3. Distribution plugins
+        plugins.plugin_paths.push_back("/usr/lib/leviathan/plugins");
+        
+        LOG_DEBUG("Using default plugin paths");
+    } else {
+        // User specified custom paths
+        plugins.plugin_paths.clear();
+        if (node["plugin_paths"].IsSequence()) {
+            for (const auto& path : node["plugin_paths"]) {
+                std::string path_str = path.as<std::string>();
+                
+                // Expand ~ to home directory
+                if (!path_str.empty() && path_str[0] == '~') {
+                    const char* home = getenv("HOME");
+                    if (home) {
+                        path_str = std::string(home) + path_str.substr(1);
+                    }
+                }
+                
+                plugins.plugin_paths.push_back(path_str);
+                LOG_DEBUG("Plugin path: {}", path_str);
+            }
+        } else if (node["plugin_paths"].IsScalar()) {
+            std::string path_str = node["plugin_paths"].as<std::string>();
+            
+            // Expand ~ to home directory
+            if (!path_str.empty() && path_str[0] == '~') {
+                const char* home = getenv("HOME");
+                if (home) {
+                    path_str = std::string(home) + path_str.substr(1);
+                }
+            }
+            
+            plugins.plugin_paths.push_back(path_str);
+            LOG_DEBUG("Plugin path: {}", path_str);
+        }
+    }
+    
+    // Log all plugin paths
+    for (const auto& path : plugins.plugin_paths) {
+        LOG_INFO("Plugin search path: {}", path);
+    }
+    
+    // Parse plugins list
+    if (node["list"]) {
+        plugins.plugins.clear();
+        if (node["list"].IsSequence()) {
+            for (const auto& plugin_node : node["list"]) {
+                PluginConfig plugin_config;
+                
+                // Plugin name is required
+                if (plugin_node["name"]) {
+                    plugin_config.name = plugin_node["name"].as<std::string>();
+                    LOG_DEBUG("Plugin: {}", plugin_config.name);
+                } else {
+                    LOG_WARN("Plugin entry missing 'name', skipping");
+                    continue;
+                }
+                
+                // Parse plugin-specific config
+                if (plugin_node["config"]) {
+                    const YAML::Node& config_node = plugin_node["config"];
+                    if (config_node.IsMap()) {
+                        for (const auto& kv : config_node) {
+                            std::string key = kv.first.as<std::string>();
+                            std::string value = kv.second.as<std::string>();
+                            plugin_config.config[key] = value;
+                            LOG_DEBUG("  {}: {}", key, value);
+                        }
+                    }
+                }
+                
+                plugins.plugins.push_back(plugin_config);
+            }
+        }
+    }
+}
+
+void ConfigParser::HexToRGBA(const std::string& hex, float rgba[4]) {
+    std::string color = hex;
+    
+    // Remove leading # if present
+    if (!color.empty() && color[0] == '#') {
+        color = color.substr(1);
+    }
+    
+    // Default to opaque black if parsing fails
+    rgba[0] = rgba[1] = rgba[2] = 0.0f;
+    rgba[3] = 1.0f;
+    
+    try {
+        if (color.length() == 6) {
+            // RGB format: RRGGBB
+            int r = std::stoi(color.substr(0, 2), nullptr, 16);
+            int g = std::stoi(color.substr(2, 2), nullptr, 16);
+            int b = std::stoi(color.substr(4, 2), nullptr, 16);
+            
+            rgba[0] = r / 255.0f;
+            rgba[1] = g / 255.0f;
+            rgba[2] = b / 255.0f;
+            rgba[3] = 1.0f;
+        } else if (color.length() == 8) {
+            // RGBA format: RRGGBBAA
+            int r = std::stoi(color.substr(0, 2), nullptr, 16);
+            int g = std::stoi(color.substr(2, 2), nullptr, 16);
+            int b = std::stoi(color.substr(4, 2), nullptr, 16);
+            int a = std::stoi(color.substr(6, 2), nullptr, 16);
+            
+            rgba[0] = r / 255.0f;
+            rgba[1] = g / 255.0f;
+            rgba[2] = b / 255.0f;
+            rgba[3] = a / 255.0f;
+        } else {
+            LOG_WARN("Invalid hex color format: {}, using black", hex);
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("Failed to parse hex color '{}': {}", hex, e.what());
     }
 }
 

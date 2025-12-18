@@ -171,6 +171,7 @@ pkg_check_modules(XKB REQUIRED xkbcommon)
 pkg_check_modules(PIXMAN REQUIRED pixman-1)
 pkg_check_modules(LIBINPUT REQUIRED libinput)
 pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
+pkg_check_modules(CAIRO REQUIRED cairo)
 
 # Include directories
 include_directories(
@@ -181,6 +182,7 @@ include_directories(
     ${XKB_INCLUDE_DIRS}
     ${PIXMAN_INCLUDE_DIRS}
     ${DISPLAY_INFO_INCLUDE_DIRS}
+    ${CAIRO_INCLUDE_DIRS}
 )
 
 # Source files
@@ -192,18 +194,25 @@ set(SOURCES
     src/wayland/View.cpp
     src/wayland/Input.cpp
     src/wayland/LayerManager.cpp
+    src/wayland/LayerSurface.cpp
     # Core layer
     src/core/Seat.cpp
     src/core/Screen.cpp
     src/core/Tag.cpp
     src/core/Client.cpp
     # Utilities
-    src/TilingLayout.cpp
-    src/Config.cpp
     src/ConfigParser.cpp
     src/KeyBindings.cpp
+    # Layout
+    src/layout/TilingLayout.cpp
+    # UI
+    src/ui/StatusBar.cpp
+    src/ui/Widget.cpp
+    src/ui/WidgetPluginManager.cpp
+    src/ui/CompositorState.cpp
+    src/ui/PluginAPI.cpp
     # IPC
-    src/IPC.cpp
+    src/ipc/IPC.cpp
 )
 
 # Headers
@@ -214,22 +223,31 @@ set(HEADERS
     include/wayland/View.hpp
     include/wayland/Input.hpp
     include/wayland/LayerManager.hpp
+    include/wayland/LayerSurface.hpp
     # Core layer
     include/core/Seat.hpp
     include/core/Screen.hpp
     include/core/Tag.hpp
     include/core/Client.hpp
     # Utilities
-    include/TilingLayout.hpp
-    include/Config.hpp
     include/ConfigParser.hpp
     include/KeyBindings.hpp
     include/Types.hpp
-    include/IPC.hpp
+    # Layout
+    include/layout/TilingLayout.hpp
+    # UI
+    include/ui/StatusBar.hpp
+    # IPC
+    include/ipc/IPC.hpp
 )
 
 # Executable
 add_executable(leviathan ${SOURCES} ${HEADERS})
+
+# Export symbols for plugins to use
+set_target_properties(leviathan PROPERTIES
+    ENABLE_EXPORTS ON
+)
 
 # Link libraries
 target_link_libraries(leviathan
@@ -240,19 +258,26 @@ target_link_libraries(leviathan
     ${DISPLAY_INFO_LIBRARIES}
     ${LIBINPUT_LIBRARIES}
     ${YAMLCPP_LIBRARIES}
+    ${CAIRO_LIBRARIES}
     spdlog::spdlog
     nlohmann_json::nlohmann_json
+    dl  # For dynamic plugin loading
 )
 
 # leviathanctl utility
 add_executable(leviathanctl 
-    src/leviathanctl.cpp
-    src/IPC.cpp
+    src/ipc/leviathanctl.cpp
+    src/ipc/IPC.cpp
 )
 target_link_libraries(leviathanctl
     spdlog::spdlog
     nlohmann_json::nlohmann_json
 )
+
+# Add help window tool subdirectory (if exists)
+if(EXISTS "${CMAKE_SOURCE_DIR}/tools/help-window")
+    add_subdirectory(tools/help-window)
+endif()
 
 # Installation
 install(TARGETS leviathan leviathanctl DESTINATION bin)

@@ -2,8 +2,11 @@
 #include "wayland/Output.hpp"
 #include "wayland/View.hpp"
 #include "wayland/Input.hpp"
+#include "wayland/LayerSurface.hpp"
+#include "ui/StatusBar.hpp"
 #include "Logger.hpp"
 #include <nlohmann/json.hpp>
+#include <algorithm>
 
 extern "C" {
 #include <wlr/backend.h>
@@ -49,6 +52,11 @@ static void handle_new_xdg_toplevel(struct wl_listener* listener, void* data) {
 static void handle_new_xdg_decoration(struct wl_listener* listener, void* data) {
     Server* server = wl_container_of(listener, server, new_xdg_decoration);
     server->OnNewXdgDecoration(static_cast<struct wlr_xdg_toplevel_decoration_v1*>(data));
+}
+
+static void handle_new_layer_surface(struct wl_listener* listener, void* data) {
+    Server* server = wl_container_of(listener, server, new_layer_surface);
+    LayerSurfaceManager::HandleNewLayerSurface(listener, data);
 }
 
 static void handle_new_input(struct wl_listener* listener, void* data) {
@@ -105,16 +113,17 @@ Server::Server()
     wl_list_init(&keyboards);
     wl_list_init(&pointers);
     
-    // Default colors (Nord theme)
-    border_focused_[0] = 0.36f;   // R
+    // Border colors will be loaded from config in Initialize()
+    // Set defaults here in case config loading fails
+    border_focused_[0] = 0.36f;   // R (Nord blue #5E81AC)
     border_focused_[1] = 0.50f;   // G
     border_focused_[2] = 0.67f;   // B
     border_focused_[3] = 1.0f;    // A
     
-    border_unfocused_[0] = 0.23f;
-    border_unfocused_[1] = 0.26f;
-    border_unfocused_[2] = 0.32f;
-    border_unfocused_[3] = 1.0f;
+    border_unfocused_[0] = 0.23f; // R (Nord dark gray #3B4252)
+    border_unfocused_[1] = 0.26f; // G
+    border_unfocused_[2] = 0.32f; // B
+    border_unfocused_[3] = 1.0f;  // A
 }
 
 Server::~Server() {
@@ -198,6 +207,13 @@ bool Server::Initialize() {
     new_xdg_decoration.notify = handle_new_xdg_decoration;
     wl_signal_add(&xdg_decoration_mgr->events.new_toplevel_decoration, &new_xdg_decoration);
     
+    // Create Layer Shell (for bars, notifications, overlays)
+    layer_shell = wlr_layer_shell_v1_create(wl_display, 4);
+    wl_list_init(&layer_surfaces);
+    new_layer_surface.notify = handle_new_layer_surface;
+    wl_signal_add(&layer_shell->events.new_surface, &new_layer_surface);
+    LOG_INFO("Layer shell v1 initialized");
+    
     // NOTE: Don't listen to new_surface - tinywl doesn't do this
     // Only listen to new_toplevel and new_popup
     // new_xdg_surface.notify = handle_new_xdg_surface;
@@ -247,33 +263,13 @@ bool Server::Initialize() {
         LOG_INFO("No session (probably nested) - VT switching unavailable");
     }
     
-    // Initialize components
-    config_ = std::make_unique<Config>();
-    config_parser_ = std::make_unique<ConfigParser>();
-    
-    // Load configuration from standard locations
-    const char* home = getenv("HOME");
-    const char* xdg_config = getenv("XDG_CONFIG_HOME");
-    std::string config_dir = xdg_config ? std::string(xdg_config) : 
-                             (home ? std::string(home) + "/.config" : "");
-    
-    std::vector<std::string> config_paths;
-    if (!config_dir.empty()) {
-        config_paths.push_back(config_dir + "/leviathan/leviathan.yaml");
-    }
-    config_paths.push_back("/etc/leviathan/leviathan.yaml");
-    
-    bool config_loaded = false;
-    for (const auto& path : config_paths) {
-        if (config_parser_->LoadWithIncludes(path)) {
-            config_loaded = true;
-            break;
-        }
-    }
-    
-    if (!config_loaded) {
-        LOG_INFO("No configuration file found, using defaults");
-    }
+    // Load border colors from global config
+    auto& config = Config();
+    ConfigParser::HexToRGBA(config.general.border_color_focused, border_focused_);
+    ConfigParser::HexToRGBA(config.general.border_color_unfocused, border_unfocused_);
+    LOG_DEBUG("Border colors - Focused: {}, Unfocused: {}", 
+             config.general.border_color_focused,
+             config.general.border_color_unfocused);
     
     layout_engine_ = std::make_unique<TilingLayout>();
     keybindings_ = std::make_unique<KeyBindings>(this);
@@ -282,7 +278,7 @@ bool Server::Initialize() {
     core_seat_ = std::make_unique<Core::Seat>();
     
     // Create default tags
-    int tag_count = config_->GetWorkspaceCount();
+    int tag_count = config.general.workspace_count;
     for (int i = 0; i < tag_count; ++i) {
         auto* tag = new Core::Tag(std::to_string(i + 1));
         core_seat_->AddTag(tag);
@@ -399,6 +395,10 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     
     LOG_INFO("Created scene output for '{}' at {:p}", wlr_output->name, 
              static_cast<void*>(output->scene_output));
+    
+    // Create status bar for this output
+    output->status_bar = new StatusBar(output, this);
+    LOG_INFO("Created status bar for output '{}'", wlr_output->name);
     
     // CRITICAL: Connect the output to the scene layout so the scene knows where to render
     wlr_scene_output_layout_add_output(scene_layout, layout_output, output->scene_output);
@@ -576,6 +576,45 @@ void Server::CloseView(View* view) {
     wlr_xdg_toplevel_send_close(view->xdg_toplevel);
 }
 
+void Server::RemoveView(View* view) {
+    if (!view) {
+        return;
+    }
+    
+    LOG_DEBUG("RemoveView: Cleaning up view {}", static_cast<void*>(view));
+    
+    // Remove from views list
+    auto it = std::find(views.begin(), views.end(), view);
+    if (it != views.end()) {
+        views.erase(it);
+        LOG_DEBUG("Removed view from server's view list, {} views remaining", views.size());
+    }
+    
+    // Clear focus if this view was focused
+    if (focused_view_ == view) {
+        focused_view_ = nullptr;
+        LOG_DEBUG("Cleared focused_view since it was the destroyed view");
+    }
+    
+    // Find and remove the associated Client
+    Core::Client* client_to_remove = nullptr;
+    for (auto* client : clients_) {
+        if (client->GetView() == view) {
+            client_to_remove = client;
+            break;
+        }
+    }
+    
+    if (client_to_remove) {
+        LOG_DEBUG("Found client for view, removing from seat");
+        core_seat_->RemoveClient(client_to_remove);
+        // Note: Client destructor will remove itself from clients_ vector
+    }
+    
+    // Retile remaining windows
+    TileViews();
+}
+
 void Server::TileViews() {
     LOG_DEBUG("TileViews() called");
     
@@ -606,22 +645,36 @@ void Server::TileViews() {
         return;
     }
     
-    // Get output dimensions from first output in layout
-    int screen_width = 1920;
-    int screen_height = 1080;
-    
+    // Get first output from layout
     struct wlr_output_layout_output* layout_output = 
         wl_container_of(output_layout->outputs.next, layout_output, link);
     
-    if (layout_output && layout_output->output) {
-        screen_width = layout_output->output->width;
-        screen_height = layout_output->output->height;
+    if (!layout_output || !layout_output->output) {
+        LOG_WARN("TileViews: No output available");
+        return;
     }
     
-    int gap = config_->GetGapSize();
+    // Calculate usable workspace area from LayerManager
+    // This accounts for reserved space (status bar, docks, etc.)
+    auto workspace = layer_manager_->CalculateUsableArea(
+        0, 0,  // Output position (assuming 0,0 for now)
+        layout_output->output->width,
+        layout_output->output->height
+    );
+    
+    int workspace_x = workspace.x;
+    int workspace_y = workspace.y;
+    int screen_width = workspace.width;
+    int screen_height = workspace.height;
+    
+    LOG_DEBUG("Using workspace area from LayerManager: pos=({},{}), size=({}x{})", 
+             workspace_x, workspace_y, screen_width, screen_height);
+    
+    int gap = Config().general.gap_size;
     int master_count = tag->GetMasterCount();
     float master_ratio = tag->GetMasterRatio();
     
+    // Apply layout algorithm (positions are relative to workspace)
     switch (tag->GetLayout()) {
         case LayoutType::MASTER_STACK:
             layout_engine_->ApplyMasterStack(tiled_views, 
@@ -637,6 +690,15 @@ void Server::TileViews() {
             break;
         default:
             break;
+    }
+    
+    // Offset all window positions to workspace area
+    for (auto* view : tiled_views) {
+        if (view->scene_tree) {
+            wlr_scene_node_set_position(&view->scene_tree->node, 
+                                       view->x + workspace_x, 
+                                       view->y + workspace_y);
+        }
     }
 }
 
@@ -945,6 +1007,66 @@ void Server::OnNewXdgDecoration(struct wlr_xdg_toplevel_decoration_v1* decoratio
     } else {
         LOG_WARN("Could not find view for decoration");
     }
+}
+
+// CompositorState interface implementation
+std::vector<Core::Screen*> Server::GetScreens() const {
+    if (!core_seat_) {
+        return {};
+    }
+    return core_seat_->GetScreens();
+}
+
+Core::Screen* Server::GetFocusedScreen() const {
+    if (!core_seat_) {
+        return nullptr;
+    }
+    return core_seat_->GetFocusedScreen();
+}
+
+std::vector<Core::Tag*> Server::GetTags() const {
+    if (!core_seat_) {
+        return {};
+    }
+    return core_seat_->GetTags();
+}
+
+Core::Tag* Server::GetActiveTag() const {
+    if (!core_seat_) {
+        return nullptr;
+    }
+    return core_seat_->GetActiveTag();
+}
+
+std::vector<Core::Client*> Server::GetAllClients() const {
+    return clients_;
+}
+
+std::vector<Core::Client*> Server::GetClientsOnTag(Core::Tag* tag) const {
+    if (!tag) {
+        return {};
+    }
+    return tag->GetClients();
+}
+
+std::vector<Core::Client*> Server::GetClientsOnScreen(Core::Screen* screen) const {
+    if (!screen) {
+        return {};
+    }
+    
+    Core::Tag* tag = screen->GetCurrentTag();
+    if (!tag) {
+        return {};
+    }
+    
+    return tag->GetClients();
+}
+
+Core::Client* Server::GetFocusedClient() const {
+    if (!core_seat_) {
+        return nullptr;
+    }
+    return core_seat_->GetFocusedClient();
 }
 
 } // namespace Wayland

@@ -1,4 +1,4 @@
-#include "TilingLayout.hpp"
+#include "layout/TilingLayout.hpp"
 #include "Logger.hpp"
 
 extern "C" {
@@ -28,7 +28,7 @@ void TilingLayout::ApplyMasterStack(std::vector<View*>& views,
     master_count = std::min(master_count, n);
     
     if (n == 1) {
-        // Single window - fullscreen
+        // Single window - fullscreen in workspace area
         MoveResizeView(views[0], 
                       gap_size, gap_size,
                       screen_width - 2 * gap_size, 
@@ -84,7 +84,7 @@ void TilingLayout::ApplyMasterStack(std::vector<View*>& views,
 
 void TilingLayout::ApplyMonocle(std::vector<View*>& views,
                                int screen_width, int screen_height) {
-    // All windows fullscreen, stacked on top of each other
+    // All windows fullscreen in workspace area, stacked on top of each other
     for (auto* view : views) {
         MoveResizeView(view, 0, 0, screen_width, screen_height);
     }

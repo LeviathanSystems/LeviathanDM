@@ -1,6 +1,8 @@
 #include "wayland/View.hpp"
 #include "Logger.hpp"
 #include "wayland/Server.hpp"
+#include "ConfigParser.hpp"
+#include <algorithm>
 
 extern "C" {
 #include <wlr/types/wlr_xdg_shell.h>
@@ -61,6 +63,14 @@ View::View(struct wlr_xdg_toplevel* toplevel, Server* srv)
 }
 
 View::~View() {
+    LOG_DEBUG("View destructor called for {}", static_cast<void*>(this));
+    
+    // Let server handle the cleanup (removing from lists, retiling, etc.)
+    if (server) {
+        server->RemoveView(this);
+    }
+    
+    // Remove wayland listeners
     wl_list_remove(&commit.link);
     wl_list_remove(&map.link);
     wl_list_remove(&unmap.link);
@@ -98,11 +108,20 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
         // Send configure with size 0,0 to let the client pick its own dimensions
         wlr_xdg_toplevel_set_size(view->xdg_toplevel, 0, 0);
         
-        // If we have a decoration object, set it to server-side mode now
+        // If we have a decoration object, check config and set mode accordingly
         if (view->decoration) {
-            wlr_xdg_toplevel_decoration_v1_set_mode(view->decoration,
-                WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-            LOG_INFO("Set decoration mode to SERVER_SIDE (no client decorations)");
+            // Check config to see if we should remove client titlebars
+            bool remove_titlebars = Config().general.remove_client_titlebars;
+            
+            if (remove_titlebars) {
+                wlr_xdg_toplevel_decoration_v1_set_mode(view->decoration,
+                    WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+                LOG_INFO("Set decoration mode to SERVER_SIDE (no client decorations)");
+            } else {
+                wlr_xdg_toplevel_decoration_v1_set_mode(view->decoration,
+                    WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
+                LOG_INFO("Set decoration mode to CLIENT_SIDE (client draws decorations)");
+            }
         }
     } else {
         //LOG_DEBUG("Not initial commit, skipping configure");

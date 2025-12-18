@@ -17,6 +17,10 @@ A lightweight, customizable tiling Wayland compositor built with wlroots and C++
 
 - **Vim-like Keybindings**: Familiar navigation (hjkl)
 
+- **Layer-Shell Protocol**: Support for panels, notifications, and overlays (wlr-layer-shell-v1)
+
+- **Built-in Help**: Press `Super + F1` for an overlay showing all keybindings
+
 ## Building
 
 ### Dependencies
@@ -35,24 +39,29 @@ You only need to install build tools and base libraries:
 - wayland-protocols  
 - xkbcommon
 - pixman
+- GTK4 (for help window)
+- gtk-layer-shell (for help window overlay)
 
 On Ubuntu/Debian:
 ```bash
 sudo apt install build-essential cmake meson ninja-build \
-  wayland-protocols libwayland-dev libxkbcommon-dev libpixman-1-dev
+  wayland-protocols libwayland-dev libxkbcommon-dev libpixman-1-dev \
+  libgtk-4-dev libgtk-layer-shell-dev
 ```
 
 On Arch Linux:
 ```bash
 sudo pacman -S base-devel cmake meson ninja \
-  wayland wayland-protocols xkbcommon pixman
+  wayland wayland-protocols xkbcommon pixman \
+  gtk4 gtk-layer-shell
 ```
 
 On Fedora:
 ```bash
 sudo dnf install gcc-c++ cmake meson ninja-build \
   wayland-devel wayland-protocols-devel \
-  libxkbcommon-devel pixman-devel
+  libxkbcommon-devel pixman-devel \
+  gtk4-devel gtk-layer-shell-devel
 ```
 
 ### Compile
@@ -158,6 +167,19 @@ All keybindings use `Super` (Windows key) as the modifier.
 
 ### Applications
 - `Super + p` - Application launcher (rofi)
+- `Super + F1` - Show keybinding help window
+
+## Help Window
+
+LeviathanDM includes a built-in help window that displays all keybindings. Press `Super + F1` to show it.
+
+The help window:
+- Uses the layer-shell protocol to appear as an overlay
+- Groups keybindings by category for easy reference
+- Can be dismissed with `Esc` or `F1`
+- Features a dark theme matching the compositor aesthetic
+
+The help tool is built with GTK4 and gtk-layer-shell, and is located at `build/tools/help-window/leviathan-help`.
 
 ## Configuration
 

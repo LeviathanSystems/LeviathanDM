@@ -1,10 +1,13 @@
 #include "wayland/Input.hpp"
 #include "wayland/Server.hpp"
+#include "ConfigParser.hpp"
 #include "Logger.hpp"
 
 extern "C" {
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/backend/multi.h>
 #include <wlr/backend/libinput.h>
 #include <libinput.h>
@@ -34,15 +37,18 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
         keyboard->wlr_keyboard->xkb_state, keycode, &syms);
     
     // Get modifiers - this reflects the state INCLUDING the current key press
-    uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
-    bool ctrl = modifiers & WLR_MODIFIER_CTRL;
-    bool alt = modifiers & WLR_MODIFIER_ALT;
-    bool shift = modifiers & WLR_MODIFIER_SHIFT;
-    bool mod = modifiers & WLR_MODIFIER_LOGO;
+    uint32_t wlr_mods = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
+    
+    // Convert wlroots modifiers to our Modifier enum
+    uint32_t modifiers = MOD_NONE;
+    if (wlr_mods & WLR_MODIFIER_SHIFT) modifiers |= MOD_SHIFT;
+    if (wlr_mods & WLR_MODIFIER_CTRL)  modifiers |= MOD_CTRL;
+    if (wlr_mods & WLR_MODIFIER_ALT)   modifiers |= MOD_ALT;
+    if (wlr_mods & WLR_MODIFIER_LOGO)  modifiers |= MOD_SUPER;
     
     // CRITICAL: Allow VT switching (Ctrl+Alt+F1-F12) to pass through to backend
     // Don't consume these keys - the libseat/session backend handles VT switching
-    if (ctrl && alt) {
+    if ((wlr_mods & WLR_MODIFIER_CTRL) && (wlr_mods & WLR_MODIFIER_ALT)) {
         for (int i = 0; i < nsyms; i++) {
             // Check for F1-F12 keys (XKB_KEY_F1 = 0xffbe through XKB_KEY_F12 = 0xffc9)
             if (syms[i] >= XKB_KEY_F1 && syms[i] <= XKB_KEY_F12) {
@@ -67,22 +73,12 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
                 continue; // Don't process modifier keys themselves
             }
             
-            // Debug: Log key presses with modifiers (for non-modifier keys only)
-            LOG_DEBUG("Key pressed: sym={:#x}, mod={}, shift={}, ctrl={}, alt={}", 
-                     sym, mod, shift, ctrl, alt);
-            
-            // Mod+Shift+Q: Quit compositor
-            // Check if it's actually Q key (not a modifier)
-            if (sym == XKB_KEY_Q || sym == XKB_KEY_q) {
-                if (mod && shift) {
-                    LOG_INFO("Mod+Shift+Q pressed - Terminating compositor");
-                    wl_display_terminate(server->GetDisplay());
-                    handled = true;
-                    break;
-                }
+            // Try to handle the key with the KeyBindings system
+            if (server->GetKeyBindings() && 
+                server->GetKeyBindings()->HandleKeyPress(modifiers, sym)) {
+                handled = true;
+                break;
             }
-            
-            // Future: Add more keybindings here
         }
     }
     
@@ -144,11 +140,8 @@ void InputManager::HandleNewInput(Server* server, struct wlr_input_device* devic
         if (wlr_input_device_is_libinput(device)) {
             struct libinput_device* libinput_dev = wlr_libinput_get_device_handle(device);
             
-            // Get mouse speed from config (default: 0.5)
-            double mouse_speed = 0.5;
-            if (server->GetConfigParser()) {
-                mouse_speed = server->GetConfigParser()->libinput.mouse.speed;
-            }
+            // Get mouse speed from config
+            double mouse_speed = Config().libinput.mouse.speed;
             
             // Set pointer acceleration (range: -1 to 1)
             if (libinput_device_config_accel_is_available(libinput_dev)) {
@@ -188,6 +181,48 @@ void InputManager::HandleKeyboardDestroy(struct wl_listener* listener, void* dat
     keyboard_handle_destroy(listener, data);
 }
 
+static void process_cursor_motion(Server* server, uint32_t time) {
+    // Find the surface under the cursor
+    double sx, sy;
+    struct wlr_scene_node* node = wlr_scene_node_at(
+        &server->GetScene()->tree.node, server->cursor->x, server->cursor->y, &sx, &sy);
+    
+    struct wlr_surface* surface = nullptr;
+    View* view = nullptr;
+    
+    if (node && node->type == WLR_SCENE_NODE_BUFFER) {
+        struct wlr_scene_buffer* scene_buffer = wlr_scene_buffer_from_node(node);
+        struct wlr_scene_surface* scene_surface = wlr_scene_surface_try_from_buffer(scene_buffer);
+        
+        if (scene_surface) {
+            surface = scene_surface->surface;
+            
+            // Try to find the view - walk up the tree to find a node with data
+            struct wlr_scene_node* current = &scene_surface->buffer->node;
+            while (current && !current->data) {
+                current = &current->parent->node;
+            }
+            
+            if (current && current->data) {
+                view = static_cast<View*>(current->data);
+            }
+        }
+    }
+    
+    // Focus follows mouse - focus the view under cursor if enabled
+    if (view && Config().general.focus_follows_mouse) {
+        server->FocusView(view);
+    }
+    
+    // Send pointer motion to the surface
+    if (surface) {
+        wlr_seat_pointer_notify_enter(server->seat, surface, sx, sy);
+        wlr_seat_pointer_notify_motion(server->seat, time, sx, sy);
+    } else {
+        wlr_seat_pointer_clear_focus(server->seat);
+    }
+}
+
 void InputManager::HandleCursorMotion(struct wl_listener* listener, void* data) {
     Server* server = wl_container_of(listener, server, cursor_motion);
     struct wlr_pointer_motion_event* event = 
@@ -197,7 +232,7 @@ void InputManager::HandleCursorMotion(struct wl_listener* listener, void* data) 
     wlr_cursor_move(server->cursor, &event->pointer->base,
                     event->delta_x, event->delta_y);
     
-    // TODO: Process cursor motion (find surface under cursor, send pointer events)
+    process_cursor_motion(server, event->time_msec);
 }
 
 void InputManager::HandleCursorMotionAbsolute(struct wl_listener* listener, void* data) {
@@ -209,11 +244,43 @@ void InputManager::HandleCursorMotionAbsolute(struct wl_listener* listener, void
     wlr_cursor_warp_absolute(server->cursor, &event->pointer->base, 
                             event->x, event->y);
     
-    // TODO: Process cursor motion
+    process_cursor_motion(server, event->time_msec);
 }
 
 void InputManager::HandleCursorButton(struct wl_listener* listener, void* data) {
-    // Future: handle mouse buttons
+    Server* server = wl_container_of(listener, server, cursor_button);
+    struct wlr_pointer_button_event* event = 
+        static_cast<struct wlr_pointer_button_event*>(data);
+    
+    // Notify clients of the button event
+    wlr_seat_pointer_notify_button(server->seat, event->time_msec, 
+                                    event->button, event->state);
+    
+    // Click to focus - focus the view when clicking on it
+    if (event->state == WL_POINTER_BUTTON_STATE_PRESSED && 
+        Config().general.click_to_focus) {
+        
+        double sx, sy;
+        struct wlr_scene_node* node = wlr_scene_node_at(
+            &server->GetScene()->tree.node, server->cursor->x, server->cursor->y, &sx, &sy);
+        
+        if (node) {
+            // Try to find the view - walk up the tree to find a node with data
+            struct wlr_scene_node* current = node;
+            while (current && !current->data) {
+                if (current->parent) {
+                    current = &current->parent->node;
+                } else {
+                    break;
+                }
+            }
+            
+            if (current && current->data) {
+                View* view = static_cast<View*>(current->data);
+                server->FocusView(view);
+            }
+        }
+    }
 }
 
 void InputManager::HandleCursorAxis(struct wl_listener* listener, void* data) {

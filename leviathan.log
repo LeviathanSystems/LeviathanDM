@@ -1,64 +1,95 @@
-[2025-12-16 18:37:35.302] [info] [:] Logger initialized - writing to console and leviathan.log
-[2025-12-16 18:37:35.302] [info] [:] LeviathanDM - Wayland Compositor
-[2025-12-16 18:37:35.302] [info] [:] Starting compositor...
-[2025-12-16 18:37:35.360] [info] [:] Created layer hierarchy:
-[2025-12-16 18:37:35.360] [info] [:]   - Background layer: 0x556be3fd7d10
-[2025-12-16 18:37:35.360] [info] [:]   - Working area layer: 0x556be3ffee60
-[2025-12-16 18:37:35.360] [info] [:]   - Top layer: 0x556be3ffeef0
-[2025-12-16 18:37:35.360] [info] [:] Using layer manager's working area for windows
-[2025-12-16 18:37:35.363] [info] [:] No session (probably nested) - VT switching unavailable
-[2025-12-16 18:37:35.363] [debug] [:] Mouse speed: 0.5
-[2025-12-16 18:37:35.364] [debug] [:] Terminal: alacritty
-[2025-12-16 18:37:35.364] [info] [:] Loaded configuration with includes from: /home/romeo/.config/leviathan/leviathan.yaml
-[2025-12-16 18:37:35.364] [info] [:] Tag '1' visibility changed to: false
-[2025-12-16 18:37:35.364] [debug] [:] Tag has 0 clients
-[2025-12-16 18:37:35.364] [info] [:] Tag '1' visibility changed to: true
-[2025-12-16 18:37:35.364] [debug] [:] Tag has 0 clients
-[2025-12-16 18:37:35.364] [info] [:] IPC server listening on /run/user/1000/leviathan-ipc.sock
-[2025-12-16 18:37:35.364] [info] [:] New input device: wayland-keyboard-seat0
-[2025-12-16 18:37:35.366] [info] [:] New input device: wayland-touch-seat0
-[2025-12-16 18:37:35.366] [info] [:] New output: WL-1
-[2025-12-16 18:37:35.367] [info] [:] Created scene output for 'WL-1' at 0x556be34198f0
-[2025-12-16 18:37:35.367] [info] [:] Connected output 'WL-1' to scene layout
-[2025-12-16 18:37:35.367] [info] [:] Registered frame listener for output 'WL-1'
-[2025-12-16 18:37:35.367] [info] [:] Output 'WL-1' fully configured and enabled
-[2025-12-16 18:37:35.369] [debug] [:] TileViews() called
-[2025-12-16 18:37:35.369] [debug] [:] TileViews: Active tag has 0 clients
-[2025-12-16 18:37:35.369] [debug] [:] TileViews: 0 tiled views after filtering
-[2025-12-16 18:37:35.369] [debug] [:] TileViews: No tiled views, returning
-[2025-12-16 18:37:35.369] [info] [:] New input device: wayland-pointer-seat0
-[2025-12-16 18:37:35.369] [info] [:] Running compositor on WAYLAND_DISPLAY=wayland-1
-[2025-12-16 18:37:35.371] [info] [:] Launched alacritty terminal (PID: 214945)
-[2025-12-16 18:37:35.477] [info] [:] OnNewXdgToplevel called - this is the proper signal!
-[2025-12-16 18:37:35.477] [debug] [:] Toplevel pointer: 0x556be350df00, base surface: 0x556be4130b50
-[2025-12-16 18:37:35.477] [debug] [:] Created scene tree for toplevel view
-[2025-12-16 18:37:35.477] [debug] [:] Surface initialized: false
-[2025-12-16 18:37:35.477] [info] [:] Added client to tag '1' (total clients: 1)
-[2025-12-16 18:37:35.477] [debug] [:]   - Enabled scene node for new client (tag is visible)
-[2025-12-16 18:37:35.477] [info] [:] Toplevel view fully initialized and added to active tag
-[2025-12-16 18:37:35.477] [info] [:] New XDG decoration request for toplevel=0x556be350df00
-[2025-12-16 18:37:35.477] [info] [:] Associated decoration with view=0x556be4135750, will set mode after surface init
-[2025-12-16 18:37:35.477] [info] [:] Initial commit received for view=0x556be4135750, sending configure
-[2025-12-16 18:37:35.477] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
-[2025-12-16 18:37:35.514] [info] [:] View mapped! view=0x556be4135750, xdg_toplevel=0x556be350df00
-[2025-12-16 18:37:35.514] [debug] [:] Raised scene tree to top and enabled it
-[2025-12-16 18:37:35.514] [debug] [:] Gave keyboard focus to newly mapped view
-[2025-12-16 18:37:35.514] [debug] [:] TileViews() called
-[2025-12-16 18:37:35.514] [debug] [:] TileViews: Active tag has 1 clients
-[2025-12-16 18:37:35.514] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-16 18:37:35.514] [debug] [:] TileViews: 1 tiled views after filtering
-[2025-12-16 18:37:35.514] [debug] [:] MoveResizeView: view=0x556be4135750, pos=(0,0), size=(1280,720), scene_tree=0x556be40bb6a0
-[2025-12-16 18:37:35.514] [debug] [:]   - Set scene node position
-[2025-12-16 18:37:35.514] [debug] [:]   - Set toplevel size
-[2025-12-16 18:37:36.969] [debug] [:] Key pressed: sym=0x61, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:37.017] [debug] [:] Key pressed: sym=0x73, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:37.084] [debug] [:] Key pressed: sym=0x64, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:37.344] [debug] [:] Key pressed: sym=0xff0d, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:37.764] [debug] [:] Key pressed: sym=0x61, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:37.796] [debug] [:] Key pressed: sym=0x73, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:37.863] [debug] [:] Key pressed: sym=0x64, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:37.932] [debug] [:] Key pressed: sym=0xff0d, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:38.793] [debug] [:] Key pressed: sym=0x61, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:38.822] [debug] [:] Key pressed: sym=0x73, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:38.851] [debug] [:] Key pressed: sym=0x64, mod=false, shift=false, ctrl=false, alt=false
-[2025-12-16 18:37:39.061] [debug] [:] Key pressed: sym=0xff0d, mod=false, shift=false, ctrl=false, alt=false
+[2025-12-18 19:47:37.215] [info] [:] Logger initialized - writing to console and leviathan.log
+[2025-12-18 19:47:37.215] [info] [:] LeviathanDM - Wayland Compositor
+[2025-12-18 19:47:37.215] [debug] [:] Mouse speed: 0.5
+[2025-12-18 19:47:37.215] [debug] [:] Terminal: alacritty
+[2025-12-18 19:47:37.215] [debug] [:] Using default plugin paths
+[2025-12-18 19:47:37.215] [info] [:] Plugin search path: /home/romeo/.config/leviathan/plugins
+[2025-12-18 19:47:37.215] [info] [:] Plugin search path: /usr/local/lib/leviathan/plugins
+[2025-12-18 19:47:37.215] [info] [:] Plugin search path: /usr/lib/leviathan/plugins
+[2025-12-18 19:47:37.215] [debug] [:] Plugin: ClockWidget
+[2025-12-18 19:47:37.215] [debug] [:]   format: %H:%M:%S
+[2025-12-18 19:47:37.215] [debug] [:]   update_interval: 1
+[2025-12-18 19:47:37.215] [debug] [:]   font_size: 12
+[2025-12-18 19:47:37.215] [info] [:] Loaded configuration with includes from: /home/romeo/.config/leviathan/leviathan.yaml
+[2025-12-18 19:47:37.215] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-12-18 19:47:37.215] [info] [:] Loading Widget Plugins
+[2025-12-18 19:47:37.215] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-12-18 19:47:37.215] [info] [:] Searching for plugins in: /home/romeo/.config/leviathan/plugins
+[2025-12-18 19:47:37.215] [info] [:] Discovering widget plugins in: /home/romeo/.config/leviathan/plugins
+[2025-12-18 19:47:37.216] [info] [:] Loading widget plugin: /home/romeo/.config/leviathan/plugins/clock-widget.so
+[2025-12-18 19:47:37.216] [info] [:] Successfully loaded plugin: ClockWidget v1.0.0 by LeviathanDM
+[2025-12-18 19:47:37.216] [debug] [:] Plugin description: Displays current time with configurable format
+[2025-12-18 19:47:37.216] [info] [:] Discovered and loaded 1 widget plugins from /home/romeo/.config/leviathan/plugins
+[2025-12-18 19:47:37.216] [info] [:] Searching for plugins in: /usr/local/lib/leviathan/plugins
+[2025-12-18 19:47:37.216] [info] [:] Discovering widget plugins in: /usr/local/lib/leviathan/plugins
+[2025-12-18 19:47:37.216] [warning] [:] Plugin directory does not exist: /usr/local/lib/leviathan/plugins
+[2025-12-18 19:47:37.216] [info] [:] Searching for plugins in: /usr/lib/leviathan/plugins
+[2025-12-18 19:47:37.216] [info] [:] Discovering widget plugins in: /usr/lib/leviathan/plugins
+[2025-12-18 19:47:37.216] [warning] [:] Plugin directory does not exist: /usr/lib/leviathan/plugins
+[2025-12-18 19:47:37.216] [info] [:] Loaded 1 plugin(s):
+[2025-12-18 19:47:37.216] [info] [:]   ✓ ClockWidget v1.0.0 by LeviathanDM
+[2025-12-18 19:47:37.216] [info] [:]     Displays current time with configurable format
+[2025-12-18 19:47:37.216] [info] [:] Creating 1 plugin instance(s) from config...
+[2025-12-18 19:47:37.216] [info] [:] Initializing: ClockWidget
+[2025-12-18 19:47:37.216] [debug] [:]   Configuration:
+[2025-12-18 19:47:37.216] [debug] [:]     font_size: 12
+[2025-12-18 19:47:37.216] [debug] [:]     format: %H:%M:%S
+[2025-12-18 19:47:37.216] [debug] [:]     update_interval: 1
+[2025-12-18 19:47:37.216] [debug] [:] Created instance of plugin widget: ClockWidget
+[2025-12-18 19:47:37.216] [info] [:]   ✓ Successfully initialized ClockWidget
+[2025-12-18 19:47:37.216] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-12-18 19:47:37.216] [info] [:] Starting compositor...
+[2025-12-18 19:47:38.722] [info] [:] Created layer hierarchy:
+[2025-12-18 19:47:38.722] [info] [:]   - Background layer: 0x55d66f9b8400
+[2025-12-18 19:47:38.722] [info] [:]   - Working area layer: 0x55d66f9df550
+[2025-12-18 19:47:38.722] [info] [:]   - Top layer: 0x55d66f9df5e0
+[2025-12-18 19:47:38.722] [info] [:] Using layer manager's working area for windows
+[2025-12-18 19:47:38.722] [info] [:] Layer shell v1 initialized
+[2025-12-18 19:47:38.726] [info] [:] No session (probably nested) - VT switching unavailable
+[2025-12-18 19:47:38.726] [debug] [:] Border colors - Focused: #ff0000, Unfocused: #3B4252
+[2025-12-18 19:47:38.726] [info] [:] Tag '1' visibility changed to: false
+[2025-12-18 19:47:38.726] [debug] [:] Tag has 0 clients
+[2025-12-18 19:47:38.726] [info] [:] Tag '1' visibility changed to: true
+[2025-12-18 19:47:38.726] [debug] [:] Tag has 0 clients
+[2025-12-18 19:47:38.726] [info] [:] IPC server listening on /run/user/1000/leviathan-ipc.sock
+[2025-12-18 19:47:38.726] [info] [:] New input device: x11-keyboard
+[2025-12-18 19:47:38.729] [info] [:] New output: X11-1
+[2025-12-18 19:47:38.732] [info] [:] Created scene output for 'X11-1' at 0x55d66ed93fa0
+[2025-12-18 19:47:38.732] [info] [:] Reserved space updated: top=24, bottom=0, left=0, right=0
+[2025-12-18 19:47:38.732] [debug] [:] Status bar created in WorkingArea layer, reserved 24px at top
+[2025-12-18 19:47:38.732] [info] [:] Created status bar for output: 1024x24
+[2025-12-18 19:47:38.732] [info] [:] Created status bar for output 'X11-1'
+[2025-12-18 19:47:38.732] [info] [:] Connected output 'X11-1' to scene layout
+[2025-12-18 19:47:38.732] [info] [:] Registered frame listener for output 'X11-1'
+[2025-12-18 19:47:38.732] [info] [:] Output 'X11-1' fully configured and enabled
+[2025-12-18 19:47:38.735] [debug] [:] TileViews() called
+[2025-12-18 19:47:38.735] [debug] [:] TileViews: Active tag has 0 clients
+[2025-12-18 19:47:38.735] [debug] [:] TileViews: 0 tiled views after filtering
+[2025-12-18 19:47:38.735] [debug] [:] TileViews: No tiled views, returning
+[2025-12-18 19:47:38.735] [info] [:] New input device: x11-pointer
+[2025-12-18 19:47:38.735] [info] [:] New input device: x11-touch
+[2025-12-18 19:47:38.735] [info] [:] Running compositor on WAYLAND_DISPLAY=wayland-0
+[2025-12-18 19:47:38.737] [info] [:] Launched alacritty terminal (PID: 334645)
+[2025-12-18 19:47:38.846] [info] [:] OnNewXdgToplevel called - this is the proper signal!
+[2025-12-18 19:47:38.846] [debug] [:] Toplevel pointer: 0x55d66fb13380, base surface: 0x55d66fb0ed50
+[2025-12-18 19:47:38.846] [debug] [:] Created scene tree for toplevel view
+[2025-12-18 19:47:38.846] [debug] [:] Surface initialized: false
+[2025-12-18 19:47:38.846] [info] [:] Added client to tag '1' (total clients: 1)
+[2025-12-18 19:47:38.846] [debug] [:]   - Enabled scene node for new client (tag is visible)
+[2025-12-18 19:47:38.846] [info] [:] Toplevel view fully initialized and added to active tag
+[2025-12-18 19:47:38.846] [info] [:] New XDG decoration request for toplevel=0x55d66fb13380
+[2025-12-18 19:47:38.846] [info] [:] Associated decoration with view=0x55d66f9e55f0, will set mode after surface init
+[2025-12-18 19:47:38.846] [info] [:] Initial commit received for view=0x55d66f9e55f0, sending configure
+[2025-12-18 19:47:38.846] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
+[2025-12-18 19:47:38.877] [info] [:] View mapped! view=0x55d66f9e55f0, xdg_toplevel=0x55d66fb13380
+[2025-12-18 19:47:38.877] [debug] [:] Raised scene tree to top and enabled it
+[2025-12-18 19:47:38.877] [debug] [:] Gave keyboard focus to newly mapped view
+[2025-12-18 19:47:38.877] [debug] [:] TileViews() called
+[2025-12-18 19:47:38.877] [debug] [:] TileViews: Active tag has 1 clients
+[2025-12-18 19:47:38.877] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
+[2025-12-18 19:47:38.877] [debug] [:] TileViews: 1 tiled views after filtering
+[2025-12-18 19:47:38.877] [debug] [:] Usable area: x=0, y=24, w=1024, h=744
+[2025-12-18 19:47:38.877] [debug] [:] Using workspace area from LayerManager: pos=(0,24), size=(1024x744)
+[2025-12-18 19:47:38.877] [debug] [:] MoveResizeView: view=0x55d66f9e55f0, pos=(0,0), size=(1024,744), scene_tree=0x55d66faa2f10
+[2025-12-18 19:47:38.877] [debug] [:]   - Set scene node position
+[2025-12-18 19:47:38.877] [debug] [:]   - Set toplevel size

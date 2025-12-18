@@ -1,5 +1,6 @@
 #include "KeyBindings.hpp"
 #include "wayland/Server.hpp"
+#include "Logger.hpp"
 
 #include <iostream>
 #include <cstdlib>
@@ -23,11 +24,11 @@ void KeyBindings::SetupDefaultBindings() {
         system("alacritty &");
     }});
     
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_c, [this]() {
+    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_C, [this]() {
         server_->CloseView(nullptr);
     }});
     
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_q, [this]() {
+    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_Q, [this]() {
         exit(0);
     }});
     
@@ -41,11 +42,11 @@ void KeyBindings::SetupDefaultBindings() {
     }});
     
     // Window swapping
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_j, [this]() {
+    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_J, [this]() {
         server_->SwapWithNext();
     }});
     
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_k, [this]() {
+    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_K, [this]() {
         server_->SwapWithPrev();
     }});
     
@@ -96,15 +97,48 @@ void KeyBindings::SetupDefaultBindings() {
     bindings_.push_back({mod, XKB_KEY_p, [this]() {
         system("rofi -show run &");
     }});
+    
+    // Help window
+    bindings_.push_back({mod, XKB_KEY_F1, [this]() {
+        system("leviathan-help &");
+    }});
 }
 
 bool KeyBindings::HandleKeyPress(uint32_t modifiers, xkb_keysym_t keysym) {
     for (const auto& binding : bindings_) {
         if (binding.keysym == keysym && binding.modifiers == modifiers) {
+            // Log which keybinding is being triggered
+            std::string mod_str;
+            if (modifiers & MOD_SUPER) mod_str += "Super+";
+            if (modifiers & MOD_SHIFT) mod_str += "Shift+";
+            if (modifiers & MOD_CTRL)  mod_str += "Ctrl+";
+            if (modifiers & MOD_ALT)   mod_str += "Alt+";
+            
+            // Get key name from keysym
+            char key_name[64];
+            xkb_keysym_get_name(keysym, key_name, sizeof(key_name));
+            
+            LOG_INFO("Keybinding triggered: {}{}", mod_str, key_name);
+            
             binding.action();
             return true;
         }
     }
+    
+    // Log unmatched key presses with modifiers (for debugging)
+    if (modifiers != MOD_NONE) {
+        std::string mod_str;
+        if (modifiers & MOD_SUPER) mod_str += "Super+";
+        if (modifiers & MOD_SHIFT) mod_str += "Shift+";
+        if (modifiers & MOD_CTRL)  mod_str += "Ctrl+";
+        if (modifiers & MOD_ALT)   mod_str += "Alt+";
+        
+        char key_name[64];
+        xkb_keysym_get_name(keysym, key_name, sizeof(key_name));
+        
+        LOG_DEBUG("No keybinding for: {}{}", mod_str, key_name);
+    }
+    
     return false;
 }
 

@@ -2,15 +2,22 @@
 #define SERVER_HPP
 
 #include "Types.hpp"
-#include "TilingLayout.hpp"
-#include "Config.hpp"
+#include "layout/TilingLayout.hpp"
 #include "ConfigParser.hpp"
 #include "KeyBindings.hpp"
-#include "IPC.hpp"
+#include "ipc/IPC.hpp"
 #include "core/Seat.hpp"
 #include "core/Client.hpp"
 #include "wayland/LayerManager.hpp"
 #include "wayland/WaylandTypes.hpp"
+#include "ui/CompositorState.hpp"
+
+// Layer shell needs special handling for 'namespace' keyword
+#define namespace namespace_
+extern "C" {
+#include <wlr/types/wlr_layer_shell_v1.h>
+}
+#undef namespace
 
 #include <memory>
 #include <vector>
@@ -18,7 +25,7 @@
 namespace Leviathan {
 namespace Wayland {
 
-class Server {
+class Server : public UI::CompositorState {
 public:
     static Server* Create();
     ~Server();
@@ -28,6 +35,7 @@ public:
     // View operations
     void FocusView(View* view);
     void CloseView(View* view);
+    void RemoveView(View* view);  // Called by View destructor to clean up
     
     // Layout operations
     void TileViews();
@@ -56,8 +64,18 @@ public:
     const std::vector<View*>& GetViews() const { return views; }
     const std::vector<Core::Client*>& GetClients() const { return clients_; }
     TilingLayout* GetLayoutEngine() { return layout_engine_.get(); }
-    ConfigParser* GetConfigParser() { return config_parser_.get(); }
+    KeyBindings* GetKeyBindings() { return keybindings_.get(); }
     LayerManager* GetLayerManager() { return layer_manager_.get(); }
+    
+    // CompositorState interface implementation
+    std::vector<Core::Screen*> GetScreens() const override;
+    Core::Screen* GetFocusedScreen() const override;
+    std::vector<Core::Tag*> GetTags() const override;
+    Core::Tag* GetActiveTag() const override;
+    std::vector<Core::Client*> GetAllClients() const override;
+    std::vector<Core::Client*> GetClientsOnTag(Core::Tag* tag) const override;
+    std::vector<Core::Client*> GetClientsOnScreen(Core::Screen* screen) const override;
+    Core::Client* GetFocusedClient() const override;
     
     // IPC command processor
     IPC::Response ProcessIPCCommand(const std::string& command_json);
@@ -68,11 +86,15 @@ public:
     struct wlr_cursor* cursor;
     struct wlr_seat* seat;
     
+    // Public for layer surface access
+    struct wl_list layer_surfaces; // LayerSurface::link
+    
     // Public for C callback access
     struct wl_listener new_output;
     struct wl_listener new_xdg_surface;
     struct wl_listener new_xdg_toplevel;
     struct wl_listener new_xdg_decoration;
+    struct wl_listener new_layer_surface;
     struct wl_listener new_input;
     struct wl_listener session_active;  // For VT switching
     struct wl_listener cursor_motion;
@@ -126,6 +148,9 @@ private:
     struct wlr_xdg_decoration_manager_v1* xdg_decoration_mgr;
     std::vector<View*> views;
     
+    // Layer shell
+    struct wlr_layer_shell_v1* layer_shell;
+    
     // Input
     struct wlr_xcursor_manager* cursor_mgr;
     struct wl_listener request_cursor;
@@ -137,8 +162,6 @@ private:
     View* focused_view_;  // Current wayland-level focus
     
     std::unique_ptr<TilingLayout> layout_engine_;
-    std::unique_ptr<Config> config_;
-    std::unique_ptr<ConfigParser> config_parser_;
     std::unique_ptr<KeyBindings> keybindings_;
     
     // Wayland socket name (for child processes)

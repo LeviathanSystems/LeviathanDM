@@ -14,6 +14,8 @@
 namespace Leviathan {
 
 // Forward declarations
+class StatusBar;  // For Output
+
 namespace Core {
     class Seat;
     class Screen;
@@ -82,6 +84,7 @@ struct Output {
     struct wl_listener frame;
     struct wl_listener destroy;
     struct wl_list link;
+    Leviathan::StatusBar* status_bar;  // Built-in status bar (in parent namespace)
     
     Output(struct wlr_output* output);
     ~Output();
