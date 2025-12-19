@@ -1,0 +1,87 @@
+# Test configuration with plugin widgets
+# This demonstrates both built-in widgets and plugin widgets in status bars
+
+# Plugin configuration
+plugins:
+  plugin-paths:
+    - ~/.config/leviathan/plugins
+    - /usr/local/lib/leviathan/plugins
+    - ./build/plugins  # For development testing
+  
+  plugins:
+    - name: ClockWidget
+      config:
+        update-interval: "1000"  # Update every second
+
+# Status bars configuration
+status-bars:
+  - name: test-bar-with-plugins
+    position: top
+    height: 30
+    background-color: "#2E3440"
+    foreground-color: "#D8DEE9"
+    font-size: 12
+    font-family: "monospace"
+    
+    # Left section - workspace indicators
+    left:
+      spacing: 8
+      padding: 4
+      alignment: start
+      widgets:
+        - type: label
+          properties:
+            text: " LeviathanDM "
+            font-size: "13"
+            color: "#88C0D0"
+    
+    # Center section - window title
+    center:
+      spacing: 4
+      padding: 4
+      alignment: center
+      widgets:
+        - type: label
+          properties:
+            text: "Welcome to Leviathan"
+            font-size: "12"
+            color: "#ECEFF4"
+    
+    # Right section - system info with plugin widgets
+    right:
+      spacing: 12
+      padding: 8
+      alignment: end
+      widgets:
+        # Built-in label
+        - type: label
+          properties:
+            text: "CPU:"
+            font-size: "11"
+            color: "#81A1C1"
+        
+        # Plugin widget - Clock
+        - type: ClockWidget
+          properties:
+            format: "%H:%M:%S"
+            color: "#A3BE8C"
+            update-interval: "1000"
+        
+        # Another built-in label
+        - type: label
+          properties:
+            text: "📅"
+            font-size: "12"
+
+# Monitor groups
+monitor-groups:
+  groups:
+    - name: Testing
+      default: true
+      monitors:
+        - identifier: "*"  # Match any monitor
+          status-bars:
+            - test-bar-with-plugins
+          mode: "1280x720"
+          scale: 1.0
+          position: [0, 0]

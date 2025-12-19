@@ -43,6 +43,52 @@ struct GeneralConfig {
     bool remove_client_titlebars = true;
 };
 
+// Widget configuration for status bars
+struct WidgetConfig {
+    std::string type;  // "label", "clock", "battery", "workspaces", etc.
+    std::map<std::string, std::string> properties;  // Widget-specific properties
+};
+
+// Container configuration (HBox, VBox)
+struct ContainerConfig {
+    std::string type;  // "hbox" or "vbox"
+    std::vector<WidgetConfig> widgets;
+    
+    // Container properties
+    int spacing = 5;
+    std::string alignment = "center";  // "left", "center", "right" for HBox; "top", "center", "bottom" for VBox
+    int padding = 0;
+};
+
+// Status bar configuration
+struct StatusBarConfig {
+    std::string name;  // Unique identifier (e.g., "main-bar", "laptop-bar", "monitor-left-bar")
+    
+    // Position on screen
+    enum class Position {
+        Top,
+        Bottom,
+        Left,
+        Right
+    };
+    Position position = Position::Top;
+    
+    // Size
+    int height = 30;  // For top/bottom bars (pixels)
+    int width = 30;   // For left/right bars (pixels)
+    
+    // Appearance
+    std::string background_color = "#2E3440";  // Nord polar night
+    std::string foreground_color = "#D8DEE9";  // Nord snow storm
+    int font_size = 12;
+    std::string font_family = "monospace";
+    
+    // Layout sections
+    ContainerConfig left;    // Left section (for horizontal bars) or top (for vertical bars)
+    ContainerConfig center;  // Center section
+    ContainerConfig right;   // Right section (for horizontal bars) or bottom (for vertical bars)
+};
+
 // Monitor configuration within a group
 struct MonitorConfig {
     // Identifier can be:
@@ -50,6 +96,10 @@ struct MonitorConfig {
     // - Description prefix: "d:Dell Inc. U2720Q" (matches EDID description)
     // - Make/Model: "m:Dell Inc./U2720Q"
     std::string identifier;
+    
+    // Status bars assigned to this monitor
+    // Can have multiple bars at different positions
+    std::vector<std::string> status_bars;  // Names of status bars to show
     
     // Optional position (e.g., "0x0", "1920x0")
     // If not set, wlroots auto-arranges
@@ -96,10 +146,19 @@ struct PluginsConfig {
     std::vector<PluginConfig> plugins;                  // List of plugins to load with their configs
 };
 
+// Status bars configuration
+struct StatusBarsConfig {
+    std::vector<StatusBarConfig> bars;  // All defined status bars
+    
+    // Find a status bar by name
+    const StatusBarConfig* FindByName(const std::string& name) const;
+};
+
 struct ConfigParser {
     LibInputConfig libinput;
     GeneralConfig general;
     PluginsConfig plugins;
+    StatusBarsConfig status_bars;
     MonitorGroupsConfig monitor_groups;
     
     // Load configuration from file
@@ -118,6 +177,7 @@ private:
     void ParseLibInput(const YAML::Node& node);
     void ParseGeneral(const YAML::Node& node);
     void ParsePlugins(const YAML::Node& node);
+    void ParseStatusBars(const YAML::Node& node);
     void ParseMonitorGroups(const YAML::Node& node);
     void ProcessIncludes(const YAML::Node& node, const std::string& base_path);
     

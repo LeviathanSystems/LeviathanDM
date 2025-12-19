@@ -172,6 +172,7 @@ pkg_check_modules(PIXMAN REQUIRED pixman-1)
 pkg_check_modules(LIBINPUT REQUIRED libinput)
 pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
 pkg_check_modules(CAIRO REQUIRED cairo)
+pkg_check_modules(LIBDRM REQUIRED libdrm)
 
 # Include directories
 include_directories(
@@ -183,6 +184,7 @@ include_directories(
     ${PIXMAN_INCLUDE_DIRS}
     ${DISPLAY_INFO_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
+    ${LIBDRM_INCLUDE_DIRS}
 )
 
 # Source files
@@ -261,6 +263,7 @@ target_link_libraries(leviathan
     ${LIBINPUT_LIBRARIES}
     ${YAMLCPP_LIBRARIES}
     ${CAIRO_LIBRARIES}
+    ${LIBDRM_LIBRARIES}
     spdlog::spdlog
     nlohmann_json::nlohmann_json
     dl  # For dynamic plugin loading

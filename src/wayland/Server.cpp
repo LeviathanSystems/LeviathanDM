@@ -608,6 +608,14 @@ void Server::ApplyMonitorGroupConfiguration() {
             wlr_output_layout_add(output_layout, output->wlr_output, x, y);
             LOG_INFO("Set position {}x{} for '{}'", x, y, output->wlr_output->name);
         }
+        
+        // Create status bars for this monitor (handled by LayerManager)
+        output->layer_manager->CreateStatusBars(
+            mon_config.status_bars,
+            config.status_bars,
+            output->wlr_output->width,
+            output->wlr_output->height
+        );
     }
     
     LOG_INFO("Monitor group '{}' configuration applied", group->name);

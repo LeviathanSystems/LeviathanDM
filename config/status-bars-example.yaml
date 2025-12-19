@@ -1,0 +1,228 @@
+# Status Bar Configuration Example
+# This file demonstrates how to configure status bars for different monitors
+
+# Define status bars with unique names
+status-bars:
+  # Main laptop status bar - top positioned
+  - name: laptop-bar
+    position: top
+    height: 30
+    background_color: "#2E3440"  # Nord polar night
+    foreground_color: "#D8DEE9"  # Nord snow storm
+    font_size: 12
+    font_family: "JetBrains Mono"
+    
+    left:
+      spacing: 10
+      alignment: left
+      padding: 5
+      widgets:
+        - type: workspaces
+          active_color: "#88C0D0"
+          inactive_color: "#4C566A"
+        - type: label
+          text: "|"
+          color: "#4C566A"
+        - type: window-title
+          max_length: 50
+    
+    center:
+      spacing: 5
+      alignment: center
+      widgets:
+        - type: clock
+          format: "%A, %B %d  %H:%M:%S"
+          update_interval: 1
+    
+    right:
+      spacing: 10
+      alignment: right
+      padding: 5
+      widgets:
+        - type: battery
+          show_percentage: true
+          show_icon: true
+        - type: network
+          show_name: true
+          show_icon: true
+        - type: volume
+          show_percentage: true
+          show_icon: true
+        - type: clock
+          format: "%H:%M"
+          update_interval: 60
+
+  # External monitor - minimal bottom bar
+  - name: external-bottom
+    position: bottom
+    height: 25
+    background_color: "#3B4252"
+    foreground_color: "#ECEFF4"
+    font_size: 10
+    
+    left:
+      widgets:
+        - type: workspaces
+          style: compact
+    
+    center:
+      widgets:
+        - type: clock
+          format: "%H:%M"
+    
+    right:
+      widgets:
+        - type: system-tray
+
+  # Vertical status bar for ultra-wide monitors
+  - name: ultrawide-left
+    position: left
+    width: 40
+    background_color: "#2E3440"
+    foreground_color: "#D8DEE9"
+    
+    left:  # Actually "top" for vertical bars
+      alignment: top
+      spacing: 10
+      widgets:
+        - type: workspaces
+          orientation: vertical
+    
+    center:
+      widgets:
+        - type: clock
+          format: "%H\n%M"
+          orientation: vertical
+    
+    right:  # Actually "bottom" for vertical bars
+      alignment: bottom
+      widgets:
+        - type: battery
+          orientation: vertical
+
+  # Dual status bars for a single monitor (top and bottom)
+  - name: monitor-top
+    position: top
+    height: 28
+    background_color: "#2E3440"
+    foreground_color: "#D8DEE9"
+    
+    left:
+      widgets:
+        - type: workspaces
+    
+    center:
+      widgets:
+        - type: window-title
+    
+    right:
+      widgets:
+        - type: clock
+          format: "%H:%M"
+
+  - name: monitor-bottom
+    position: bottom
+    height: 24
+    background_color: "#3B4252"
+    foreground_color: "#D8DEE9"
+    
+    left:
+      widgets:
+        - type: cpu
+        - type: memory
+    
+    center:
+      widgets:
+        - type: network
+    
+    right:
+      widgets:
+        - type: battery
+
+# Monitor groups with status bar assignments
+monitor-groups:
+  # Laptop only - single bar at top
+  - name: Default
+    default: true
+    monitors:
+      - display: eDP-1
+        position: 0x0
+        mode: 1920x1080@60
+        status-bars:
+          - laptop-bar  # Single status bar
+
+  # Home setup - laptop + external 4K
+  - name: Home
+    monitors:
+      - display: eDP-1
+        position: 3840x0
+        mode: 1920x1080@60
+        status-bars:
+          - laptop-bar
+      
+      - display: "d:Dell Inc./U2720Q"
+        position: 0x0
+        mode: 3840x2160@60
+        scale: 1.5
+        status-bars:
+          - external-bottom  # Different bar on external monitor
+
+  # Office setup - dual external monitors + laptop
+  - name: Office
+    monitors:
+      - display: eDP-1
+        position: 3840x0
+        status-bars:
+          - laptop-bar
+      
+      - display: "m:Dell Inc./P2419H"
+        position: 0x0
+        mode: 1920x1080@60
+        status-bars:
+          - monitor-top
+          - monitor-bottom  # Multiple bars on same monitor!
+      
+      - display: "m:Dell Inc./P2419H"
+        position: 1920x0
+        mode: 1920x1080@60
+        status-bars:
+          - external-bottom
+
+  # Ultra-wide setup
+  - name: Ultrawide
+    monitors:
+      - display: eDP-1
+        position: 3440x0
+        status-bar: laptop-bar
+      
+      - display: "d:LG/34GN850"
+        position: 0x0
+        mode: 3440x1440@144
+        status-bars:
+          - ultrawide-left  # Vertical bar on left side
+          - external-bottom  # Horizontal bar on bottom
+
+  # Presentation mode - only external projector
+  - name: Presentation
+    monitors:
+      - display: "d:Projector"
+        position: 0x0
+        mode: 1920x1080@60
+        # No status bars for clean presentation!
+
+  # Triple monitor setup - no status bars, minimal setup
+  - name: Trading
+    monitors:
+      - display: "m:Dell Inc./U2415"
+        position: 0x0
+        transform: 90  # Portrait mode
+        # No status bar
+      
+      - display: "m:Dell Inc./U2415"
+        position: 1200x0
+        # No status bar - max screen real estate
+      
+      - display: "m:Dell Inc./U2415"
+        position: 3120x0
+        transform: 90  # Portrait mode
+        # No status bar

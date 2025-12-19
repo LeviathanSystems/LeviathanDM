@@ -27,6 +27,10 @@ bool ConfigParser::Load(const std::string& config_path) {
             ParsePlugins(config["plugins"]);
         }
         
+        if (config["status-bars"]) {
+            ParseStatusBars(config["status-bars"]);
+        }
+        
         if (config["monitor-groups"]) {
             ParseMonitorGroups(config["monitor-groups"]);
         }
@@ -71,6 +75,14 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
         
         if (config["plugins"]) {
             ParsePlugins(config["plugins"]);
+        }
+        
+        if (config["status-bars"]) {
+            ParseStatusBars(config["status-bars"]);
+        }
+        
+        if (config["monitor-groups"]) {
+            ParseMonitorGroups(config["monitor-groups"]);
         }
         
         LOG_INFO("Loaded configuration with includes from: {}", main_config);
@@ -346,6 +358,115 @@ void ConfigParser::HexToRGBA(const std::string& hex, float rgba[4]) {
     }
 }
 
+void ConfigParser::ParseStatusBars(const YAML::Node& node) {
+    if (!node.IsSequence()) {
+        LOG_WARN("status-bars should be a sequence");
+        return;
+    }
+    
+    status_bars.bars.clear();
+    
+    for (const auto& bar_node : node) {
+        StatusBarConfig bar;
+        
+        // Parse name (required)
+        if (bar_node["name"]) {
+            bar.name = bar_node["name"].as<std::string>();
+        } else {
+            LOG_WARN("Status bar missing 'name', skipping");
+            continue;
+        }
+        
+        // Parse position
+        if (bar_node["position"]) {
+            std::string pos = bar_node["position"].as<std::string>();
+            if (pos == "top") {
+                bar.position = StatusBarConfig::Position::Top;
+            } else if (pos == "bottom") {
+                bar.position = StatusBarConfig::Position::Bottom;
+            } else if (pos == "left") {
+                bar.position = StatusBarConfig::Position::Left;
+            } else if (pos == "right") {
+                bar.position = StatusBarConfig::Position::Right;
+            } else {
+                LOG_WARN("Unknown status bar position '{}', using top", pos);
+            }
+        }
+        
+        // Parse dimensions
+        if (bar_node["height"]) {
+            bar.height = bar_node["height"].as<int>();
+        }
+        if (bar_node["width"]) {
+            bar.width = bar_node["width"].as<int>();
+        }
+        
+        // Parse appearance
+        if (bar_node["background_color"]) {
+            bar.background_color = bar_node["background_color"].as<std::string>();
+        }
+        if (bar_node["foreground_color"]) {
+            bar.foreground_color = bar_node["foreground_color"].as<std::string>();
+        }
+        if (bar_node["font_size"]) {
+            bar.font_size = bar_node["font_size"].as<int>();
+        }
+        if (bar_node["font_family"]) {
+            bar.font_family = bar_node["font_family"].as<std::string>();
+        }
+        
+        // Parse widget containers
+        auto parse_container = [](const YAML::Node& container_node, ContainerConfig& container) {
+            if (!container_node.IsDefined()) {
+                return;
+            }
+            
+            if (container_node["spacing"]) {
+                container.spacing = container_node["spacing"].as<int>();
+            }
+            if (container_node["alignment"]) {
+                container.alignment = container_node["alignment"].as<std::string>();
+            }
+            if (container_node["padding"]) {
+                container.padding = container_node["padding"].as<int>();
+            }
+            
+            // Parse widgets
+            if (container_node["widgets"] && container_node["widgets"].IsSequence()) {
+                for (const auto& widget_node : container_node["widgets"]) {
+                    WidgetConfig widget;
+                    
+                    if (widget_node["type"]) {
+                        widget.type = widget_node["type"].as<std::string>();
+                    } else {
+                        LOG_WARN("Widget missing 'type', skipping");
+                        continue;
+                    }
+                    
+                    // Parse all other properties as string key-value pairs
+                    for (const auto& prop : widget_node) {
+                        std::string key = prop.first.as<std::string>();
+                        if (key != "type") {
+                            widget.properties[key] = prop.second.as<std::string>();
+                        }
+                    }
+                    
+                    container.widgets.push_back(widget);
+                }
+            }
+        };
+        
+        parse_container(bar_node["left"], bar.left);
+        parse_container(bar_node["center"], bar.center);
+        parse_container(bar_node["right"], bar.right);
+        
+        status_bars.bars.push_back(bar);
+        LOG_DEBUG("Loaded status bar config: '{}'", bar.name);
+    }
+    
+    LOG_INFO("Loaded {} status bar configuration(s)", status_bars.bars.size());
+}
+
 void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
     if (!node.IsSequence()) {
         LOG_WARN("monitor-groups should be a sequence");
@@ -401,6 +522,16 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
                 } else {
                     LOG_WARN("Monitor config missing 'display' or 'id', skipping");
                     continue;
+                }
+                
+                // Parse status bars assigned to this monitor
+                if (mon_node["status-bars"] && mon_node["status-bars"].IsSequence()) {
+                    for (const auto& bar_name : mon_node["status-bars"]) {
+                        mon.status_bars.push_back(bar_name.as<std::string>());
+                    }
+                } else if (mon_node["status-bar"]) {
+                    // Allow single status bar as string
+                    mon.status_bars.push_back(mon_node["status-bar"].as<std::string>());
                 }
                 
                 // Parse position (e.g., "1920x0" or "0x1080")
@@ -527,6 +658,15 @@ const MonitorGroup* MonitorGroupsConfig::FindMatchingGroup(
     
     // No specific group matched, return default
     return GetDefaultGroup();
+}
+
+const StatusBarConfig* StatusBarsConfig::FindByName(const std::string& name) const {
+    for (const auto& bar : bars) {
+        if (bar.name == name) {
+            return &bar;
+        }
+    }
+    return nullptr;
 }
 
 } // namespace Leviathan

@@ -10,6 +10,7 @@ LeviathanDM is a Wayland compositor built on wlroots 0.19, designed for tiling w
 - [Tag-Based Workspaces](#tag-based-workspaces)
 - [Tiling Layout Engine](#tiling-layout-engine)
 - [Monitor Groups](#monitor-groups)
+- [Status Bars](#status-bars)
 - [Widget Plugin System](#widget-plugin-system)
 
 ---
@@ -391,6 +392,163 @@ When outputs connect/disconnect, the compositor:
 2. Finds best matching monitor group
 3. Applies positions, modes, scales, and transforms
 4. Falls back to "Default" group if no match
+
+---
+
+## Status Bars
+
+### Per-Monitor Status Bar Configuration
+
+Status bars in LeviathanDM are highly flexible and can be configured per-monitor with multiple bars per screen.
+
+### Key Features
+
+1. **Named Status Bars**: Define status bars with unique names
+2. **Multiple Positions**: top, bottom, left, right
+3. **Per-Monitor Assignment**: Different monitors get different bars
+4. **Multiple Bars Per Monitor**: A monitor can have top + bottom bars simultaneously
+5. **Reserved Space**: Bars automatically reserve space from tiling area
+6. **Widget System**: Three-section layout (left, center, right) with plugin support
+
+### Configuration Structure
+
+```yaml
+# Define status bars
+status-bars:
+  - name: laptop-bar
+    position: top
+    height: 30
+    background_color: "#2E3440"
+    foreground_color: "#D8DEE9"
+    
+    left:
+      widgets:
+        - type: workspaces
+        - type: window-title
+    center:
+      widgets:
+        - type: clock
+          format: "%H:%M"
+    right:
+      widgets:
+        - type: battery
+
+  - name: external-bottom
+    position: bottom
+    height: 25
+    # ...
+
+# Assign to monitors
+monitor-groups:
+  - name: Home
+    monitors:
+      - display: eDP-1
+        status-bars:
+          - laptop-bar
+      
+      - display: HDMI-A-1
+        status-bars:
+          - external-bottom
+          - external-top  # Multiple bars!
+```
+
+### Reserved Space Integration
+
+When status bars are created, they register with the LayerManager:
+
+```cpp
+// Example: Top bar (30px) + Bottom bar (25px)
+ReservedSpace {
+    .top = 30,
+    .bottom = 25,
+    .left = 0,
+    .right = 0
+};
+
+// Usable area for tiling windows is reduced by 55px
+```
+
+### Status Bar Lifecycle
+
+```
+1. Output connects
+   ↓
+2. Find MonitorConfig
+   ↓
+3. For each bar in status_bars list:
+   a. Lookup StatusBarConfig by name
+   b. Create StatusBar instance
+   c. Reserve space in LayerManager
+   d. Create widget instances
+   e. Render in WorkingArea layer
+   ↓
+4. TileViews() uses reduced usable area
+```
+
+### Widget Sections
+
+Each status bar has three sections:
+
+**Horizontal Bars (top/bottom):**
+- `left`: Widgets aligned to left edge
+- `center`: Widgets centered
+- `right`: Widgets aligned to right edge
+
+**Vertical Bars (left/right):**
+- `left`: Widgets at top (confusing but consistent naming)
+- `center`: Widgets in middle
+- `right`: Widgets at bottom
+
+### Example: Multiple Bars
+
+```yaml
+status-bars:
+  - name: info-bar
+    position: top
+    height: 28
+    left:
+      widgets:
+        - type: workspaces
+    center:
+      widgets:
+        - type: window-title
+  
+  - name: system-bar
+    position: bottom
+    height: 24
+    left:
+      widgets:
+        - type: cpu
+        - type: memory
+    right:
+      widgets:
+        - type: network
+
+monitor-groups:
+  - name: Default
+    monitors:
+      - display: eDP-1
+        status-bars:
+          - info-bar
+          - system-bar
+```
+
+Result:
+```
+┌─────────────────────────────────┐
+│ [workspaces] [window-title]     │ ← info-bar (28px)
+├─────────────────────────────────┤
+│                                 │
+│      Tiled Windows              │
+│      (1920x668 usable)          │
+│                                 │
+├─────────────────────────────────┤
+│ [cpu][mem]         [network]    │ ← system-bar (24px)
+└─────────────────────────────────┘
+  Total reserved: 52px
+```
+
+For detailed status bar documentation, see `docs/STATUS_BARS.md`.
 
 ---
 

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
+#include <string>
 
 // Forward declarations
 struct wlr_scene;
@@ -14,6 +15,8 @@ namespace Leviathan {
 
 // Forward declarations
 class TilingLayout;
+struct StatusBarsConfig;
+class StatusBar;
 
 namespace Core {
     class Tag;
@@ -91,10 +94,23 @@ public:
                    Core::Tag* tag,
                    TilingLayout* layout_engine);
     
+    // Status bar management
+    void AddStatusBar(Leviathan::StatusBar* bar);
+    void RemoveStatusBar(Leviathan::StatusBar* bar);
+    const std::vector<Leviathan::StatusBar*>& GetStatusBars() const { return status_bars_; }
+    
+    // Create status bars from configuration
+    // Takes a list of status bar names and the full config
+    void CreateStatusBars(const std::vector<std::string>& bar_names,
+                         const StatusBarsConfig& all_bars_config,
+                         uint32_t output_width,
+                         uint32_t output_height);
+    
 private:
     struct wlr_scene_tree* layers_[static_cast<size_t>(Layer::COUNT)];
     ReservedSpace reserved_space_;
     struct wlr_output* output_;  // The output this manager belongs to
+    std::vector<Leviathan::StatusBar*> status_bars_;  // Status bars on this output
 };
 
 } // namespace Wayland

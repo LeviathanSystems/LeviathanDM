@@ -1,418 +1,134 @@
-[2025-12-19 16:20:25.877] [info] [:] Logger initialized - writing to console and leviathan.log
-[2025-12-19 16:20:25.878] [info] [:] LeviathanDM - Wayland Compositor
-[2025-12-19 16:20:25.880] [debug] [:] Mouse speed: 0.5
-[2025-12-19 16:20:25.881] [debug] [:] Terminal: alacritty
-[2025-12-19 16:20:25.881] [debug] [:] Using default plugin paths
-[2025-12-19 16:20:25.881] [info] [:] Plugin search path: /home/romeo/.config/leviathan/plugins
-[2025-12-19 16:20:25.881] [info] [:] Plugin search path: /usr/local/lib/leviathan/plugins
-[2025-12-19 16:20:25.881] [info] [:] Plugin search path: /usr/lib/leviathan/plugins
-[2025-12-19 16:20:25.881] [debug] [:] Plugin: ClockWidget
-[2025-12-19 16:20:25.881] [debug] [:]   format: %H:%M:%S
-[2025-12-19 16:20:25.881] [debug] [:]   update_interval: 1
-[2025-12-19 16:20:25.881] [debug] [:]   font_size: 12
-[2025-12-19 16:20:25.882] [info] [:] Loaded configuration with includes from: /home/romeo/.config/leviathan/leviathan.yaml
-[2025-12-19 16:20:25.882] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-12-19 16:20:25.882] [info] [:] Loading Widget Plugins
-[2025-12-19 16:20:25.882] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-12-19 16:20:25.882] [info] [:] Searching for plugins in: /home/romeo/.config/leviathan/plugins
-[2025-12-19 16:20:25.882] [info] [:] Discovering widget plugins in: /home/romeo/.config/leviathan/plugins
-[2025-12-19 16:20:25.883] [info] [:] Loading widget plugin: /home/romeo/.config/leviathan/plugins/clock-widget.so
-[2025-12-19 16:20:25.884] [info] [:] Successfully loaded plugin: ClockWidget v1.0.0 by LeviathanDM
-[2025-12-19 16:20:25.884] [debug] [:] Plugin description: Displays current time with configurable format
-[2025-12-19 16:20:25.884] [info] [:] Discovered and loaded 1 widget plugins from /home/romeo/.config/leviathan/plugins
-[2025-12-19 16:20:25.885] [info] [:] Searching for plugins in: /usr/local/lib/leviathan/plugins
-[2025-12-19 16:20:25.885] [info] [:] Discovering widget plugins in: /usr/local/lib/leviathan/plugins
-[2025-12-19 16:20:25.885] [warning] [:] Plugin directory does not exist: /usr/local/lib/leviathan/plugins
-[2025-12-19 16:20:25.885] [info] [:] Searching for plugins in: /usr/lib/leviathan/plugins
-[2025-12-19 16:20:25.885] [info] [:] Discovering widget plugins in: /usr/lib/leviathan/plugins
-[2025-12-19 16:20:25.885] [warning] [:] Plugin directory does not exist: /usr/lib/leviathan/plugins
-[2025-12-19 16:20:25.885] [info] [:] Loaded 1 plugin(s):
-[2025-12-19 16:20:25.885] [info] [:]   ✓ ClockWidget v1.0.0 by LeviathanDM
-[2025-12-19 16:20:25.885] [info] [:]     Displays current time with configurable format
-[2025-12-19 16:20:25.885] [info] [:] Creating 1 plugin instance(s) from config...
-[2025-12-19 16:20:25.886] [info] [:] Initializing: ClockWidget
-[2025-12-19 16:20:25.887] [debug] [:]   Configuration:
-[2025-12-19 16:20:25.887] [debug] [:]     font_size: 12
-[2025-12-19 16:20:25.888] [debug] [:]     format: %H:%M:%S
-[2025-12-19 16:20:25.890] [debug] [:]     update_interval: 1
-[2025-12-19 16:20:25.891] [debug] [:] Created instance of plugin widget: ClockWidget
-[2025-12-19 16:20:25.892] [info] [:]   ✓ Successfully initialized ClockWidget
-[2025-12-19 16:20:26.891] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-12-19 16:20:26.892] [info] [:] Starting compositor...
-[2025-12-19 16:20:27.136] [info] [:] Layer shell v1 initialized
-[2025-12-19 16:20:27.154] [info] [:] Session detected - VT switching will be available
-[2025-12-19 16:20:27.154] [debug] [:] Border colors - Focused: #ff0000, Unfocused: #3B4252
-[2025-12-19 16:20:27.154] [info] [:] Tag '1' visibility changed to: false
-[2025-12-19 16:20:27.154] [debug] [:] Tag has 0 clients
-[2025-12-19 16:20:27.154] [info] [:] Tag '1' visibility changed to: true
-[2025-12-19 16:20:27.154] [debug] [:] Tag has 0 clients
-[2025-12-19 16:20:27.154] [info] [:] IPC server listening on /run/user/1000/leviathan-ipc.sock
-[2025-12-19 16:20:27.222] [info] [:] New input device: Video Bus
-[2025-12-19 16:20:27.226] [info] [:] New input device: Video Bus
-[2025-12-19 16:20:27.228] [info] [:] New input device: Power Button
-[2025-12-19 16:20:27.230] [info] [:] New input device: Lid Switch
-[2025-12-19 16:20:27.230] [info] [:] New input device: DELL0A69:00 0488:120A Mouse
-[2025-12-19 16:20:27.230] [info] [:] Set pointer speed to 0.5 for device: DELL0A69:00 0488:120A Mouse
-[2025-12-19 16:20:27.230] [info] [:] New input device: DELL0A69:00 0488:120A Touchpad
-[2025-12-19 16:20:27.230] [info] [:] Set pointer speed to 0.5 for device: DELL0A69:00 0488:120A Touchpad
-[2025-12-19 16:20:27.230] [info] [:] New input device: DELL0A69:00 0488:120A UNKNOWN
-[2025-12-19 16:20:27.233] [info] [:] New input device: Intel HID events
-[2025-12-19 16:20:27.235] [info] [:] New input device: Intel HID 5 button array
-[2025-12-19 16:20:27.238] [info] [:] New input device: Dell Privacy Driver
-[2025-12-19 16:20:27.240] [info] [:] New input device: Dell WMI hotkeys
-[2025-12-19 16:20:27.242] [info] [:] New input device: AT Translated Set 2 keyboard
-[2025-12-19 16:20:27.245] [info] [:] New input device: PS/2 Generic Mouse
-[2025-12-19 16:20:27.245] [info] [:] Set pointer speed to 0.5 for device: PS/2 Generic Mouse
-[2025-12-19 16:20:27.248] [info] [:] New output: eDP-1
-[2025-12-19 16:20:28.473] [debug] [:] Added Output to outputs list
-[2025-12-19 16:20:28.473] [info] [:] Created scene output for 'eDP-1' at 0x564fa5f03df0
-[2025-12-19 16:20:28.474] [info] [:] Screen: eDP-1 - AU Optronics 0x23ED (eDP-1)
-[2025-12-19 16:20:28.474] [debug] [:]   Resolution: 1920x1080 @ 1.0x
-[2025-12-19 16:20:28.474] [debug] [:]   Physical Size: 340mm x 190mm
-[2025-12-19 16:20:28.474] [info] [:] Added screen 'eDP-1' to core seat
-[2025-12-19 16:20:28.474] [info] [:] Created per-output layer hierarchy for 'eDP-1':
-[2025-12-19 16:20:28.474] [info] [:]   - Background layer: 0x564fa6f8c520
-[2025-12-19 16:20:28.474] [info] [:]   - Working area layer: 0x564fa6f23b10
-[2025-12-19 16:20:28.474] [info] [:]   - Top layer: 0x564fa6f64cc0
-[2025-12-19 16:20:28.474] [info] [:] Created LayerManager for output 'eDP-1'
-[2025-12-19 16:20:28.474] [info] [:] Connected output 'eDP-1' to scene layout
-[2025-12-19 16:20:28.474] [info] [:] Registered frame listener for output 'eDP-1'
-[2025-12-19 16:20:28.474] [info] [:] Output 'eDP-1' fully configured and enabled
-[2025-12-19 16:20:28.474] [warning] [:] No matching monitor group found, using auto-configuration
-[2025-12-19 16:20:28.479] [debug] [:] TileViews() called
-[2025-12-19 16:20:28.479] [debug] [:] TileViews: Active tag has 0 clients
-[2025-12-19 16:20:28.479] [debug] [:] TileViews: 0 tiled views after filtering
-[2025-12-19 16:20:28.479] [debug] [:] TileViews: No tiled views, returning
-[2025-12-19 16:20:28.485] [info] [:] Running compositor on WAYLAND_DISPLAY=wayland-0
-[2025-12-19 16:20:28.488] [info] [:] Launched alacritty terminal (PID: 42003)
-[2025-12-19 16:20:28.664] [info] [:] OnNewXdgToplevel called - this is the proper signal!
-[2025-12-19 16:20:28.664] [debug] [:] Toplevel pointer: 0x564fa6d5e6b0, base surface: 0x564fa7000b90
-[2025-12-19 16:20:28.664] [debug] [:] Created scene tree for toplevel view
-[2025-12-19 16:20:28.664] [debug] [:] Surface initialized: false
-[2025-12-19 16:20:28.664] [info] [:] Added client to tag '1' (total clients: 1)
-[2025-12-19 16:20:28.664] [debug] [:]   - Enabled scene node for new client (tag is visible)
-[2025-12-19 16:20:28.664] [info] [:] Toplevel view fully initialized and added to active tag
-[2025-12-19 16:20:28.664] [info] [:] New XDG decoration request for toplevel=0x564fa6d5e6b0
-[2025-12-19 16:20:28.664] [info] [:] Associated decoration with view=0x564fa6dbf2b0, will set mode after surface init
-[2025-12-19 16:20:28.664] [info] [:] Initial commit received for view=0x564fa6dbf2b0, sending configure
-[2025-12-19 16:20:28.664] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
-[2025-12-19 16:20:28.708] [info] [:] View mapped! view=0x564fa6dbf2b0, xdg_toplevel=0x564fa6d5e6b0
-[2025-12-19 16:20:28.708] [debug] [:] Raised scene tree to top and enabled it
-[2025-12-19 16:20:28.708] [debug] [:] Gave keyboard focus to newly mapped view
-[2025-12-19 16:20:28.708] [debug] [:] TileViews() called
-[2025-12-19 16:20:28.708] [debug] [:] TileViews: Active tag has 1 clients
-[2025-12-19 16:20:28.708] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:28.708] [debug] [:] TileViews: 1 tiled views after filtering
-[2025-12-19 16:20:28.708] [info] [:] Tiling 1 views on output 'eDP-1'
-[2025-12-19 16:20:28.708] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:28.709] [debug] [:] Tiling 1 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:28.709] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1920,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:28.709] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:28.709] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:30.391] [debug] [:] No keybinding for: Super+q
-[2025-12-19 16:20:31.154] [info] [:] Keybinding triggered: Super+Return
-[2025-12-19 16:20:31.261] [info] [:] OnNewXdgToplevel called - this is the proper signal!
-[2025-12-19 16:20:31.261] [debug] [:] Toplevel pointer: 0x564fa6d5f2e0, base surface: 0x564fa70007d0
-[2025-12-19 16:20:31.261] [debug] [:] Created scene tree for toplevel view
-[2025-12-19 16:20:31.261] [debug] [:] Surface initialized: false
-[2025-12-19 16:20:31.261] [info] [:] Added client to tag '1' (total clients: 2)
-[2025-12-19 16:20:31.261] [debug] [:]   - Enabled scene node for new client (tag is visible)
-[2025-12-19 16:20:31.261] [info] [:] Toplevel view fully initialized and added to active tag
-[2025-12-19 16:20:31.261] [info] [:] New XDG decoration request for toplevel=0x564fa6d5f2e0
-[2025-12-19 16:20:31.261] [info] [:] Associated decoration with view=0x564fa6d87120, will set mode after surface init
-[2025-12-19 16:20:31.261] [info] [:] Initial commit received for view=0x564fa6d87120, sending configure
-[2025-12-19 16:20:31.261] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
-[2025-12-19 16:20:31.353] [info] [:] View mapped! view=0x564fa6d87120, xdg_toplevel=0x564fa6d5f2e0
-[2025-12-19 16:20:31.353] [debug] [:] Raised scene tree to top and enabled it
-[2025-12-19 16:20:31.353] [debug] [:] Gave keyboard focus to newly mapped view
-[2025-12-19 16:20:31.353] [debug] [:] TileViews() called
-[2025-12-19 16:20:31.353] [debug] [:] TileViews: Active tag has 2 clients
-[2025-12-19 16:20:31.353] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:31.353] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:31.353] [debug] [:] TileViews: 2 tiled views after filtering
-[2025-12-19 16:20:31.353] [info] [:] Tiling 2 views on output 'eDP-1'
-[2025-12-19 16:20:31.353] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:31.353] [debug] [:] Tiling 2 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:31.353] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:31.353] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:31.353] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:31.353] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,1080), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:31.353] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:31.353] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:32.020] [info] [:] Keybinding triggered: Super+Return
-[2025-12-19 16:20:32.097] [info] [:] OnNewXdgToplevel called - this is the proper signal!
-[2025-12-19 16:20:32.097] [debug] [:] Toplevel pointer: 0x564fa6d5f7e0, base surface: 0x564fa6ea7230
-[2025-12-19 16:20:32.097] [debug] [:] Created scene tree for toplevel view
-[2025-12-19 16:20:32.097] [debug] [:] Surface initialized: false
-[2025-12-19 16:20:32.097] [info] [:] Added client to tag '1' (total clients: 3)
-[2025-12-19 16:20:32.097] [debug] [:]   - Enabled scene node for new client (tag is visible)
-[2025-12-19 16:20:32.097] [info] [:] Toplevel view fully initialized and added to active tag
-[2025-12-19 16:20:32.097] [info] [:] New XDG decoration request for toplevel=0x564fa6d5f7e0
-[2025-12-19 16:20:32.097] [info] [:] Associated decoration with view=0x564fa6dc2e30, will set mode after surface init
-[2025-12-19 16:20:32.097] [info] [:] Initial commit received for view=0x564fa6dc2e30, sending configure
-[2025-12-19 16:20:32.097] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
-[2025-12-19 16:20:32.165] [info] [:] View mapped! view=0x564fa6dc2e30, xdg_toplevel=0x564fa6d5f7e0
-[2025-12-19 16:20:32.165] [debug] [:] Raised scene tree to top and enabled it
-[2025-12-19 16:20:32.165] [debug] [:] Gave keyboard focus to newly mapped view
-[2025-12-19 16:20:32.165] [debug] [:] TileViews() called
-[2025-12-19 16:20:32.165] [debug] [:] TileViews: Active tag has 3 clients
-[2025-12-19 16:20:32.165] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:32.165] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:32.165] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:32.165] [debug] [:] TileViews: 3 tiled views after filtering
-[2025-12-19 16:20:32.165] [info] [:] Tiling 3 views on output 'eDP-1'
-[2025-12-19 16:20:32.165] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:32.165] [debug] [:] Tiling 3 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:32.165] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:32.165] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:32.165] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:32.165] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,540), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:32.165] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:32.165] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:32.165] [debug] [:] MoveResizeView: view=0x564fa6dc2e30, pos=(1056,540), size=(864,540), scene_tree=0x564fa6f23d50
-[2025-12-19 16:20:32.165] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:32.165] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:32.729] [info] [:] Keybinding triggered: Super+Return
-[2025-12-19 16:20:32.773] [info] [:] OnNewXdgToplevel called - this is the proper signal!
-[2025-12-19 16:20:32.773] [debug] [:] Toplevel pointer: 0x564fa6d5fcd0, base surface: 0x564fa6e73680
-[2025-12-19 16:20:32.773] [debug] [:] Created scene tree for toplevel view
-[2025-12-19 16:20:32.773] [debug] [:] Surface initialized: false
-[2025-12-19 16:20:32.773] [info] [:] Added client to tag '1' (total clients: 4)
-[2025-12-19 16:20:32.773] [debug] [:]   - Enabled scene node for new client (tag is visible)
-[2025-12-19 16:20:32.773] [info] [:] Toplevel view fully initialized and added to active tag
-[2025-12-19 16:20:32.773] [info] [:] New XDG decoration request for toplevel=0x564fa6d5fcd0
-[2025-12-19 16:20:32.773] [info] [:] Associated decoration with view=0x564fa6dbe4f0, will set mode after surface init
-[2025-12-19 16:20:32.773] [info] [:] Initial commit received for view=0x564fa6dbe4f0, sending configure
-[2025-12-19 16:20:32.773] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
-[2025-12-19 16:20:32.839] [info] [:] View mapped! view=0x564fa6dbe4f0, xdg_toplevel=0x564fa6d5fcd0
-[2025-12-19 16:20:32.839] [debug] [:] Raised scene tree to top and enabled it
-[2025-12-19 16:20:32.839] [debug] [:] Gave keyboard focus to newly mapped view
-[2025-12-19 16:20:32.839] [debug] [:] TileViews() called
-[2025-12-19 16:20:32.839] [debug] [:] TileViews: Active tag has 4 clients
-[2025-12-19 16:20:32.839] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:32.839] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:32.839] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:32.839] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:32.839] [debug] [:] TileViews: 4 tiled views after filtering
-[2025-12-19 16:20:32.839] [info] [:] Tiling 4 views on output 'eDP-1'
-[2025-12-19 16:20:32.839] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:32.839] [debug] [:] Tiling 4 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:32.839] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:32.839] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:32.839] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:32.839] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,360), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:32.839] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:32.839] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:32.839] [debug] [:] MoveResizeView: view=0x564fa6dc2e30, pos=(1056,360), size=(864,360), scene_tree=0x564fa6f23d50
-[2025-12-19 16:20:32.839] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:32.839] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:32.839] [debug] [:] MoveResizeView: view=0x564fa6dbe4f0, pos=(1056,720), size=(864,360), scene_tree=0x564fa6f88e10
-[2025-12-19 16:20:32.839] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:32.839] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:33.406] [info] [:] Keybinding triggered: Super+Return
-[2025-12-19 16:20:33.484] [info] [:] OnNewXdgToplevel called - this is the proper signal!
-[2025-12-19 16:20:33.484] [debug] [:] Toplevel pointer: 0x564fa6d60210, base surface: 0x564fa7003250
-[2025-12-19 16:20:33.484] [debug] [:] Created scene tree for toplevel view
-[2025-12-19 16:20:33.484] [debug] [:] Surface initialized: false
-[2025-12-19 16:20:33.484] [info] [:] Added client to tag '1' (total clients: 5)
-[2025-12-19 16:20:33.484] [debug] [:]   - Enabled scene node for new client (tag is visible)
-[2025-12-19 16:20:33.484] [info] [:] Toplevel view fully initialized and added to active tag
-[2025-12-19 16:20:33.484] [info] [:] New XDG decoration request for toplevel=0x564fa6d60210
-[2025-12-19 16:20:33.484] [info] [:] Associated decoration with view=0x564fa6da0240, will set mode after surface init
-[2025-12-19 16:20:33.484] [info] [:] Initial commit received for view=0x564fa6da0240, sending configure
-[2025-12-19 16:20:33.484] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
-[2025-12-19 16:20:33.569] [info] [:] View mapped! view=0x564fa6da0240, xdg_toplevel=0x564fa6d60210
-[2025-12-19 16:20:33.569] [debug] [:] Raised scene tree to top and enabled it
-[2025-12-19 16:20:33.569] [debug] [:] Gave keyboard focus to newly mapped view
-[2025-12-19 16:20:33.569] [debug] [:] TileViews() called
-[2025-12-19 16:20:33.569] [debug] [:] TileViews: Active tag has 5 clients
-[2025-12-19 16:20:33.569] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:33.569] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:33.569] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:33.569] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:33.569] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:33.569] [debug] [:] TileViews: 5 tiled views after filtering
-[2025-12-19 16:20:33.569] [info] [:] Tiling 5 views on output 'eDP-1'
-[2025-12-19 16:20:33.569] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:33.569] [debug] [:] Tiling 5 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:33.569] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:33.569] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:33.569] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:33.569] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,270), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:33.569] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:33.569] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:33.569] [debug] [:] MoveResizeView: view=0x564fa6dc2e30, pos=(1056,270), size=(864,270), scene_tree=0x564fa6f23d50
-[2025-12-19 16:20:33.569] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:33.569] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:33.569] [debug] [:] MoveResizeView: view=0x564fa6dbe4f0, pos=(1056,540), size=(864,270), scene_tree=0x564fa6f88e10
-[2025-12-19 16:20:33.569] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:33.569] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:33.569] [debug] [:] MoveResizeView: view=0x564fa6da0240, pos=(1056,810), size=(864,270), scene_tree=0x564fa6f8e9b0
-[2025-12-19 16:20:33.569] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:33.569] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.778] [info] [:] Keybinding triggered: Super+Shift+C
-[2025-12-19 16:20:34.788] [info] [:] View unmapped! view=0x564fa6da0240
-[2025-12-19 16:20:34.788] [debug] [:] TileViews() called
-[2025-12-19 16:20:34.788] [debug] [:] TileViews: Active tag has 5 clients
-[2025-12-19 16:20:34.788] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.788] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.788] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.788] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.788] [debug] [:]   Client view: mapped=false, floating=false, fullscreen=false
-[2025-12-19 16:20:34.788] [debug] [:] TileViews: 4 tiled views after filtering
-[2025-12-19 16:20:34.788] [info] [:] Tiling 4 views on output 'eDP-1'
-[2025-12-19 16:20:34.788] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:34.788] [debug] [:] Tiling 4 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:34.788] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:34.788] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.788] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.789] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,360), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:34.789] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.789] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.789] [debug] [:] MoveResizeView: view=0x564fa6dc2e30, pos=(1056,360), size=(864,360), scene_tree=0x564fa6f23d50
-[2025-12-19 16:20:34.789] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.789] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.789] [debug] [:] MoveResizeView: view=0x564fa6dbe4f0, pos=(1056,720), size=(864,360), scene_tree=0x564fa6f88e10
-[2025-12-19 16:20:34.789] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.789] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.789] [debug] [:] View destructor called for 0x564fa6da0240
-[2025-12-19 16:20:34.789] [debug] [:] RemoveView: Cleaning up view 0x564fa6da0240
-[2025-12-19 16:20:34.789] [debug] [:] Removed view from server's view list, 4 views remaining
-[2025-12-19 16:20:34.789] [debug] [:] Cleared focused_view since it was the destroyed view
-[2025-12-19 16:20:34.789] [debug] [:] Found client for view, removing from seat
-[2025-12-19 16:20:34.789] [debug] [:] TileViews() called
-[2025-12-19 16:20:34.789] [debug] [:] TileViews: Active tag has 4 clients
-[2025-12-19 16:20:34.789] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.789] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.789] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.789] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:34.789] [debug] [:] TileViews: 4 tiled views after filtering
-[2025-12-19 16:20:34.789] [info] [:] Tiling 4 views on output 'eDP-1'
-[2025-12-19 16:20:34.789] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:34.789] [debug] [:] Tiling 4 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:34.789] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:34.789] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.789] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.789] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,360), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:34.789] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.789] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.789] [debug] [:] MoveResizeView: view=0x564fa6dc2e30, pos=(1056,360), size=(864,360), scene_tree=0x564fa6f23d50
-[2025-12-19 16:20:34.789] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.789] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:34.789] [debug] [:] MoveResizeView: view=0x564fa6dbe4f0, pos=(1056,720), size=(864,360), scene_tree=0x564fa6f88e10
-[2025-12-19 16:20:34.789] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:34.789] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:35.005] [info] [:] Keybinding triggered: Super+Shift+C
-[2025-12-19 16:20:35.357] [info] [:] Keybinding triggered: Super+Shift+C
-[2025-12-19 16:20:36.547] [info] [:] Keybinding triggered: Super+Shift+C
-[2025-12-19 16:20:36.549] [info] [:] View unmapped! view=0x564fa6dbe4f0
-[2025-12-19 16:20:36.584] [debug] [:] TileViews() called
-[2025-12-19 16:20:36.584] [debug] [:] TileViews: Active tag has 4 clients
-[2025-12-19 16:20:36.584] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:36.584] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:36.584] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:36.584] [debug] [:]   Client view: mapped=false, floating=false, fullscreen=false
-[2025-12-19 16:20:36.584] [debug] [:] TileViews: 3 tiled views after filtering
-[2025-12-19 16:20:36.584] [info] [:] Tiling 3 views on output 'eDP-1'
-[2025-12-19 16:20:36.584] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:36.584] [debug] [:] Tiling 3 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:36.584] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:36.584] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:36.585] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:36.585] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,540), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:36.585] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:36.585] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:36.585] [debug] [:] MoveResizeView: view=0x564fa6dc2e30, pos=(1056,540), size=(864,540), scene_tree=0x564fa6f23d50
-[2025-12-19 16:20:36.585] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:36.585] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:36.585] [debug] [:] View destructor called for 0x564fa6dbe4f0
-[2025-12-19 16:20:36.585] [debug] [:] RemoveView: Cleaning up view 0x564fa6dbe4f0
-[2025-12-19 16:20:36.585] [debug] [:] Removed view from server's view list, 3 views remaining
-[2025-12-19 16:20:36.585] [debug] [:] Cleared focused_view since it was the destroyed view
-[2025-12-19 16:20:36.585] [debug] [:] Found client for view, removing from seat
-[2025-12-19 16:20:36.585] [debug] [:] TileViews() called
-[2025-12-19 16:20:36.585] [debug] [:] TileViews: Active tag has 3 clients
-[2025-12-19 16:20:36.585] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:36.585] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:36.585] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:36.585] [debug] [:] TileViews: 3 tiled views after filtering
-[2025-12-19 16:20:36.585] [info] [:] Tiling 3 views on output 'eDP-1'
-[2025-12-19 16:20:36.585] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:36.585] [debug] [:] Tiling 3 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:36.585] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:36.585] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:36.585] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:36.585] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,540), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:36.585] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:36.585] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:36.585] [debug] [:] MoveResizeView: view=0x564fa6dc2e30, pos=(1056,540), size=(864,540), scene_tree=0x564fa6f23d50
-[2025-12-19 16:20:36.585] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:36.585] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:37.499] [info] [:] Keybinding triggered: Super+Shift+C
-[2025-12-19 16:20:37.501] [info] [:] View unmapped! view=0x564fa6dc2e30
-[2025-12-19 16:20:37.501] [debug] [:] TileViews() called
-[2025-12-19 16:20:37.501] [debug] [:] TileViews: Active tag has 3 clients
-[2025-12-19 16:20:37.501] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:37.501] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:37.501] [debug] [:]   Client view: mapped=false, floating=false, fullscreen=false
-[2025-12-19 16:20:37.501] [debug] [:] TileViews: 2 tiled views after filtering
-[2025-12-19 16:20:37.501] [info] [:] Tiling 2 views on output 'eDP-1'
-[2025-12-19 16:20:37.501] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:37.501] [debug] [:] Tiling 2 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:37.501] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:37.501] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:37.501] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:37.501] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,1080), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:37.501] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:37.501] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:37.501] [debug] [:] View destructor called for 0x564fa6dc2e30
-[2025-12-19 16:20:37.501] [debug] [:] RemoveView: Cleaning up view 0x564fa6dc2e30
-[2025-12-19 16:20:37.501] [debug] [:] Removed view from server's view list, 2 views remaining
-[2025-12-19 16:20:37.501] [debug] [:] Cleared focused_view since it was the destroyed view
-[2025-12-19 16:20:37.501] [debug] [:] Found client for view, removing from seat
-[2025-12-19 16:20:37.501] [debug] [:] TileViews() called
-[2025-12-19 16:20:37.501] [debug] [:] TileViews: Active tag has 2 clients
-[2025-12-19 16:20:37.501] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:37.501] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:37.501] [debug] [:] TileViews: 2 tiled views after filtering
-[2025-12-19 16:20:37.501] [info] [:] Tiling 2 views on output 'eDP-1'
-[2025-12-19 16:20:37.501] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:37.501] [debug] [:] Tiling 2 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:37.501] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1056,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:37.501] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:37.501] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:37.501] [debug] [:] MoveResizeView: view=0x564fa6d87120, pos=(1056,0), size=(864,1080), scene_tree=0x564fa6f23060
-[2025-12-19 16:20:37.501] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:37.501] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:38.983] [info] [:] Keybinding triggered: Super+Shift+C
-[2025-12-19 16:20:38.987] [info] [:] View unmapped! view=0x564fa6d87120
-[2025-12-19 16:20:38.987] [debug] [:] TileViews() called
-[2025-12-19 16:20:38.987] [debug] [:] TileViews: Active tag has 2 clients
-[2025-12-19 16:20:38.987] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:38.987] [debug] [:]   Client view: mapped=false, floating=false, fullscreen=false
-[2025-12-19 16:20:38.987] [debug] [:] TileViews: 1 tiled views after filtering
-[2025-12-19 16:20:38.987] [info] [:] Tiling 1 views on output 'eDP-1'
-[2025-12-19 16:20:38.987] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:38.987] [debug] [:] Tiling 1 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:38.987] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1920,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:38.987] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:38.987] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:38.987] [debug] [:] View destructor called for 0x564fa6d87120
-[2025-12-19 16:20:38.987] [debug] [:] RemoveView: Cleaning up view 0x564fa6d87120
-[2025-12-19 16:20:38.987] [debug] [:] Removed view from server's view list, 1 views remaining
-[2025-12-19 16:20:38.987] [debug] [:] Cleared focused_view since it was the destroyed view
-[2025-12-19 16:20:38.987] [debug] [:] Found client for view, removing from seat
-[2025-12-19 16:20:38.987] [debug] [:] TileViews() called
-[2025-12-19 16:20:38.987] [debug] [:] TileViews: Active tag has 1 clients
-[2025-12-19 16:20:38.987] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
-[2025-12-19 16:20:38.987] [debug] [:] TileViews: 1 tiled views after filtering
-[2025-12-19 16:20:38.987] [info] [:] Tiling 1 views on output 'eDP-1'
-[2025-12-19 16:20:38.987] [debug] [:] Usable area: x=0, y=0, w=1920, h=1080
-[2025-12-19 16:20:38.987] [debug] [:] Tiling 1 views on output 'eDP-1' in workspace: pos=(0,0), size=(1920x1080)
-[2025-12-19 16:20:38.987] [debug] [:] MoveResizeView: view=0x564fa6dbf2b0, pos=(0,0), size=(1920,1080), scene_tree=0x564fa6f6c9c0
-[2025-12-19 16:20:38.987] [debug] [:]   - Set scene node position
-[2025-12-19 16:20:38.987] [debug] [:]   - Set toplevel size
-[2025-12-19 16:20:41.315] [debug] [:] No keybinding for: Super+Ctrl+q
-[2025-12-19 16:20:43.198] [info] [:] Keybinding triggered: Super+Shift+Q
-[2025-12-19 16:20:44.698] [info] [:] Unloading all widget plugins
-[2025-12-19 16:20:44.698] [info] [:] Unloading plugin: ClockWidget
+[2025-12-19 19:03:29.110] [info] [:] Logger initialized - writing to console and leviathan.log
+[2025-12-19 19:03:29.110] [info] [:] LeviathanDM - Wayland Compositor
+[2025-12-19 19:03:29.111] [debug] [:] Mouse speed: 0.5
+[2025-12-19 19:03:29.111] [debug] [:] Terminal: alacritty
+[2025-12-19 19:03:29.111] [debug] [:] Using default plugin paths
+[2025-12-19 19:03:29.111] [info] [:] Plugin search path: /home/romeo/.config/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Plugin search path: /usr/local/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Plugin search path: /usr/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [debug] [:] Plugin: ClockWidget
+[2025-12-19 19:03:29.111] [debug] [:]   format: %H:%M:%S
+[2025-12-19 19:03:29.111] [debug] [:]   update_interval: 1
+[2025-12-19 19:03:29.111] [debug] [:]   font_size: 12
+[2025-12-19 19:03:29.111] [debug] [:] Loaded status bar config: 'laptop-bar'
+[2025-12-19 19:03:29.111] [info] [:] Loaded 1 status bar configuration(s)
+[2025-12-19 19:03:29.111] [info] [:] Loaded monitor group 'Default' with 1 monitors (default)
+[2025-12-19 19:03:29.111] [info] [:] Loaded monitor group 'Testing' with 1 monitors
+[2025-12-19 19:03:29.111] [info] [:] Loaded monitor group 'Home' with 2 monitors
+[2025-12-19 19:03:29.111] [info] [:] Loaded configuration with includes from: /home/romeo/.config/leviathan/leviathan.yaml
+[2025-12-19 19:03:29.111] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-12-19 19:03:29.111] [info] [:] Loading Widget Plugins
+[2025-12-19 19:03:29.111] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-12-19 19:03:29.111] [info] [:] Searching for plugins in: /home/romeo/.config/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Discovering widget plugins in: /home/romeo/.config/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Loading widget plugin: /home/romeo/.config/leviathan/plugins/clock-widget.so
+[2025-12-19 19:03:29.111] [info] [:] Successfully loaded plugin: ClockWidget v1.0.0 by LeviathanDM
+[2025-12-19 19:03:29.111] [debug] [:] Plugin description: Displays current time with configurable format
+[2025-12-19 19:03:29.111] [info] [:] Discovered and loaded 1 widget plugins from /home/romeo/.config/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Searching for plugins in: /usr/local/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Discovering widget plugins in: /usr/local/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [warning] [:] Plugin directory does not exist: /usr/local/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Searching for plugins in: /usr/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Discovering widget plugins in: /usr/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [warning] [:] Plugin directory does not exist: /usr/lib/leviathan/plugins
+[2025-12-19 19:03:29.111] [info] [:] Loaded 1 plugin(s):
+[2025-12-19 19:03:29.111] [info] [:]   ✓ ClockWidget v1.0.0 by LeviathanDM
+[2025-12-19 19:03:29.111] [info] [:]     Displays current time with configurable format
+[2025-12-19 19:03:29.111] [info] [:] Creating 1 plugin instance(s) from config...
+[2025-12-19 19:03:29.111] [info] [:] Initializing: ClockWidget
+[2025-12-19 19:03:29.111] [debug] [:]   Configuration:
+[2025-12-19 19:03:29.111] [debug] [:]     font_size: 12
+[2025-12-19 19:03:29.111] [debug] [:]     format: %H:%M:%S
+[2025-12-19 19:03:29.111] [debug] [:]     update_interval: 1
+[2025-12-19 19:03:29.111] [debug] [:] Created instance of plugin widget: ClockWidget
+[2025-12-19 19:03:29.111] [info] [:]   ✓ Successfully initialized ClockWidget
+[2025-12-19 19:03:29.111] [info] [:] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-12-19 19:03:29.111] [info] [:] Starting compositor...
+[2025-12-19 19:03:29.166] [info] [:] Layer shell v1 initialized
+[2025-12-19 19:03:29.170] [info] [:] No session (probably nested) - VT switching unavailable
+[2025-12-19 19:03:29.170] [debug] [:] Border colors - Focused: #ff0000, Unfocused: #3B4252
+[2025-12-19 19:03:29.170] [info] [:] Tag '1' visibility changed to: false
+[2025-12-19 19:03:29.170] [debug] [:] Tag has 0 clients
+[2025-12-19 19:03:29.170] [info] [:] Tag '1' visibility changed to: true
+[2025-12-19 19:03:29.170] [debug] [:] Tag has 0 clients
+[2025-12-19 19:03:29.170] [info] [:] IPC server listening on /run/user/1000/leviathan-ipc.sock
+[2025-12-19 19:03:29.170] [info] [:] New input device: wayland-keyboard-seat0
+[2025-12-19 19:03:29.172] [info] [:] New input device: wayland-touch-seat0
+[2025-12-19 19:03:29.172] [info] [:] New output: WL-1
+[2025-12-19 19:03:29.174] [debug] [:] Added Output to outputs list
+[2025-12-19 19:03:29.174] [info] [:] Created scene output for 'WL-1' at 0x56498f3f3fa0
+[2025-12-19 19:03:29.174] [info] [:] Screen: WL-1 - WL-1 (WL-1)
+[2025-12-19 19:03:29.174] [debug] [:]   Resolution: 1280x720 @ 1.0x
+[2025-12-19 19:03:29.174] [info] [:] Added screen 'WL-1' to core seat
+[2025-12-19 19:03:29.174] [info] [:] Created per-output layer hierarchy for 'WL-1':
+[2025-12-19 19:03:29.174] [info] [:]   - Background layer: 0x564990040510
+[2025-12-19 19:03:29.174] [info] [:]   - Working area layer: 0x56499010b040
+[2025-12-19 19:03:29.174] [info] [:]   - Top layer: 0x56499006d670
+[2025-12-19 19:03:29.174] [info] [:] Created LayerManager for output 'WL-1'
+[2025-12-19 19:03:29.174] [info] [:] Connected output 'WL-1' to scene layout
+[2025-12-19 19:03:29.174] [info] [:] Registered frame listener for output 'WL-1'
+[2025-12-19 19:03:29.174] [info] [:] Output 'WL-1' fully configured and enabled
+[2025-12-19 19:03:29.174] [info] [:] Applying monitor group: 'Testing'
+[2025-12-19 19:03:29.174] [info] [:] Configuring output 'WL-1' from monitor group
+[2025-12-19 19:03:29.174] [warning] [:] Mode 1280x720 not available for 'WL-1'
+[2025-12-19 19:03:29.174] [info] [:] Set scale 1 for 'WL-1'
+[2025-12-19 19:03:29.174] [info] [:] Set position 0x0 for 'WL-1'
+[2025-12-19 19:03:29.174] [info] [:] Creating 1 status bar(s) for output 'WL-1'
+[2025-12-19 19:03:29.174] [info] [:] Reserved 30px at top for status bar 'laptop-bar'
+[2025-12-19 19:03:29.174] [info] [:] Creating status bar 'laptop-bar' at position 0 with size 1280x30
+[2025-12-19 19:03:29.174] [debug] [:] Status bar 'laptop-bar' scene nodes created at (0, 0)
+[2025-12-19 19:03:29.174] [info] [:] Creating widgets for status bar 'laptop-bar'
+[2025-12-19 19:03:29.174] [warning] [:] Unknown widget type 'workspaces' and no plugin found with that name
+[2025-12-19 19:03:29.174] [debug] [:] Added widget 'label' to left section
+[2025-12-19 19:03:29.174] [warning] [:] Unknown widget type 'window-title' and no plugin found with that name
+[2025-12-19 19:03:29.174] [debug] [:] Creating plugin widget: ClockWidget
+[2025-12-19 19:03:29.174] [debug] [:] Created instance of plugin widget: ClockWidget
+[2025-12-19 19:03:29.174] [debug] [:] Added widget 'ClockWidget' to center section
+[2025-12-19 19:03:29.174] [warning] [:] Unknown widget type 'battery' and no plugin found with that name
+[2025-12-19 19:03:29.174] [warning] [:] Unknown widget type 'network' and no plugin found with that name
+[2025-12-19 19:03:29.174] [warning] [:] Unknown widget type 'volume' and no plugin found with that name
+[2025-12-19 19:03:29.174] [warning] [:] Unknown widget type 'clock' and no plugin found with that name
+[2025-12-19 19:03:29.174] [info] [:] Created 1 left, 1 center, 0 right widgets
+[2025-12-19 19:03:29.187] [info] [:] Saved status bar rendering to /tmp/statusbar_debug.png for debugging
+[2025-12-19 19:03:29.187] [debug] [:] Rendered status bar 'laptop-bar' with 2 total widgets to Cairo buffer
+[2025-12-19 19:03:29.187] [debug] [:] Got renderer from output
+[2025-12-19 19:03:29.189] [info] [:] Created/updated texture 1280x30 for status bar 'laptop-bar'
+[2025-12-19 19:03:29.190] [info] [:] Rendered 112 pixel rects for status bar (sample rate: 2, max: 5000)
+[2025-12-19 19:03:29.190] [warning] [:] Using inefficient scene_rect pixel rendering - this is a PROOF OF CONCEPT
+[2025-12-19 19:03:29.190] [info] [:] Status bar 'laptop-bar' created successfully
+[2025-12-19 19:03:29.190] [debug] [:] Added StatusBar to LayerManager for output 'WL-1'
+[2025-12-19 19:03:29.190] [info] [:] Reserved space updated: top=30, bottom=0, left=0, right=0
+[2025-12-19 19:03:29.190] [debug] [:] Total reserved space: top=30, bottom=0, left=0, right=0
+[2025-12-19 19:03:29.190] [info] [:] Monitor group 'Testing' configuration applied
+[2025-12-19 19:03:29.190] [debug] [:] TileViews() called
+[2025-12-19 19:03:29.190] [debug] [:] TileViews: Active tag has 0 clients
+[2025-12-19 19:03:29.190] [debug] [:] TileViews: 0 tiled views after filtering
+[2025-12-19 19:03:29.190] [debug] [:] TileViews: No tiled views, returning
+[2025-12-19 19:03:29.190] [info] [:] New input device: wayland-pointer-seat0
+[2025-12-19 19:03:29.190] [info] [:] Running compositor on WAYLAND_DISPLAY=wayland-1
+[2025-12-19 19:03:29.192] [info] [:] Launched alacritty terminal (PID: 352110)
+[2025-12-19 19:03:29.301] [info] [:] OnNewXdgToplevel called - this is the proper signal!
+[2025-12-19 19:03:29.301] [debug] [:] Toplevel pointer: 0x564990160f60, base surface: 0x564990206b10
+[2025-12-19 19:03:29.301] [debug] [:] Created scene tree for toplevel view
+[2025-12-19 19:03:29.301] [debug] [:] Surface initialized: false
+[2025-12-19 19:03:29.301] [info] [:] Added client to tag '1' (total clients: 1)
+[2025-12-19 19:03:29.301] [debug] [:]   - Enabled scene node for new client (tag is visible)
+[2025-12-19 19:03:29.301] [info] [:] Toplevel view fully initialized and added to active tag
+[2025-12-19 19:03:29.301] [info] [:] New XDG decoration request for toplevel=0x564990160f60
+[2025-12-19 19:03:29.301] [info] [:] Associated decoration with view=0x56499020cc80, will set mode after surface init
+[2025-12-19 19:03:29.301] [info] [:] Initial commit received for view=0x56499020cc80, sending configure
+[2025-12-19 19:03:29.301] [info] [:] Set decoration mode to SERVER_SIDE (no client decorations)
+[2025-12-19 19:03:29.335] [info] [:] View mapped! view=0x56499020cc80, xdg_toplevel=0x564990160f60
+[2025-12-19 19:03:29.335] [debug] [:] Raised scene tree to top and enabled it
+[2025-12-19 19:03:29.335] [debug] [:] Gave keyboard focus to newly mapped view
+[2025-12-19 19:03:29.335] [debug] [:] TileViews() called
+[2025-12-19 19:03:29.335] [debug] [:] TileViews: Active tag has 1 clients
+[2025-12-19 19:03:29.335] [debug] [:]   Client view: mapped=true, floating=false, fullscreen=false
+[2025-12-19 19:03:29.335] [debug] [:] TileViews: 1 tiled views after filtering
+[2025-12-19 19:03:29.335] [info] [:] Tiling 1 views on output 'WL-1'
+[2025-12-19 19:03:29.335] [debug] [:] Usable area: x=0, y=30, w=1280, h=690
+[2025-12-19 19:03:29.335] [debug] [:] Tiling 1 views on output 'WL-1' in workspace: pos=(0,30), size=(1280x690)
+[2025-12-19 19:03:29.335] [debug] [:] MoveResizeView: view=0x56499020cc80, pos=(0,0), size=(1280,690), scene_tree=0x56499020d780
+[2025-12-19 19:03:29.335] [debug] [:]   - Set scene node position
+[2025-12-19 19:03:29.335] [debug] [:]   - Set toplevel size
+[2025-12-19 19:03:29.335] [debug] [:]   Offset view to (0,30) for workspace at (0,30)

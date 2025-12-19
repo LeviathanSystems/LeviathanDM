@@ -4,9 +4,11 @@
 #include "core/Tag.hpp"
 #include "layout/TilingLayout.hpp"
 #include "config/ConfigParser.hpp"
+#include "ui/StatusBar.hpp"
 #include "Logger.hpp"
 
 #include <wlr/types/wlr_scene.h>
+#include <algorithm>
 
 namespace Leviathan {
 namespace Wayland {
@@ -23,10 +25,10 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output)
     layers_[static_cast<size_t>(Layer::Top)] = 
         wlr_scene_tree_create(&scene->tree);
     
-    LOG_INFO("Created per-output layer hierarchy for '{}':", output->name);
-    LOG_INFO("  - Background layer: {}", static_cast<void*>(layers_[0]));
-    LOG_INFO("  - Working area layer: {}", static_cast<void*>(layers_[1]));
-    LOG_INFO("  - Top layer: {}", static_cast<void*>(layers_[2]));
+    //LOG_INFO("Created per-output layer hierarchy for '{}':", output->name);
+    //LOG_INFO("  - Background layer: {}", static_cast<void*>(layers_[0]));
+    //LOG_INFO("  - Working area layer: {}", static_cast<void*>(layers_[1]));
+    //LOG_INFO("  - Top layer: {}", static_cast<void*>(layers_[2]));
 }
 
 LayerManager::~LayerManager() {
@@ -127,6 +129,84 @@ void LayerManager::TileViews(std::vector<View*>& views,
             }
         }
     }
+}
+
+void LayerManager::AddStatusBar(Leviathan::StatusBar* bar) {
+    if (!bar) {
+        LOG_WARN("Attempted to add null StatusBar to LayerManager");
+        return;
+    }
+    
+    status_bars_.push_back(bar);
+    LOG_DEBUG("Added StatusBar to LayerManager for output '{}'", output_->name);
+}
+
+void LayerManager::RemoveStatusBar(Leviathan::StatusBar* bar) {
+    auto it = std::find(status_bars_.begin(), status_bars_.end(), bar);
+    if (it != status_bars_.end()) {
+        status_bars_.erase(it);
+        LOG_DEBUG("Removed StatusBar from LayerManager for output '{}'", output_->name);
+    }
+}
+
+void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
+                                   const StatusBarsConfig& all_bars_config,
+                                   uint32_t output_width,
+                                   uint32_t output_height) {
+    if (bar_names.empty()) {
+        LOG_DEBUG("No status bars to create for output '{}'", output_->name);
+        return;
+    }
+    
+    LOG_INFO("Creating {} status bar(s) for output '{}'", 
+             bar_names.size(), output_->name);
+    
+    ReservedSpace reserved = reserved_space_;
+    
+    for (const auto& bar_name : bar_names) {
+        const StatusBarConfig* bar_config = all_bars_config.FindByName(bar_name);
+        
+        if (!bar_config) {
+            LOG_WARN("Status bar '{}' not found in configuration", bar_name);
+            continue;
+        }
+        
+        // Reserve space for this status bar
+        switch (bar_config->position) {
+            case StatusBarConfig::Position::Top:
+                reserved.top += bar_config->height;
+                LOG_INFO("Reserved {}px at top for status bar '{}'", 
+                         bar_config->height, bar_name);
+                break;
+            
+            case StatusBarConfig::Position::Bottom:
+                reserved.bottom += bar_config->height;
+                LOG_INFO("Reserved {}px at bottom for status bar '{}'", 
+                         bar_config->height, bar_name);
+                break;
+            
+            case StatusBarConfig::Position::Left:
+                reserved.left += bar_config->width;
+                LOG_INFO("Reserved {}px at left for status bar '{}'", 
+                         bar_config->width, bar_name);
+                break;
+            
+            case StatusBarConfig::Position::Right:
+                reserved.right += bar_config->width;
+                LOG_INFO("Reserved {}px at right for status bar '{}'", 
+                         bar_config->width, bar_name);
+                break;
+        }
+        
+        // Create and render the StatusBar
+        Leviathan::StatusBar* bar = new Leviathan::StatusBar(*bar_config, this, output_width, output_height);
+        AddStatusBar(bar);
+    }
+    
+    // Apply the accumulated reserved space
+    SetReservedSpace(reserved);
+    LOG_DEBUG("Total reserved space: top={}, bottom={}, left={}, right={}", 
+             reserved.top, reserved.bottom, reserved.left, reserved.right);
 }
 
 } // namespace Wayland
