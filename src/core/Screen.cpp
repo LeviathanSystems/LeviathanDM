@@ -1,8 +1,11 @@
 #include "core/Screen.hpp"
+#include "Logger.hpp"
 
 extern "C" {
 #include <wlr/types/wlr_output.h>
 }
+
+#include <sstream>
 
 namespace Leviathan {
 namespace Core {
@@ -15,6 +18,55 @@ Screen::Screen(struct wlr_output* output)
     , height_(output->height)
     , scale_(output->scale)
     , current_tag_(nullptr) {
+    
+    ParseOutputInfo();
+}
+
+void Screen::ParseOutputInfo() {
+    if (!wlr_output_) {
+        return;
+    }
+    
+    // wlroots already parses EDID using libdisplay-info internally
+    // and populates the make, model, serial, phys_width, phys_height fields
+    if (wlr_output_->make) {
+        make_ = wlr_output_->make;
+    }
+    
+    if (wlr_output_->model) {
+        model_ = wlr_output_->model;
+    }
+    
+    if (wlr_output_->serial) {
+        serial_ = wlr_output_->serial;
+    }
+    
+    // Build description string
+    std::ostringstream desc;
+    if (!make_.empty() && !model_.empty()) {
+        desc << make_ << " " << model_;
+    } else if (!model_.empty()) {
+        desc << model_;
+    } else if (!make_.empty()) {
+        desc << make_;
+    } else {
+        desc << name_;  // Fallback to connector name
+    }
+    
+    // Add connector name in parentheses
+    desc << " (" << name_ << ")";
+    description_ = desc.str();
+    
+    LOG_INFO("Screen: {} - {}", name_, description_);
+    if (!serial_.empty()) {
+        LOG_DEBUG("  Serial: {}", serial_);
+    }
+    LOG_DEBUG("  Resolution: {}x{} @ {:.1f}x", width_, height_, scale_);
+    
+    // Log physical dimensions if available (from EDID)
+    if (wlr_output_->phys_width > 0 && wlr_output_->phys_height > 0) {
+        LOG_DEBUG("  Physical Size: {}mm x {}mm", wlr_output_->phys_width, wlr_output_->phys_height);
+    }
 }
 
 Screen::~Screen() {

@@ -27,6 +27,10 @@ bool ConfigParser::Load(const std::string& config_path) {
             ParsePlugins(config["plugins"]);
         }
         
+        if (config["monitor-groups"]) {
+            ParseMonitorGroups(config["monitor-groups"]);
+        }
+        
         LOG_INFO("Loaded configuration from: {}", config_path);
         return true;
     } catch (const YAML::Exception& e) {
@@ -340,6 +344,189 @@ void ConfigParser::HexToRGBA(const std::string& hex, float rgba[4]) {
     } catch (const std::exception& e) {
         LOG_ERROR("Failed to parse hex color '{}': {}", hex, e.what());
     }
+}
+
+void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
+    if (!node.IsSequence()) {
+        LOG_WARN("monitor-groups should be a sequence");
+        return;
+    }
+    
+    monitor_groups.groups.clear();
+    bool has_default = false;
+    
+    for (const auto& group_node : node) {
+        MonitorGroup group;
+        
+        if (group_node["name"]) {
+            group.name = group_node["name"].as<std::string>();
+        } else {
+            LOG_WARN("Monitor group missing 'name', skipping");
+            continue;
+        }
+        
+        // Check if this is the default group
+        if (group_node["default"]) {
+            group.is_default = group_node["default"].as<bool>();
+            if (group.is_default) {
+                if (has_default) {
+                    LOG_WARN("Multiple default monitor groups defined, using first one");
+                    group.is_default = false;
+                } else {
+                    has_default = true;
+                }
+            }
+        }
+        
+        // Special case: "Default" name is always default
+        if (group.name == "Default") {
+            if (has_default && !group.is_default) {
+                LOG_WARN("Group named 'Default' found but another default already set");
+            } else {
+                group.is_default = true;
+                has_default = true;
+            }
+        }
+        
+        // Parse monitors in this group
+        if (group_node["monitors"] && group_node["monitors"].IsSequence()) {
+            for (const auto& mon_node : group_node["monitors"]) {
+                MonitorConfig mon;
+                
+                // Get identifier (required)
+                if (mon_node["display"]) {
+                    mon.identifier = mon_node["display"].as<std::string>();
+                } else if (mon_node["id"]) {
+                    mon.identifier = mon_node["id"].as<std::string>();
+                } else {
+                    LOG_WARN("Monitor config missing 'display' or 'id', skipping");
+                    continue;
+                }
+                
+                // Parse position (e.g., "1920x0" or "0x1080")
+                if (mon_node["pos"] || mon_node["position"]) {
+                    std::string pos_str = mon_node["pos"] ? 
+                        mon_node["pos"].as<std::string>() : 
+                        mon_node["position"].as<std::string>();
+                    
+                    size_t x_pos = pos_str.find('x');
+                    if (x_pos != std::string::npos) {
+                        try {
+                            int x = std::stoi(pos_str.substr(0, x_pos));
+                            int y = std::stoi(pos_str.substr(x_pos + 1));
+                            mon.position = {x, y};
+                        } catch (const std::exception& e) {
+                            LOG_WARN("Invalid position format '{}': {}", pos_str, e.what());
+                        }
+                    }
+                }
+                
+                // Parse mode/size (e.g., "1920x1080" or "3840x2160@60")
+                if (mon_node["mode"] || mon_node["size"]) {
+                    mon.mode = mon_node["mode"] ? 
+                        mon_node["mode"].as<std::string>() : 
+                        mon_node["size"].as<std::string>();
+                }
+                
+                // Parse scale
+                if (mon_node["scale"]) {
+                    mon.scale = mon_node["scale"].as<float>();
+                }
+                
+                // Parse transform/rotation
+                if (mon_node["transform"] || mon_node["rotation"]) {
+                    mon.transform = mon_node["transform"] ? 
+                        mon_node["transform"].as<int>() : 
+                        mon_node["rotation"].as<int>();
+                }
+                
+                group.monitors.push_back(mon);
+            }
+        }
+        
+        monitor_groups.groups.push_back(group);
+        LOG_INFO("Loaded monitor group '{}' with {} monitors{}", 
+                 group.name, group.monitors.size(), 
+                 group.is_default ? " (default)" : "");
+    }
+    
+    // Ensure we have a default group
+    if (!has_default && !monitor_groups.groups.empty()) {
+        LOG_WARN("No default monitor group specified, using first group as default");
+        monitor_groups.groups[0].is_default = true;
+    }
+}
+
+const MonitorGroup* MonitorGroupsConfig::GetDefaultGroup() const {
+    for (const auto& group : groups) {
+        if (group.is_default) {
+            return &group;
+        }
+    }
+    return groups.empty() ? nullptr : &groups[0];
+}
+
+const MonitorGroup* MonitorGroupsConfig::FindMatchingGroup(
+    const std::vector<std::string>& connected_outputs) const {
+    
+    // Helper to check if an identifier matches an output
+    auto matches = [](const std::string& identifier, const std::string& output_name, 
+                      const std::string& output_desc, const std::string& output_make_model) {
+        // Direct name match (e.g., "eDP-1", "HDMI-A-1")
+        if (identifier == output_name) {
+            return true;
+        }
+        
+        // Description match (e.g., "d:Dell Inc. U2720Q")
+        if (identifier.size() > 2 && identifier.substr(0, 2) == "d:") {
+            std::string search = identifier.substr(2);
+            return output_desc.find(search) != std::string::npos;
+        }
+        
+        // Make/model match (e.g., "m:Dell Inc./U2720Q")
+        if (identifier.size() > 2 && identifier.substr(0, 2) == "m:") {
+            std::string search = identifier.substr(2);
+            return output_make_model.find(search) != std::string::npos;
+        }
+        
+        return false;
+    };
+    
+    // Try to find a group where ALL monitors match connected outputs
+    for (const auto& group : groups) {
+        if (group.is_default) {
+            continue;  // Skip default group, try specific ones first
+        }
+        
+        if (group.monitors.empty()) {
+            continue;
+        }
+        
+        // Check if all monitors in this group can be matched
+        bool all_matched = true;
+        for (const auto& mon : group.monitors) {
+            bool found = false;
+            for (const auto& output : connected_outputs) {
+                // TODO: Get actual description and make/model from wlroots
+                // For now, just do name matching
+                if (matches(mon.identifier, output, "", "")) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                all_matched = false;
+                break;
+            }
+        }
+        
+        if (all_matched) {
+            return &group;
+        }
+    }
+    
+    // No specific group matched, return default
+    return GetDefaultGroup();
 }
 
 } // namespace Leviathan

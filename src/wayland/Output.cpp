@@ -1,7 +1,9 @@
 #include "wayland/Output.hpp"
 #include "Types.hpp"
 #include "Logger.hpp"
-#include "ui/StatusBar.hpp"
+#include "wayland/Server.hpp"
+#include "wayland/LayerManager.hpp"
+#include "core/Seat.hpp"
 
 extern "C" {
 #include <wlr/types/wlr_output.h>
@@ -12,13 +14,27 @@ extern "C" {
 namespace Leviathan {
 namespace Wayland {
 
-Output::Output(struct wlr_output* output)
-    : wlr_output(output), scene_output(nullptr), status_bar(nullptr) {
+Output::Output(struct wlr_output* output, Server* srv)
+    : wlr_output(output), scene_output(nullptr), core_screen(nullptr), server(srv), layer_manager(nullptr) {
 }
 
 Output::~Output() {
-    if (status_bar) {
-        delete status_bar;
+    // Remove screen from core seat before deleting
+    if (core_screen && server) {
+        auto* core_seat = server->GetCoreSeat();
+        if (core_seat) {
+            core_seat->RemoveScreen(core_screen);
+            LOG_INFO("Removed screen '{}' from core seat", core_screen->GetName());
+        }
+    }
+    
+    // Clean up layer manager
+    if (layer_manager) {
+        delete layer_manager;
+    }
+    
+    if (core_screen) {
+        delete core_screen;
     }
 }
 

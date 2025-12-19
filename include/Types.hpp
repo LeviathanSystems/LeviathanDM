@@ -25,6 +25,8 @@ namespace Core {
 namespace Wayland {
     struct View;
     struct Output;
+    class Server;
+    class LayerManager;
 }
 
 // Layout types
@@ -84,9 +86,11 @@ struct Output {
     struct wl_listener frame;
     struct wl_listener destroy;
     struct wl_list link;
-    Leviathan::StatusBar* status_bar;  // Built-in status bar (in parent namespace)
+    Leviathan::Core::Screen* core_screen;  // Core screen object with EDID info
+    Leviathan::Wayland::Server* server;  // Reference to compositor server
+    Leviathan::Wayland::LayerManager* layer_manager;  // Per-output layer management
     
-    Output(struct wlr_output* output);
+    Output(struct wlr_output* output, Leviathan::Wayland::Server* srv);
     ~Output();
 };
 

@@ -69,6 +69,10 @@ bool IsClientFullscreen(Core::Client* client);
 
 // Screen (monitor) queries
 std::string GetScreenName(Core::Screen* screen);
+std::string GetScreenDescription(Core::Screen* screen);
+std::string GetScreenMake(Core::Screen* screen);
+std::string GetScreenModel(Core::Screen* screen);
+std::string GetScreenSerial(Core::Screen* screen);
 int GetScreenWidth(Core::Screen* screen);
 int GetScreenHeight(Core::Screen* screen);
 Core::Tag* GetScreenCurrentTag(Core::Screen* screen);

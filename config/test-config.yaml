@@ -1,0 +1,23 @@
+# LeviathanDM Configuration
+# Simple test configuration with monitor groups
+
+general:
+  terminal: "alacritty"
+  auto_launch_terminal: false
+  border_width: 2
+  border_color_focused: "#5E81AC"
+  border_color_unfocused: "#3B4252"
+  gap_size: 0
+  workspace_count: 9
+  focus_follows_mouse: true
+  click_to_focus: true
+
+monitor-groups:
+  # Default group - laptop only
+  - name: Default
+    default: true
+    monitors:
+      - display: "HEADLESS-1"  # For cage/nested
+        pos: "0x0"
+        mode: "1920x1080"
+        scale: 1.0

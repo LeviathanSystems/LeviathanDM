@@ -4,6 +4,7 @@
 #include "wayland/Input.hpp"
 #include "wayland/LayerSurface.hpp"
 #include "ui/StatusBar.hpp"
+#include "config/ConfigParser.hpp"
 #include "Logger.hpp"
 #include <nlohmann/json.hpp>
 #include <algorithm>
@@ -17,6 +18,7 @@ extern "C" {
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -188,12 +190,9 @@ bool Server::Initialize() {
     scene = wlr_scene_create();
     scene_layout = wlr_scene_attach_output_layout(scene, output_layout);
     
-    // Initialize layer manager
-    layer_manager_ = std::make_unique<LayerManager>(scene);
-    
-    // Get window layer from layer manager
-    window_layer = layer_manager_->GetLayer(Layer::WorkingArea);
-    LOG_INFO("Using layer manager's working area for windows");
+    // Note: LayerManager is now created per-output in OnNewOutput()
+    // Window layer will be from the output's LayerManager
+    window_layer = nullptr;  // Will be set per-output
     
     // Setup output listener
     new_output.notify = handle_new_output;
@@ -380,7 +379,11 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     wlr_output_state_finish(&state);
     
     // Create output wrapper
-    Output* output = new Output(wlr_output);
+    Output* output = new Output(wlr_output, this);
+    
+    // CRITICAL: Add output to the server's outputs list
+    wl_list_insert(&outputs, &output->link);
+    LOG_DEBUG("Added Output to outputs list");
     
     // Add to layout
     struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(output_layout, wlr_output);
@@ -396,9 +399,18 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     LOG_INFO("Created scene output for '{}' at {:p}", wlr_output->name, 
              static_cast<void*>(output->scene_output));
     
-    // Create status bar for this output
-    output->status_bar = new StatusBar(output, this);
-    LOG_INFO("Created status bar for output '{}'", wlr_output->name);
+    // Create Core::Screen object for this output
+    Core::Screen* screen = new Core::Screen(wlr_output);
+    output->core_screen = screen;  // Store reference in Output for cleanup
+    
+    if (core_seat_) {
+        core_seat_->AddScreen(screen);
+        LOG_INFO("Added screen '{}' to core seat", screen->GetName());
+    }
+    
+    // Create per-output LayerManager
+    output->layer_manager = new LayerManager(scene, wlr_output);
+    LOG_INFO("Created LayerManager for output '{}'", wlr_output->name);
     
     // CRITICAL: Connect the output to the scene layout so the scene knows where to render
     wlr_scene_output_layout_add_output(scene_layout, layout_output, output->scene_output);
@@ -416,12 +428,189 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     
     LOG_INFO("Output '{}' fully configured and enabled", wlr_output->name);
     
+    // Apply monitor group configuration
+    ApplyMonitorGroupConfiguration();
+    
     // Set cursor image for this output
     if (cursor_mgr) {
         wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
     }
     
     TileViews();
+}
+
+void Server::ApplyMonitorGroupConfiguration() {
+    auto& config = Config();
+    
+    // Build list of currently connected output names and their EDID info
+    std::vector<std::string> connected_names;
+    std::map<std::string, Output*> output_map;
+    
+    Output* iter;
+    wl_list_for_each(iter, &outputs, link) {
+        if (!iter->wlr_output) continue;
+        
+        std::string name = iter->wlr_output->name;
+        connected_names.push_back(name);
+        output_map[name] = iter;
+    }
+    
+    if (connected_names.empty()) {
+        LOG_WARN("No outputs connected, skipping monitor group configuration");
+        return;
+    }
+    
+    // Find matching monitor group
+    const MonitorGroup* group = config.monitor_groups.FindMatchingGroup(connected_names);
+    
+    if (!group) {
+        LOG_WARN("No matching monitor group found, using auto-configuration");
+        return;
+    }
+    
+    LOG_INFO("Applying monitor group: '{}'", group->name);
+    
+    // Apply configuration for each monitor in the group
+    for (const auto& mon_config : group->monitors) {
+        // Find the matching output
+        Output* output = nullptr;
+        
+        for (auto& [name, out] : output_map) {
+            // For now, just match by name
+            // TODO: Also match by EDID description and make/model
+            if (mon_config.identifier == name) {
+                output = out;
+                break;
+            }
+            
+            // Check description prefix match
+            if (mon_config.identifier.size() > 2 && mon_config.identifier.substr(0, 2) == "d:") {
+                if (out->core_screen) {
+                    std::string search = mon_config.identifier.substr(2);
+                    std::string desc = out->core_screen->GetDescription();
+                    if (desc.find(search) != std::string::npos) {
+                        output = out;
+                        break;
+                    }
+                }
+            }
+            
+            // Check make/model match
+            if (mon_config.identifier.size() > 2 && mon_config.identifier.substr(0, 2) == "m:") {
+                if (out->core_screen) {
+                    std::string search = mon_config.identifier.substr(2);
+                    std::string make_model = out->core_screen->GetMake() + "/" + out->core_screen->GetModel();
+                    if (make_model.find(search) != std::string::npos) {
+                        output = out;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (!output) {
+            LOG_WARN("Monitor '{}' from group '{}' not found in connected outputs", 
+                     mon_config.identifier, group->name);
+            continue;
+        }
+        
+        LOG_INFO("Configuring output '{}' from monitor group", output->wlr_output->name);
+        
+        // Create output state for applying configuration
+        struct wlr_output_state state;
+        wlr_output_state_init(&state);
+        
+        // Apply mode if specified
+        if (mon_config.mode.has_value()) {
+            const std::string& mode_str = mon_config.mode.value();
+            
+            // Parse mode string (e.g., "1920x1080" or "1920x1080@60")
+            int width = 0, height = 0, refresh = 0;
+            size_t x_pos = mode_str.find('x');
+            size_t at_pos = mode_str.find('@');
+            
+            if (x_pos != std::string::npos) {
+                try {
+                    width = std::stoi(mode_str.substr(0, x_pos));
+                    
+                    if (at_pos != std::string::npos) {
+                        height = std::stoi(mode_str.substr(x_pos + 1, at_pos - x_pos - 1));
+                        refresh = std::stoi(mode_str.substr(at_pos + 1));
+                    } else {
+                        height = std::stoi(mode_str.substr(x_pos + 1));
+                    }
+                    
+                    // Find and set the mode
+                    struct wlr_output_mode* mode = nullptr;
+                    struct wlr_output_mode* best_mode = nullptr;
+                    
+                    wl_list_for_each(mode, &output->wlr_output->modes, link) {
+                        if (mode->width == width && mode->height == height) {
+                            if (refresh > 0) {
+                                // Match exact refresh rate (wlroots uses millihertz)
+                                if (mode->refresh == refresh * 1000) {
+                                    best_mode = mode;
+                                    break;
+                                }
+                            } else {
+                                // No refresh specified, pick highest
+                                if (!best_mode || mode->refresh > best_mode->refresh) {
+                                    best_mode = mode;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (best_mode) {
+                        wlr_output_state_set_mode(&state, best_mode);
+                        LOG_INFO("Set mode {}x{}@{}Hz for '{}'", 
+                                 width, height, best_mode->refresh / 1000, 
+                                 output->wlr_output->name);
+                    } else {
+                        LOG_WARN("Mode {} not available for '{}'", mode_str, output->wlr_output->name);
+                    }
+                } catch (const std::exception& e) {
+                    LOG_ERROR("Failed to parse mode '{}': {}", mode_str, e.what());
+                }
+            }
+        }
+        
+        // Apply scale if specified
+        if (mon_config.scale.has_value()) {
+            wlr_output_state_set_scale(&state, mon_config.scale.value());
+            LOG_INFO("Set scale {} for '{}'", mon_config.scale.value(), output->wlr_output->name);
+        }
+        
+        // Apply transform if specified
+        if (mon_config.transform.has_value()) {
+            enum wl_output_transform transform;
+            switch (mon_config.transform.value()) {
+                case 90:  transform = WL_OUTPUT_TRANSFORM_90; break;
+                case 180: transform = WL_OUTPUT_TRANSFORM_180; break;
+                case 270: transform = WL_OUTPUT_TRANSFORM_270; break;
+                default:  transform = WL_OUTPUT_TRANSFORM_NORMAL; break;
+            }
+            wlr_output_state_set_transform(&state, transform);
+            LOG_INFO("Set transform {} for '{}'", mon_config.transform.value(), output->wlr_output->name);
+        }
+        
+        // Commit the output configuration
+        if (!wlr_output_commit_state(output->wlr_output, &state)) {
+            LOG_ERROR("Failed to commit configuration for '{}'", output->wlr_output->name);
+        }
+        
+        // Cleanup output state
+        wlr_output_state_finish(&state);
+        
+        // Apply position if specified
+        if (mon_config.position.has_value()) {
+            auto [x, y] = mon_config.position.value();
+            wlr_output_layout_add(output_layout, output->wlr_output, x, y);
+            LOG_INFO("Set position {}x{} for '{}'", x, y, output->wlr_output->name);
+        }
+    }
+    
+    LOG_INFO("Monitor group '{}' configuration applied", group->name);
 }
 
 void Server::OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface) {
@@ -447,9 +636,18 @@ void Server::OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface) {
     View* view = new View(xdg_surface->toplevel, this);
     views.push_back(view);
     
-    // Add to scene graph window layer (above background)
+    // Find first output's WorkingArea layer
+    struct wlr_scene_tree* parent_layer = &scene->tree;  // Fallback to root
+    if (!wl_list_empty(&outputs)) {
+        Output* first_output = wl_container_of(outputs.next, first_output, link);
+        if (first_output && first_output->layer_manager) {
+            parent_layer = first_output->layer_manager->GetLayer(Layer::WorkingArea);
+        }
+    }
+    
+    // Add to scene graph working area layer (where windows go)
     view->scene_tree = wlr_scene_xdg_surface_create(
-        window_layer, xdg_surface);
+        parent_layer, xdg_surface);
     
     LOG_DEBUG("Created scene tree for toplevel view");
     
@@ -645,61 +843,24 @@ void Server::TileViews() {
         return;
     }
     
-    // Get first output from layout
-    struct wlr_output_layout_output* layout_output = 
-        wl_container_of(output_layout->outputs.next, layout_output, link);
+    // For now, tile all views on the first available output
+    // TODO: Multi-monitor support - assign views to specific outputs
+    Output* first_output = nullptr;
+    Output* iter;
+    wl_list_for_each(iter, &outputs, link) {
+        first_output = iter;
+        break;
+    }
     
-    if (!layout_output || !layout_output->output) {
-        LOG_WARN("TileViews: No output available");
+    if (!first_output || !first_output->layer_manager) {
+        LOG_WARN("TileViews: No output or LayerManager available");
         return;
     }
     
-    // Calculate usable workspace area from LayerManager
-    // This accounts for reserved space (status bar, docks, etc.)
-    auto workspace = layer_manager_->CalculateUsableArea(
-        0, 0,  // Output position (assuming 0,0 for now)
-        layout_output->output->width,
-        layout_output->output->height
-    );
+    LOG_INFO("Tiling {} views on output '{}'", tiled_views.size(), first_output->wlr_output->name);
     
-    int workspace_x = workspace.x;
-    int workspace_y = workspace.y;
-    int screen_width = workspace.width;
-    int screen_height = workspace.height;
-    
-    LOG_DEBUG("Using workspace area from LayerManager: pos=({},{}), size=({}x{})", 
-             workspace_x, workspace_y, screen_width, screen_height);
-    
-    int gap = Config().general.gap_size;
-    int master_count = tag->GetMasterCount();
-    float master_ratio = tag->GetMasterRatio();
-    
-    // Apply layout algorithm (positions are relative to workspace)
-    switch (tag->GetLayout()) {
-        case LayoutType::MASTER_STACK:
-            layout_engine_->ApplyMasterStack(tiled_views, 
-                                            master_count,
-                                            master_ratio,
-                                            screen_width, screen_height, gap);
-            break;
-        case LayoutType::MONOCLE:
-            layout_engine_->ApplyMonocle(tiled_views, screen_width, screen_height);
-            break;
-        case LayoutType::GRID:
-            layout_engine_->ApplyGrid(tiled_views, screen_width, screen_height, gap);
-            break;
-        default:
-            break;
-    }
-    
-    // Offset all window positions to workspace area
-    for (auto* view : tiled_views) {
-        if (view->scene_tree) {
-            wlr_scene_node_set_position(&view->scene_tree->node, 
-                                       view->x + workspace_x, 
-                                       view->y + workspace_y);
-        }
-    }
+    // Delegate to the output's LayerManager
+    first_output->layer_manager->TileViews(tiled_views, tag, layout_engine_.get());
 }
 
 void Server::SetLayout(LayoutType layout) {
@@ -925,16 +1086,33 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
             case IPC::CommandType::GET_OUTPUTS: {
                 response.success = true;
                 
-                // Use output_layout to enumerate outputs
-                struct wlr_output_layout_output* layout_output;
-                wl_list_for_each(layout_output, &output_layout->outputs, link) {
-                    struct wlr_output* output = layout_output->output;
+                // Get Screen objects which have parsed EDID info
+                auto screens = GetScreens();
+                for (const auto* screen : screens) {
                     IPC::OutputInfo info;
-                    info.name = output->name;
-                    info.width = output->width;
-                    info.height = output->height;
-                    info.refresh_mhz = output->refresh;
-                    info.enabled = output->enabled;
+                    info.name = screen->GetName();
+                    info.description = screen->GetDescription();
+                    info.make = screen->GetMake();
+                    info.model = screen->GetModel();
+                    info.serial = screen->GetSerial();
+                    info.width = screen->GetWidth();
+                    info.height = screen->GetHeight();
+                    info.scale = screen->GetScale();
+                    
+                    // Get physical dimensions and refresh from wlr_output
+                    auto* wlr_output = screen->GetWlrOutput();
+                    if (wlr_output) {
+                        info.refresh_mhz = wlr_output->refresh;
+                        info.phys_width_mm = wlr_output->phys_width;
+                        info.phys_height_mm = wlr_output->phys_height;
+                        info.enabled = wlr_output->enabled;
+                    } else {
+                        info.refresh_mhz = 0;
+                        info.phys_width_mm = 0;
+                        info.phys_height_mm = 0;
+                        info.enabled = false;
+                    }
+                    
                     response.outputs.push_back(info);
                 }
                 break;
@@ -1015,6 +1193,16 @@ std::vector<Core::Screen*> Server::GetScreens() const {
         return {};
     }
     return core_seat_->GetScreens();
+}
+
+Output* Server::FindOutput(struct wlr_output* wlr_output) {
+    Output* iter;
+    wl_list_for_each(iter, &outputs, link) {
+        if (iter->wlr_output == wlr_output) {
+            return iter;
+        }
+    }
+    return nullptr;
 }
 
 Core::Screen* Server::GetFocusedScreen() const {

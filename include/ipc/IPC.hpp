@@ -42,8 +42,15 @@ struct ClientInfo {
 
 struct OutputInfo {
     std::string name;
+    std::string description;  // Human-readable description (e.g., "Dell U2415 (DP-1)")
+    std::string make;         // Manufacturer from EDID
+    std::string model;        // Model name from EDID
+    std::string serial;       // Serial number from EDID
     int width, height;
     int refresh_mhz;
+    int phys_width_mm;        // Physical width in millimeters
+    int phys_height_mm;       // Physical height in millimeters
+    float scale;
     bool enabled;
 };
 

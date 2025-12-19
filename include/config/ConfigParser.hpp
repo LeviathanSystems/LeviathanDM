@@ -43,6 +43,47 @@ struct GeneralConfig {
     bool remove_client_titlebars = true;
 };
 
+// Monitor configuration within a group
+struct MonitorConfig {
+    // Identifier can be:
+    // - Output name: "eDP-1", "HDMI-A-1", etc.
+    // - Description prefix: "d:Dell Inc. U2720Q" (matches EDID description)
+    // - Make/Model: "m:Dell Inc./U2720Q"
+    std::string identifier;
+    
+    // Optional position (e.g., "0x0", "1920x0")
+    // If not set, wlroots auto-arranges
+    std::optional<std::pair<int, int>> position;  // x, y
+    
+    // Optional size/mode (e.g., "1920x1080", "3840x2160@60")
+    // If not set, uses preferred mode
+    std::optional<std::string> mode;
+    
+    // Optional scale (e.g., 1.0, 1.5, 2.0)
+    std::optional<float> scale;
+    
+    // Optional transform (0, 90, 180, 270)
+    std::optional<int> transform;
+};
+
+// Monitor group - a complete multi-monitor layout
+struct MonitorGroup {
+    std::string name;
+    std::vector<MonitorConfig> monitors;
+    bool is_default = false;  // Fallback group
+};
+
+// Monitor groups configuration
+struct MonitorGroupsConfig {
+    std::vector<MonitorGroup> groups;
+    
+    // Find the matching group for currently connected outputs
+    const MonitorGroup* FindMatchingGroup(const std::vector<std::string>& connected_outputs) const;
+    
+    // Get the default/fallback group
+    const MonitorGroup* GetDefaultGroup() const;
+};
+
 // Plugin configuration
 struct PluginConfig {
     std::string name;                                    // Plugin name (e.g., "ClockWidget")
@@ -59,6 +100,7 @@ struct ConfigParser {
     LibInputConfig libinput;
     GeneralConfig general;
     PluginsConfig plugins;
+    MonitorGroupsConfig monitor_groups;
     
     // Load configuration from file
     bool Load(const std::string& config_path);
@@ -76,6 +118,7 @@ private:
     void ParseLibInput(const YAML::Node& node);
     void ParseGeneral(const YAML::Node& node);
     void ParsePlugins(const YAML::Node& node);
+    void ParseMonitorGroups(const YAML::Node& node);
     void ProcessIncludes(const YAML::Node& node, const std::string& base_path);
     
     std::vector<std::string> loaded_files_;  // Track loaded files to prevent circular includes

@@ -10,12 +10,12 @@ namespace Leviathan {
 // Forward declarations
 namespace Wayland {
     class Server;
-    struct Output;
+    class LayerManager;
 }
 
 class StatusBar {
 public:
-    StatusBar(Wayland::Output* output, Wayland::Server* server);
+    StatusBar(Wayland::LayerManager* layer_manager, int output_width);
     ~StatusBar();
 
     void Render();
@@ -38,8 +38,7 @@ private:
     void DrawTitle();
     void DrawTime();
     
-    Wayland::Output* output_;
-    Wayland::Server* server_;
+    Wayland::LayerManager* layer_manager_;
     struct wlr_scene_rect* scene_rect_;      // Background rectangle
     struct wlr_scene_buffer* scene_buffer_;  // For text/content
     struct wlr_buffer* buffer_;

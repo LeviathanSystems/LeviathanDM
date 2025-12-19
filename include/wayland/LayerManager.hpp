@@ -3,12 +3,22 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <vector>
 
 // Forward declarations
 struct wlr_scene;
 struct wlr_scene_tree;
+struct wlr_output;
 
 namespace Leviathan {
+
+// Forward declarations
+class TilingLayout;
+
+namespace Core {
+    class Tag;
+}
+
 namespace Wayland {
 
 // Forward declaration
@@ -52,8 +62,8 @@ struct UsableArea {
 
 class LayerManager {
 public:
-    LayerManager(struct wlr_scene* scene);
-    ~LayerManager() = default;
+    LayerManager(struct wlr_scene* scene, struct wlr_output* output);
+    ~LayerManager();
     
     // Get scene tree for a specific layer
     struct wlr_scene_tree* GetLayer(Layer layer);
@@ -72,9 +82,19 @@ public:
     struct wlr_scene_tree* GetWorkingAreaLayer() { return GetLayer(Layer::WorkingArea); }
     struct wlr_scene_tree* GetTopLayer() { return GetLayer(Layer::Top); }
     
+    // Get the output this manager belongs to
+    struct wlr_output* GetOutput() const { return output_; }
+    
+    // Tile windows in this output's working area
+    // Takes a list of views that should be tiled according to the tag's layout
+    void TileViews(std::vector<class View*>& views, 
+                   Core::Tag* tag,
+                   TilingLayout* layout_engine);
+    
 private:
     struct wlr_scene_tree* layers_[static_cast<size_t>(Layer::COUNT)];
     ReservedSpace reserved_space_;
+    struct wlr_output* output_;  // The output this manager belongs to
 };
 
 } // namespace Wayland

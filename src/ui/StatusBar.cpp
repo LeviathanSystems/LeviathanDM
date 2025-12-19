@@ -1,22 +1,20 @@
 #include "ui/StatusBar.hpp"
-#include "wayland/Output.hpp"
-#include "wayland/Server.hpp"
+#include "wayland/LayerManager.hpp"
 #include "Logger.hpp"
 #include <ctime>
 #include <cstring>
 
 namespace Leviathan {
 
-StatusBar::StatusBar(Wayland::Output* output, Wayland::Server* server)
-    : output_(output),
-      server_(server),
+StatusBar::StatusBar(Wayland::LayerManager* layer_manager, int output_width)
+    : layer_manager_(layer_manager),
       scene_rect_(nullptr),
       scene_buffer_(nullptr),
       buffer_(nullptr),
       cairo_surface_(nullptr),
       cairo_(nullptr),
       buffer_data_(nullptr),
-      width_(output->wlr_output->width),
+      width_(output_width),
       height_(24),  // Status bar height
       current_workspace_(0),
       total_workspaces_(9),
@@ -25,7 +23,7 @@ StatusBar::StatusBar(Wayland::Output* output, Wayland::Server* server)
       time_str_("") {
     
     CreateSceneNodes();
-    LOG_INFO("Created status bar for output: {}x{}", width_, height_);
+    LOG_INFO("Created status bar: {}x{}", width_, height_);
 }
 
 StatusBar::~StatusBar() {
@@ -45,8 +43,8 @@ void StatusBar::CreateSceneNodes() {
     // Create status bar in the WorkingArea layer (where windows are)
     // This layer is for shells that can reserve space
     
-    // Get the working area layer from the server
-    auto* working_layer = server_->GetLayerManager()->GetLayer(Wayland::Layer::WorkingArea);
+    // Get the working area layer from the LayerManager
+    auto* working_layer = layer_manager_->GetLayer(Wayland::Layer::WorkingArea);
     
     // Create a rectangle node for the status bar background
     float bg_color[4] = {
@@ -68,7 +66,7 @@ void StatusBar::CreateSceneNodes() {
     reserved.bottom = 0;
     reserved.left = 0;
     reserved.right = 0;
-    server_->GetLayerManager()->SetReservedSpace(reserved);
+    layer_manager_->SetReservedSpace(reserved);
     
     LOG_DEBUG("Status bar created in WorkingArea layer, reserved {}px at top", height_);
 }

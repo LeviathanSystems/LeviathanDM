@@ -81,13 +81,36 @@ std::string SerializeResponse(const Response& response) {
     if (!response.outputs.empty()) {
         json outputs_arr = json::array();
         for (const auto& output : response.outputs) {
-            outputs_arr.push_back({
+            json output_obj = {
                 {"name", output.name},
                 {"width", output.width},
                 {"height", output.height},
                 {"refresh_mhz", output.refresh_mhz},
-                {"enabled", output.enabled}
-            });
+                {"enabled", output.enabled},
+                {"scale", output.scale}
+            };
+            
+            // Add optional fields if they exist
+            if (!output.description.empty()) {
+                output_obj["description"] = output.description;
+            }
+            if (!output.make.empty()) {
+                output_obj["make"] = output.make;
+            }
+            if (!output.model.empty()) {
+                output_obj["model"] = output.model;
+            }
+            if (!output.serial.empty()) {
+                output_obj["serial"] = output.serial;
+            }
+            if (output.phys_width_mm > 0) {
+                output_obj["phys_width_mm"] = output.phys_width_mm;
+            }
+            if (output.phys_height_mm > 0) {
+                output_obj["phys_height_mm"] = output.phys_height_mm;
+            }
+            
+            outputs_arr.push_back(output_obj);
         }
         j["outputs"] = outputs_arr;
     }

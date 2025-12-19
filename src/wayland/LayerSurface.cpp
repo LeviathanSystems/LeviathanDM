@@ -99,31 +99,41 @@ void LayerSurfaceManager::HandleMap(struct wl_listener* listener, void* data) {
     Server* server = layer_surface->server;
     
     // If no output assigned, use the first one from output layout
-    if (!wlr_ls->output) {
+    struct wlr_output* wlr_output = wlr_ls->output;
+    if (!wlr_output) {
         struct wlr_output_layout* layout = server->GetOutputLayout();
-        struct wlr_output* output = wlr_output_layout_output_at(layout, 0, 0);
-        if (output) {
-            wlr_layer_surface_v1_configure(wlr_ls, output->width, output->height);
+        wlr_output = wlr_output_layout_output_at(layout, 0, 0);
+        if (wlr_output) {
+            wlr_layer_surface_v1_configure(wlr_ls, wlr_output->width, wlr_output->height);
             LOG_DEBUG("Assigned layer surface to output");
         } else {
             LOG_WARN("No output available for layer surface!");
+            return;
         }
     }
     
-    // Determine which scene layer to use
+    // Find the Output struct for this wlr_output to get its LayerManager
+    Output* output = server->FindOutput(wlr_output);
+    
+    if (!output || !output->layer_manager) {
+        LOG_WARN("No Output or LayerManager found for layer surface");
+        return;
+    }
+    
+    // Determine which scene layer to use from this output's LayerManager
     struct wlr_scene_tree* parent_tree = nullptr;
     switch (wlr_ls->current.layer) {
         case ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND:
-            parent_tree = server->GetLayerManager()->GetLayer(Layer::Background);
+            parent_tree = output->layer_manager->GetLayer(Layer::Background);
             break;
         case ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM:
-            parent_tree = server->GetLayerManager()->GetLayer(Layer::Background);
+            parent_tree = output->layer_manager->GetLayer(Layer::Background);
             break;
         case ZWLR_LAYER_SHELL_V1_LAYER_TOP:
-            parent_tree = server->GetLayerManager()->GetLayer(Layer::Top);
+            parent_tree = output->layer_manager->GetLayer(Layer::Top);
             break;
         case ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY:
-            parent_tree = server->GetLayerManager()->GetLayer(Layer::Top);
+            parent_tree = output->layer_manager->GetLayer(Layer::Top);
             break;
     }
     

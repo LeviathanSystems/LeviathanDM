@@ -1,6 +1,8 @@
 #include "ipc/IPC.hpp"
 #include <iostream>
+#include <iomanip>
 #include <cstring>
+#include <cmath>
 
 using namespace Leviathan::IPC;
 
@@ -82,8 +84,48 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    // Print the raw response for now (pretty-printing can be added later)
-    if (response->data.count("raw")) {
+    // Pretty-print specific command outputs
+    if (command == "get-outputs" && !response->outputs.empty()) {
+        std::cout << "Outputs:\n";
+        for (const auto& output : response->outputs) {
+            std::cout << "\n";
+            std::cout << "  Name:        " << output.name << "\n";
+            
+            if (!output.description.empty()) {
+                std::cout << "  Description: " << output.description << "\n";
+            }
+            if (!output.make.empty()) {
+                std::cout << "  Make:        " << output.make << "\n";
+            }
+            if (!output.model.empty()) {
+                std::cout << "  Model:       " << output.model << "\n";
+            }
+            if (!output.serial.empty()) {
+                std::cout << "  Serial:      " << output.serial << "\n";
+            }
+            
+            std::cout << "  Resolution:  " << output.width << "x" << output.height;
+            if (output.refresh_mhz > 0) {
+                std::cout << " @ " << std::fixed << std::setprecision(2) 
+                         << (output.refresh_mhz / 1000.0) << " Hz";
+            }
+            std::cout << "\n";
+            
+            std::cout << "  Scale:       " << std::fixed << std::setprecision(2) << output.scale << "x\n";
+            
+            if (output.phys_width_mm > 0 && output.phys_height_mm > 0) {
+                std::cout << "  Physical:    " << output.phys_width_mm << "mm x " 
+                         << output.phys_height_mm << "mm";
+                // Calculate diagonal in inches
+                float diag_mm = std::sqrt(output.phys_width_mm * output.phys_width_mm + 
+                                         output.phys_height_mm * output.phys_height_mm);
+                float diag_inches = diag_mm / 25.4;
+                std::cout << " (" << std::fixed << std::setprecision(1) << diag_inches << "\")\n";
+            }
+            
+            std::cout << "  Enabled:     " << (output.enabled ? "yes" : "no") << "\n";
+        }
+    } else if (response->data.count("raw")) {
         std::cout << response->data["raw"];
     } else {
         std::cout << "Success\n";

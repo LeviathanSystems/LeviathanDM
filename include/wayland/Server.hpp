@@ -65,7 +65,9 @@ public:
     const std::vector<Core::Client*>& GetClients() const { return clients_; }
     TilingLayout* GetLayoutEngine() { return layout_engine_.get(); }
     KeyBindings* GetKeyBindings() { return keybindings_.get(); }
-    LayerManager* GetLayerManager() { return layer_manager_.get(); }
+    
+    // Find Output struct by wlr_output
+    Output* FindOutput(struct wlr_output* wlr_output);
     
     // CompositorState interface implementation
     std::vector<Core::Screen*> GetScreens() const override;
@@ -114,6 +116,9 @@ public:
     // Auto-launch application
     void LaunchDefaultTerminal();
     
+    // Monitor group configuration
+    void ApplyMonitorGroupConfiguration();
+    
 private:
     Server();
     bool Initialize();
@@ -137,11 +142,10 @@ private:
     struct wlr_scene* scene;
     struct wlr_scene_output_layout* scene_layout;
     struct wlr_scene_tree* window_layer;  // Layer for windows (above background)
-    std::unique_ptr<LayerManager> layer_manager_;  // Layer management
     
     // Output management
     struct wlr_output_layout* output_layout;
-    struct wl_list outputs; // Output::link
+    struct wl_list outputs; // Output::link (each has its own LayerManager)
     
     // XDG shell
     struct wlr_xdg_shell* xdg_shell;

@@ -1,0 +1,62 @@
+# Monitor Groups Configuration Example
+# This file demonstrates how to configure different monitor layouts for LeviathanDM
+# The compositor will automatically switch between groups based on connected monitors
+
+monitor-groups:
+  # Default group - MANDATORY fallback when no other group matches
+  - name: Default
+    default: true
+    monitors:
+      - display: "eDP-1"  # Built-in laptop screen
+        pos: "0x0"
+        mode: "1920x1080"
+        scale: 1.0
+
+  # Home setup - Laptop + external monitor
+  - name: Home
+    monitors:
+      - display: "eDP-1"  # Laptop screen
+        pos: "0x0"
+        mode: "1920x1080"
+        scale: 1.0
+      
+      - display: "d:Dell Inc. U2720Q"  # Match by EDID description
+        pos: "1920x0"  # To the right of laptop
+        mode: "3840x2160"
+        scale: 1.5
+
+  # Office setup - Dual external monitors
+  - name: Office
+    monitors:
+      - display: "HDMI-A-1"
+        pos: "0x0"
+        mode: "1920x1080"
+        scale: 1.0
+      
+      - display: "HDMI-A-2"
+        pos: "1920x0"
+        mode: "1920x1080"
+        scale: 1.0
+      
+      - display: "eDP-1"  # Laptop as tertiary
+        pos: "3840x0"
+        mode: "1920x1080"
+        scale: 1.0
+
+  # Presentation mode - External projector only
+  - name: Presentation
+    monitors:
+      - display: "HDMI-A-1"
+        pos: "0x0"
+        mode: "1920x1080"
+        scale: 1.0
+
+# Identifier formats:
+# 1. Direct output name: "eDP-1", "HDMI-A-1", "DP-1"
+# 2. EDID description: "d:Dell Inc. U2720Q" (searches in description field)
+# 3. Make/model: "m:Dell Inc./U2720Q" (searches in make/model)
+#
+# Position format: "XxY" (e.g., "1920x0", "0x1080")
+# Mode format: "WIDTHxHEIGHT" or "WIDTHxHEIGHT@REFRESH" (e.g., "1920x1080", "3840x2160@60")
+# Scale: Float value (e.g., 1.0, 1.5, 2.0)
+# Transform: Rotation in degrees (0, 90, 180, 270)
