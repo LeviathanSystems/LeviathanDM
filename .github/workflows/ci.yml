@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential cmake meson ninja-build pkg-config \
-            wayland-protocols libwayland-dev libxkbcommon-dev \
+            wayland-protocols libxkbcommon-dev \
             libpixman-1-dev libdrm-dev libgbm-dev libudev-dev \
             libinput-dev libseat-dev hwdata \
             libcairo2-dev libpango1.0-dev libglib2.0-dev \
@@ -34,7 +34,19 @@ jobs:
             libvulkan-dev glslang-tools \
             libxcb1-dev libxcb-composite0-dev libxcb-render0-dev \
             libxcb-xfixes0-dev libxcb-xinput-dev libxcb-image0-dev \
-            libxcb-ewmh-dev libxcb-icccm4-dev libx11-xcb-dev
+            libxcb-ewmh-dev libxcb-icccm4-dev libx11-xcb-dev \
+            libxml2-dev libexpat1-dev libffi-dev
+
+      - name: Build wayland 1.23.1 from source
+        run: |
+          cd /tmp
+          wget https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.23.1/downloads/wayland-1.23.1.tar.xz
+          tar -xf wayland-1.23.1.tar.xz
+          cd wayland-1.23.1
+          meson setup build --prefix=/usr -Ddocumentation=false
+          ninja -C build
+          sudo ninja -C build install
+          sudo ldconfig
 
       - name: Setup dependencies
         run: ./setup-deps.sh
