@@ -29,8 +29,7 @@ jobs:
             wayland-protocols libwayland-dev libxkbcommon-dev \
             libpixman-1-dev libdrm-dev libgbm-dev libudev-dev \
             libinput-dev libseat-dev hwdata \
-            libcairo2-dev libpango1.0-dev \
-            libglib2.0-dev libgio2.0-cil-dev \
+            libcairo2-dev libpango1.0-dev libglib2.0-dev \
             libegl1-mesa-dev libgles2-mesa-dev \
             libvulkan-dev glslang-tools \
             libxcb1-dev libxcb-composite0-dev libxcb-render0-dev \
