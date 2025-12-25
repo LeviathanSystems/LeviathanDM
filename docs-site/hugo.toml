@@ -1,9 +1,6 @@
-baseURL = 'https://leviathansystems.github.io/LeviathanDM/'baseURL = 'https://example.org/'
-
-languageCode = 'en-us'languageCode = 'en-us'
-
-title = 'LeviathanDM Documentation'title = 'My New Hugo Site'
-
+baseURL = 'https://leviathansystems.github.io/LeviathanDM/'
+languageCode = 'en-us'
+title = 'LeviathanDM Documentation'
 theme = 'hugo-book'
 
 enableGitInfo = true
