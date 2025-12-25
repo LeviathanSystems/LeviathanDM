@@ -1,0 +1,40 @@
+baseURL = 'https://leviathansystems.github.io/LeviathanDM/'baseURL = 'https://example.org/'
+
+languageCode = 'en-us'languageCode = 'en-us'
+
+title = 'LeviathanDM Documentation'title = 'My New Hugo Site'
+
+theme = 'hugo-book'
+
+enableGitInfo = true
+disableKinds = ['taxonomy', 'term']
+
+[params]
+  BookTheme = 'auto'
+  BookToC = true
+  BookMenuBundle = '/menu'
+  BookSection = 'docs'
+  BookRepo = 'https://github.com/LeviathanSystems/LeviathanDM'
+  BookEditPath = 'edit/master/docs'
+  BookSearch = true
+  BookComments = false
+  description = 'A lightweight, customizable tiling Wayland compositor built with wlroots and C++'
+  author = 'LeviathanSystems'
+  
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.tableOfContents]
+    endLevel = 4
+    startLevel = 2
+
+[menu]
+  [[menu.before]]
+    identifier = 'github'
+    name = 'GitHub'
+    url = 'https://github.com/LeviathanSystems/LeviathanDM'
+    weight = 10
+    
+[outputs]
+  home = ['HTML', 'RSS', 'JSON']
