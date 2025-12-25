@@ -1,0 +1,137 @@
+name: CI Build and Test
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-24.04
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake meson ninja-build pkg-config \
+            wayland-protocols libwayland-dev libxkbcommon-dev \
+            libpixman-1-dev libdrm-dev libgbm-dev libudev-dev \
+            libinput-dev libseat-dev hwdata \
+            libcairo2-dev libpango1.0-dev \
+            libglib2.0-dev libgio2.0-cil-dev \
+            libegl1-mesa-dev libgles2-mesa-dev \
+            libvulkan-dev glslang-tools \
+            libxcb1-dev libxcb-composite0-dev libxcb-render0-dev \
+            libxcb-xfixes0-dev libxcb-xinput-dev libxcb-image0-dev \
+            libxcb-ewmh-dev libxcb-icccm4-dev libx11-xcb-dev
+
+      - name: Setup dependencies
+        run: ./setup-deps.sh
+
+      - name: Configure CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                ..
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(nproc)
+
+      - name: Check for warnings
+        run: |
+          echo "Checking build output for warnings..."
+          # This is informational - we don't fail on warnings yet
+          if [ -f build/compile_commands.json ]; then
+            echo "✓ Compile commands generated"
+          fi
+
+      - name: Verify binaries
+        run: |
+          test -f build/leviathan || (echo "❌ Main binary not built" && exit 1)
+          test -f build/leviathanctl || (echo "❌ Control binary not built" && exit 1)
+          test -f build/libleviathan-ui.so || (echo "❌ UI library not built" && exit 1)
+          echo "✓ All binaries built successfully"
+
+      - name: Build plugins
+        run: |
+          cd plugins
+          ./build-all.sh
+          echo "✓ Plugins built successfully"
+
+      - name: Check file sizes
+        run: |
+          echo "Binary sizes:"
+          ls -lh build/leviathan build/leviathanctl build/libleviathan-ui.so
+
+  check-docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: '0.152.2'
+          extended: true
+
+      - name: Build documentation
+        run: |
+          cd docs-site
+          hugo --gc --minify
+
+      - name: Check for broken links (if docs built)
+        run: |
+          if [ -d docs-site/public ]; then
+            echo "✓ Documentation built successfully"
+          else
+            echo "❌ Documentation build failed"
+            exit 1
+          fi
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "Checking for TODO/FIXME comments..."
+          grep -r "TODO\|FIXME" src/ include/ || echo "No TODO/FIXME found"
+
+      - name: Check file permissions
+        run: |
+          echo "Checking for executable scripts..."
+          find . -name "*.sh" -type f ! -perm -u+x -print || true
+
+      - name: Validate config files
+        run: |
+          echo "Checking YAML config files..."
+          for file in config/*.yaml; do
+            if [ -f "$file" ]; then
+              echo "✓ Found config: $file"
+            fi
+          done

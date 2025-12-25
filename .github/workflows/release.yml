@@ -1,0 +1,146 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0, v1.2.3, etc.
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-24.04
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Get version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: LeviathanDM ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          body: |
+            # LeviathanDM ${{ github.ref_name }}
+            
+            ## Download
+            
+            Download the pre-built binary for your system below.
+            
+            ## Installation
+            
+            ```bash
+            # Extract the archive
+            tar xzf leviathan-${{ steps.get_version.outputs.version }}-linux-x86_64.tar.gz
+            
+            # Install (optional)
+            sudo install -m 755 leviathan /usr/local/bin/
+            sudo install -m 755 leviathanctl /usr/local/bin/
+            
+            # Copy default config (if not exists)
+            mkdir -p ~/.config/leviathan
+            cp -n config/* ~/.config/leviathan/
+            ```
+            
+            ## What's Changed
+            
+            See the [documentation](https://leviathansystems.github.io/LeviathanDM/) for full details.
+            
+            ## Requirements
+            
+            - Linux kernel 5.x or newer
+            - Wayland-capable GPU drivers
+            - libwayland, libxkbcommon, pixman, cairo
+
+  build-linux:
+    name: Build Linux Binary
+    needs: create-release
+    runs-on: ubuntu-24.04
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake meson ninja-build pkg-config \
+            wayland-protocols libwayland-dev libxkbcommon-dev \
+            libpixman-1-dev libdrm-dev libgbm-dev libudev-dev \
+            libinput-dev libseat-dev hwdata \
+            libcairo2-dev libpango1.0-dev \
+            libglib2.0-dev libgio2.0-cil-dev \
+            libegl1-mesa-dev libgles2-mesa-dev \
+            libvulkan-dev glslang-tools \
+            libxcb1-dev libxcb-composite0-dev libxcb-render0-dev \
+            libxcb-xfixes0-dev libxcb-xinput-dev libxcb-image0-dev \
+            libxcb-ewmh-dev libxcb-icccm4-dev libx11-xcb-dev
+
+      - name: Build LeviathanDM
+        run: |
+          ./setup-deps.sh
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                ..
+          make -j$(nproc)
+
+      - name: Prepare release package
+        run: |
+          VERSION=${{ needs.create-release.outputs.version }}
+          PACKAGE_NAME="leviathan-${VERSION}-linux-x86_64"
+          
+          mkdir -p ${PACKAGE_NAME}
+          cp build/leviathan ${PACKAGE_NAME}/
+          cp build/leviathanctl ${PACKAGE_NAME}/
+          cp build/libleviathan-ui.so ${PACKAGE_NAME}/
+          cp README.md ${PACKAGE_NAME}/
+          cp LICENSE ${PACKAGE_NAME}/ 2>/dev/null || echo "No LICENSE file"
+          
+          # Copy config files
+          mkdir -p ${PACKAGE_NAME}/config
+          cp -r config/* ${PACKAGE_NAME}/config/
+          
+          # Copy plugins
+          mkdir -p ${PACKAGE_NAME}/plugins
+          cp build/plugins/*/*.so ${PACKAGE_NAME}/plugins/ 2>/dev/null || true
+          
+          # Create archive
+          tar czf ${PACKAGE_NAME}.tar.gz ${PACKAGE_NAME}
+          
+          # Create checksum
+          sha256sum ${PACKAGE_NAME}.tar.gz > ${PACKAGE_NAME}.tar.gz.sha256
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./leviathan-${{ needs.create-release.outputs.version }}-linux-x86_64.tar.gz
+          asset_name: leviathan-${{ needs.create-release.outputs.version }}-linux-x86_64.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./leviathan-${{ needs.create-release.outputs.version }}-linux-x86_64.tar.gz.sha256
+          asset_name: leviathan-${{ needs.create-release.outputs.version }}-linux-x86_64.tar.gz.sha256
+          asset_content_type: text/plain

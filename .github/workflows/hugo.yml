@@ -1,13 +1,12 @@
 name: Deploy Hugo Documentation
 
 on:
+  # Only deploy on version tags to keep docs in sync with releases
   push:
-    branches:
-      - master
-    paths:
-      - 'docs-site/**'
-      - 'docs/**'
-      - '.github/workflows/hugo.yml'
+    tags:
+      - 'v*.*.*'
+  
+  # Allow manual deployment
   workflow_dispatch:
 
 permissions:
