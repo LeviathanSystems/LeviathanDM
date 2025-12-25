@@ -16,6 +16,8 @@
 #define namespace namespace_
 extern "C" {
 #include <wlr/types/wlr_layer_shell_v1.h>
+#include <wlr/types/wlr_primary_selection_v1.h>
+#include <wlr/types/wlr_data_control_v1.h>
 }
 #undef namespace
 
@@ -68,6 +70,14 @@ public:
     
     // Find Output struct by wlr_output
     Output* FindOutput(struct wlr_output* wlr_output);
+    
+    // Check if cursor is over a status bar and handle hover
+    // Returns true if hover was handled by a status bar
+    bool CheckStatusBarHover(int x, int y);
+    
+    // Check if click is on a status bar and handle it
+    // Returns true if click was handled by a status bar
+    bool CheckStatusBarClick(int x, int y);
     
     // CompositorState interface implementation
     std::vector<Core::Screen*> GetScreens() const override;
@@ -137,6 +147,8 @@ private:
     struct wlr_compositor* compositor;
     struct wlr_subcompositor* subcompositor;
     struct wlr_data_device_manager* data_device_manager;
+    struct wlr_primary_selection_v1_device_manager* primary_selection_mgr;
+    struct wlr_data_control_manager_v1* data_control_mgr;
     
     // Scene graph
     struct wlr_scene* scene;

@@ -12,7 +12,13 @@ Seat::Seat()
 }
 
 Seat::~Seat() {
-    // Note: screens, tags, and clients are owned elsewhere, we just reference them
+    // Clean up tags we own
+    for (Tag* tag : tags_) {
+        delete tag;
+    }
+    tags_.clear();
+    
+    // Note: screens and clients are owned elsewhere, we just reference them
 }
 
 void Seat::AddScreen(Screen* screen) {

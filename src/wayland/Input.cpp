@@ -11,6 +11,7 @@ extern "C" {
 #include <wlr/backend/multi.h>
 #include <wlr/backend/libinput.h>
 #include <libinput.h>
+#include <linux/input-event-codes.h>
 #include <stdlib.h>
 }
 
@@ -146,7 +147,7 @@ void InputManager::HandleNewInput(Server* server, struct wlr_input_device* devic
             // Set pointer acceleration (range: -1 to 1)
             if (libinput_device_config_accel_is_available(libinput_dev)) {
                 libinput_device_config_accel_set_speed(libinput_dev, mouse_speed);
-                LOG_INFO("Set pointer speed to {} for device: {}", mouse_speed, device->name);
+                LOG_INFO_FMT("Set pointer speed to {} for device: {}", mouse_speed, device->name);
             }
             
             // Enable pointer acceleration profile
@@ -182,6 +183,14 @@ void InputManager::HandleKeyboardDestroy(struct wl_listener* listener, void* dat
 }
 
 static void process_cursor_motion(Server* server, uint32_t time) {
+    // Check if cursor is over a status bar first (they're in top layers)
+    if (server->CheckStatusBarHover(static_cast<int>(server->cursor->x), 
+                                   static_cast<int>(server->cursor->y))) {
+        // Cursor is over a status bar, don't send to client surfaces
+        wlr_seat_pointer_clear_focus(server->seat);
+        return;
+    }
+    
     // Find the surface under the cursor
     double sx, sy;
     struct wlr_scene_node* node = wlr_scene_node_at(
@@ -251,6 +260,16 @@ void InputManager::HandleCursorButton(struct wl_listener* listener, void* data) 
     Server* server = wl_container_of(listener, server, cursor_button);
     struct wlr_pointer_button_event* event = 
         static_cast<struct wlr_pointer_button_event*>(data);
+    
+    // Check if click is on a status bar first (before sending to clients)
+    if (event->state == WL_POINTER_BUTTON_STATE_PRESSED && 
+        event->button == BTN_LEFT) {
+        if (server->CheckStatusBarClick(static_cast<int>(server->cursor->x), 
+                                       static_cast<int>(server->cursor->y))) {
+            // Click was handled by a status bar, don't send to clients
+            return;
+        }
+    }
     
     // Notify clients of the button event
     wlr_seat_pointer_notify_button(server->seat, event->time_msec, 

@@ -35,13 +35,13 @@ bool ConfigParser::Load(const std::string& config_path) {
             ParseMonitorGroups(config["monitor-groups"]);
         }
         
-        LOG_INFO("Loaded configuration from: {}", config_path);
+        LOG_INFO_FMT("Loaded configuration from: {}", config_path);
         return true;
     } catch (const YAML::Exception& e) {
-        LOG_ERROR("Failed to parse config file {}: {}", config_path, e.what());
+        LOG_ERROR_FMT("Failed to parse config file {}: {}", config_path, e.what());
         return false;
     } catch (const std::exception& e) {
-        LOG_ERROR("Error loading config file {}: {}", config_path, e.what());
+        LOG_ERROR_FMT("Error loading config file {}: {}", config_path, e.what());
         return false;
     }
 }
@@ -52,7 +52,7 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
     try {
         std::filesystem::path config_path(main_config);
         if (!std::filesystem::exists(config_path)) {
-            LOG_WARN("Config file not found: {}, using defaults", main_config);
+            LOG_WARN_FMT("Config file not found: {}, using defaults", main_config);
             return false;
         }
         
@@ -85,13 +85,13 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
             ParseMonitorGroups(config["monitor-groups"]);
         }
         
-        LOG_INFO("Loaded configuration with includes from: {}", main_config);
+        LOG_INFO_FMT("Loaded configuration with includes from: {}", main_config);
         return true;
     } catch (const YAML::Exception& e) {
-        LOG_ERROR("Failed to parse config: {}", e.what());
+        LOG_ERROR_FMT("Failed to parse config: {}", e.what());
         return false;
     } catch (const std::exception& e) {
-        LOG_ERROR("Error loading config: {}", e.what());
+        LOG_ERROR_FMT("Error loading config: {}", e.what());
         return false;
     }
 }
@@ -103,7 +103,7 @@ void ConfigParser::ProcessIncludes(const YAML::Node& include_node, const std::st
             std::filesystem::path include_path = std::filesystem::path(base_path) / include_node.as<std::string>();
             
             if (!std::filesystem::exists(include_path)) {
-                LOG_WARN("Include file not found: {}", include_path.string());
+                LOG_WARN_FMT("Include file not found: {}", include_path.string());
                 return;
             }
             
@@ -111,7 +111,7 @@ void ConfigParser::ProcessIncludes(const YAML::Node& include_node, const std::st
             
             // Check for circular includes
             if (std::find(loaded_files_.begin(), loaded_files_.end(), canonical_path) != loaded_files_.end()) {
-                LOG_WARN("Circular include detected, skipping: {}", canonical_path);
+                LOG_WARN_FMT("Circular include detected, skipping: {}", canonical_path);
                 return;
             }
             
@@ -125,7 +125,7 @@ void ConfigParser::ProcessIncludes(const YAML::Node& include_node, const std::st
             }
         }
     } catch (const std::exception& e) {
-        LOG_ERROR("Error processing includes: {}", e.what());
+        LOG_ERROR_FMT("Error processing includes: {}", e.what());
     }
 }
 
@@ -137,7 +137,7 @@ void ConfigParser::ParseLibInput(const YAML::Node& node) {
             double speed = mouse["speed"].as<double>();
             // Clamp to valid range
             libinput.mouse.speed = std::clamp(speed, -1.0, 1.0);
-            LOG_DEBUG("Mouse speed: {}", libinput.mouse.speed);
+            LOG_DEBUG_FMT("Mouse speed: {}", libinput.mouse.speed);
         }
         if (mouse["natural_scroll"]) {
             libinput.mouse.natural_scroll = mouse["natural_scroll"].as<bool>();
@@ -183,7 +183,7 @@ void ConfigParser::ParseLibInput(const YAML::Node& node) {
 void ConfigParser::ParseGeneral(const YAML::Node& node) {
     if (node["terminal"]) {
         general.terminal = node["terminal"].as<std::string>();
-        LOG_DEBUG("Terminal: {}", general.terminal);
+        LOG_DEBUG_FMT("Terminal: {}", general.terminal);
     }
     if (node["auto_launch_terminal"]) {
         general.auto_launch_terminal = node["auto_launch_terminal"].as<bool>();
@@ -258,7 +258,7 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
                 }
                 
                 plugins.plugin_paths.push_back(path_str);
-                LOG_DEBUG("Plugin path: {}", path_str);
+                LOG_DEBUG_FMT("Plugin path: {}", path_str);
             }
         } else if (node["plugin_paths"].IsScalar()) {
             std::string path_str = node["plugin_paths"].as<std::string>();
@@ -272,13 +272,13 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
             }
             
             plugins.plugin_paths.push_back(path_str);
-            LOG_DEBUG("Plugin path: {}", path_str);
+            LOG_DEBUG_FMT("Plugin path: {}", path_str);
         }
     }
     
     // Log all plugin paths
     for (const auto& path : plugins.plugin_paths) {
-        LOG_INFO("Plugin search path: {}", path);
+        LOG_INFO_FMT("Plugin search path: {}", path);
     }
     
     // Parse plugins list
@@ -291,7 +291,7 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
                 // Plugin name is required
                 if (plugin_node["name"]) {
                     plugin_config.name = plugin_node["name"].as<std::string>();
-                    LOG_DEBUG("Plugin: {}", plugin_config.name);
+                    LOG_DEBUG_FMT("Plugin: {}", plugin_config.name);
                 } else {
                     LOG_WARN("Plugin entry missing 'name', skipping");
                     continue;
@@ -305,7 +305,7 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
                             std::string key = kv.first.as<std::string>();
                             std::string value = kv.second.as<std::string>();
                             plugin_config.config[key] = value;
-                            LOG_DEBUG("  {}: {}", key, value);
+                            LOG_DEBUG_FMT("  {}: {}", key, value);
                         }
                     }
                 }
@@ -351,11 +351,48 @@ void ConfigParser::HexToRGBA(const std::string& hex, float rgba[4]) {
             rgba[2] = b / 255.0f;
             rgba[3] = a / 255.0f;
         } else {
-            LOG_WARN("Invalid hex color format: {}, using black", hex);
+            LOG_WARN_FMT("Invalid hex color format: {}, using black", hex);
         }
     } catch (const std::exception& e) {
-        LOG_ERROR("Failed to parse hex color '{}': {}", hex, e.what());
+        LOG_ERROR_FMT("Failed to parse hex color '{}': {}", hex, e.what());
     }
+}
+
+// Recursive widget parsing function
+static WidgetConfig ParseWidget(const YAML::Node& widget_node) {
+    WidgetConfig widget;
+    
+    if (!widget_node["type"]) {
+        LOG_WARN("Widget missing 'type', skipping");
+        return widget;
+    }
+    
+    widget.type = widget_node["type"].as<std::string>();
+    
+    // Parse properties
+    if (widget_node["properties"] && widget_node["properties"].IsMap()) {
+        for (const auto& prop : widget_node["properties"]) {
+            std::string key = prop.first.as<std::string>();
+            widget.properties[key] = prop.second.as<std::string>();
+        }
+    }
+    
+    // Also support properties at root level (backward compatibility)
+    for (const auto& prop : widget_node) {
+        std::string key = prop.first.as<std::string>();
+        if (key != "type" && key != "properties" && key != "children") {
+            widget.properties[key] = prop.second.as<std::string>();
+        }
+    }
+    
+    // Recursively parse children (for containers like hbox, vbox)
+    if (widget_node["children"] && widget_node["children"].IsSequence()) {
+        for (const auto& child_node : widget_node["children"]) {
+            widget.children.push_back(ParseWidget(child_node));
+        }
+    }
+    
+    return widget;
 }
 
 void ConfigParser::ParseStatusBars(const YAML::Node& node) {
@@ -389,7 +426,7 @@ void ConfigParser::ParseStatusBars(const YAML::Node& node) {
             } else if (pos == "right") {
                 bar.position = StatusBarConfig::Position::Right;
             } else {
-                LOG_WARN("Unknown status bar position '{}', using top", pos);
+                LOG_WARN_FMT("Unknown status bar position '{}', using top", pos);
             }
         }
         
@@ -460,11 +497,16 @@ void ConfigParser::ParseStatusBars(const YAML::Node& node) {
         parse_container(bar_node["center"], bar.center);
         parse_container(bar_node["right"], bar.right);
         
+        // Parse new root widget structure (preferred)
+        if (bar_node["root"]) {
+            bar.root = ParseWidget(bar_node["root"]);
+        }
+        
         status_bars.bars.push_back(bar);
-        LOG_DEBUG("Loaded status bar config: '{}'", bar.name);
+        LOG_DEBUG_FMT("Loaded status bar config: '{}'", bar.name);
     }
     
-    LOG_INFO("Loaded {} status bar configuration(s)", status_bars.bars.size());
+    LOG_INFO_FMT("Loaded {} status bar configuration(s)", status_bars.bars.size());
 }
 
 void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
@@ -547,7 +589,7 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
                             int y = std::stoi(pos_str.substr(x_pos + 1));
                             mon.position = {x, y};
                         } catch (const std::exception& e) {
-                            LOG_WARN("Invalid position format '{}': {}", pos_str, e.what());
+                            LOG_WARN_FMT("Invalid position format '{}': {}", pos_str, e.what());
                         }
                     }
                 }
@@ -576,7 +618,7 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
         }
         
         monitor_groups.groups.push_back(group);
-        LOG_INFO("Loaded monitor group '{}' with {} monitors{}", 
+        LOG_INFO_FMT("Loaded monitor group '{}' with {} monitors{}", 
                  group.name, group.monitors.size(), 
                  group.is_default ? " (default)" : "");
     }

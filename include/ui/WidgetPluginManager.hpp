@@ -16,6 +16,8 @@ struct LoadedPlugin {
     PluginDescriptor descriptor;            // Plugin descriptor
     std::string path;                       // Path to .so file
     std::vector<WidgetPlugin*> instances;   // Active instances of this plugin
+    size_t baseline_rss;                    // RSS before plugin loaded
+    size_t baseline_virtual;                // Virtual memory before plugin loaded
 };
 
 // Plugin manager - handles loading and managing widget plugins
@@ -51,6 +53,19 @@ public:
     
     // Get plugin metadata
     PluginMetadata GetPluginMetadata(const std::string& plugin_name) const;
+    
+    // Memory statistics per plugin
+    struct PluginMemoryStats {
+        size_t rss_bytes;          // Resident Set Size (actual physical memory)
+        size_t virtual_bytes;      // Virtual memory size
+        int instance_count;        // Number of active instances
+    };
+    
+    // Get memory usage for a specific plugin
+    PluginMemoryStats GetPluginMemoryStats(const std::string& plugin_name) const;
+    
+    // Get memory usage for all plugins
+    std::map<std::string, PluginMemoryStats> GetAllPluginMemoryStats() const;
 
 private:
     WidgetPluginManager() = default;
@@ -62,6 +77,9 @@ private:
     
     // Validate plugin API version
     bool ValidatePlugin(const PluginDescriptor& descriptor) const;
+    
+    // Helper to get current process memory usage
+    void GetProcessMemory(size_t& rss_bytes, size_t& virtual_bytes) const;
     
     // Map of plugin name -> loaded plugin info
     std::map<std::string, LoadedPlugin> plugins_;

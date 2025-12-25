@@ -118,7 +118,7 @@ bool KeyBindings::HandleKeyPress(uint32_t modifiers, xkb_keysym_t keysym) {
             char key_name[64];
             xkb_keysym_get_name(keysym, key_name, sizeof(key_name));
             
-            LOG_INFO("Keybinding triggered: {}{}", mod_str, key_name);
+            LOG_INFO_FMT("Keybinding triggered: {}{}", mod_str, key_name);
             
             binding.action();
             return true;
@@ -136,7 +136,7 @@ bool KeyBindings::HandleKeyPress(uint32_t modifiers, xkb_keysym_t keysym) {
         char key_name[64];
         xkb_keysym_get_name(keysym, key_name, sizeof(key_name));
         
-        LOG_DEBUG("No keybinding for: {}{}", mod_str, key_name);
+        LOG_DEBUG_FMT("No keybinding for: {}{}", mod_str, key_name);
     }
     
     return false;

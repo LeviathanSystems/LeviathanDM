@@ -4,6 +4,7 @@
 #include "wayland/Input.hpp"
 #include "wayland/LayerSurface.hpp"
 #include "ui/StatusBar.hpp"
+#include "ui/WidgetPluginManager.hpp"
 #include "config/ConfigParser.hpp"
 #include "Logger.hpp"
 #include <nlohmann/json.hpp>
@@ -102,6 +103,8 @@ Server::Server()
     , compositor(nullptr)
     , subcompositor(nullptr)
     , data_device_manager(nullptr)
+    , primary_selection_mgr(nullptr)
+    , data_control_mgr(nullptr)
     , scene(nullptr)
     , scene_layout(nullptr)
     , output_layout(nullptr)
@@ -129,6 +132,24 @@ Server::Server()
 }
 
 Server::~Server() {
+    LOG_INFO("Server destructor - cleaning up resources");
+    
+    // Clean up remaining views (in case they weren't destroyed by Wayland)
+    // Note: Normally Wayland destroy callbacks handle this, but we clean up for safety
+    for (auto* view : views) {
+        delete view;
+    }
+    views.clear();
+    
+    // Clean up remaining clients
+    for (auto* client : clients_) {
+        delete client;
+    }
+    clients_.clear();
+    
+    // core_seat_ is a unique_ptr, it will automatically clean up (and delete tags)
+    // Outputs are cleaned up by wlroots destroy callbacks
+    
     if (wl_display) {
         wl_display_destroy(wl_display);
     }
@@ -182,6 +203,10 @@ bool Server::Initialize() {
     compositor = wlr_compositor_create(wl_display, 5, renderer);
     subcompositor = wlr_subcompositor_create(wl_display);
     data_device_manager = wlr_data_device_manager_create(wl_display);
+    primary_selection_mgr = wlr_primary_selection_v1_device_manager_create(wl_display);
+    data_control_mgr = wlr_data_control_manager_v1_create(wl_display);
+    
+    LOG_INFO("Clipboard and primary selection support enabled");
     
     // Create output layout
     output_layout = wlr_output_layout_create(wl_display);
@@ -266,7 +291,7 @@ bool Server::Initialize() {
     auto& config = Config();
     ConfigParser::HexToRGBA(config.general.border_color_focused, border_focused_);
     ConfigParser::HexToRGBA(config.general.border_color_unfocused, border_unfocused_);
-    LOG_DEBUG("Border colors - Focused: {}, Unfocused: {}", 
+    LOG_DEBUG_FMT("Border colors - Focused: {}, Unfocused: {}", 
              config.general.border_color_focused,
              config.general.border_color_unfocused);
     
@@ -332,7 +357,7 @@ void Server::Run() {
     // Note: cursor theme loading is deferred to OnNewOutput() when renderer is ready
     
     setenv("WAYLAND_DISPLAY", socket, true);
-    LOG_INFO("Running compositor on WAYLAND_DISPLAY={}", socket);
+    LOG_INFO_FMT("Running compositor on WAYLAND_DISPLAY={}", socket);
     
     // Launch default terminal
     LaunchDefaultTerminal();
@@ -351,12 +376,12 @@ void Server::Run() {
 }
 
 void Server::OnNewOutput(struct wlr_output* wlr_output) {
-    LOG_INFO("New output: {}", wlr_output->name);
+    LOG_INFO_FMT("New output: {}", wlr_output->name);
     
     // CRITICAL: Initialize output rendering with allocator and renderer
     // This must be done before creating the scene output or committing
     if (!wlr_output_init_render(wlr_output, allocator, renderer)) {
-        LOG_ERROR("Failed to initialize rendering for output '{}'", wlr_output->name);
+        LOG_ERROR_FMT("Failed to initialize rendering for output '{}'", wlr_output->name);
         return;
     }
     
@@ -372,7 +397,7 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     
     // Commit the output configuration
     if (!wlr_output_commit_state(wlr_output, &state)) {
-        LOG_ERROR("Failed to commit output '{}'", wlr_output->name);
+        LOG_ERROR_FMT("Failed to commit output '{}'", wlr_output->name);
         wlr_output_state_finish(&state);
         return;
     }
@@ -391,12 +416,12 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     // Create scene output - this is the proper wlroots 0.19 way
     output->scene_output = wlr_scene_output_create(scene, wlr_output);
     if (!output->scene_output) {
-        LOG_ERROR("Failed to create scene output for '{}'", wlr_output->name);
+        LOG_ERROR_FMT("Failed to create scene output for '{}'", wlr_output->name);
         delete output;
         return;
     }
     
-    LOG_INFO("Created scene output for '{}' at {:p}", wlr_output->name, 
+    LOG_INFO_FMT("Created scene output for '{}' at {:p}", wlr_output->name, 
              static_cast<void*>(output->scene_output));
     
     // Create Core::Screen object for this output
@@ -405,28 +430,28 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     
     if (core_seat_) {
         core_seat_->AddScreen(screen);
-        LOG_INFO("Added screen '{}' to core seat", screen->GetName());
+        LOG_INFO_FMT("Added screen '{}' to core seat", screen->GetName());
     }
     
     // Create per-output LayerManager
-    output->layer_manager = new LayerManager(scene, wlr_output);
-    LOG_INFO("Created LayerManager for output '{}'", wlr_output->name);
+    output->layer_manager = new LayerManager(scene, wlr_output, wl_event_loop);
+    LOG_INFO_FMT("Created LayerManager for output '{}'", wlr_output->name);
     
     // CRITICAL: Connect the output to the scene layout so the scene knows where to render
     wlr_scene_output_layout_add_output(scene_layout, layout_output, output->scene_output);
-    LOG_INFO("Connected output '{}' to scene layout", wlr_output->name);
+    LOG_INFO_FMT("Connected output '{}' to scene layout", wlr_output->name);
     
     // Register frame listener
     output->frame.notify = OutputManager::HandleFrame;
     wl_signal_add(&wlr_output->events.frame, &output->frame);
     
-    LOG_INFO("Registered frame listener for output '{}'", wlr_output->name);
+    LOG_INFO_FMT("Registered frame listener for output '{}'", wlr_output->name);
     
     // Register destroy listener
     output->destroy.notify = OutputManager::HandleDestroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
     
-    LOG_INFO("Output '{}' fully configured and enabled", wlr_output->name);
+    LOG_INFO_FMT("Output '{}' fully configured and enabled", wlr_output->name);
     
     // Apply monitor group configuration
     ApplyMonitorGroupConfiguration();
@@ -468,7 +493,7 @@ void Server::ApplyMonitorGroupConfiguration() {
         return;
     }
     
-    LOG_INFO("Applying monitor group: '{}'", group->name);
+    LOG_INFO_FMT("Applying monitor group: '{}'", group->name);
     
     // Apply configuration for each monitor in the group
     for (const auto& mon_config : group->monitors) {
@@ -509,12 +534,12 @@ void Server::ApplyMonitorGroupConfiguration() {
         }
         
         if (!output) {
-            LOG_WARN("Monitor '{}' from group '{}' not found in connected outputs", 
+            LOG_WARN_FMT("Monitor '{}' from group '{}' not found in connected outputs", 
                      mon_config.identifier, group->name);
             continue;
         }
         
-        LOG_INFO("Configuring output '{}' from monitor group", output->wlr_output->name);
+        LOG_INFO_FMT("Configuring output '{}' from monitor group", output->wlr_output->name);
         
         // Create output state for applying configuration
         struct wlr_output_state state;
@@ -563,14 +588,14 @@ void Server::ApplyMonitorGroupConfiguration() {
                     
                     if (best_mode) {
                         wlr_output_state_set_mode(&state, best_mode);
-                        LOG_INFO("Set mode {}x{}@{}Hz for '{}'", 
+                        LOG_INFO_FMT("Set mode {}x{}@{}Hz for '{}'", 
                                  width, height, best_mode->refresh / 1000, 
                                  output->wlr_output->name);
                     } else {
-                        LOG_WARN("Mode {} not available for '{}'", mode_str, output->wlr_output->name);
+                        LOG_WARN_FMT("Mode {} not available for '{}'", mode_str, output->wlr_output->name);
                     }
                 } catch (const std::exception& e) {
-                    LOG_ERROR("Failed to parse mode '{}': {}", mode_str, e.what());
+                    LOG_ERROR_FMT("Failed to parse mode '{}': {}", mode_str, e.what());
                 }
             }
         }
@@ -578,7 +603,7 @@ void Server::ApplyMonitorGroupConfiguration() {
         // Apply scale if specified
         if (mon_config.scale.has_value()) {
             wlr_output_state_set_scale(&state, mon_config.scale.value());
-            LOG_INFO("Set scale {} for '{}'", mon_config.scale.value(), output->wlr_output->name);
+            LOG_INFO_FMT("Set scale {} for '{}'", mon_config.scale.value(), output->wlr_output->name);
         }
         
         // Apply transform if specified
@@ -591,12 +616,12 @@ void Server::ApplyMonitorGroupConfiguration() {
                 default:  transform = WL_OUTPUT_TRANSFORM_NORMAL; break;
             }
             wlr_output_state_set_transform(&state, transform);
-            LOG_INFO("Set transform {} for '{}'", mon_config.transform.value(), output->wlr_output->name);
+            LOG_INFO_FMT("Set transform {} for '{}'", mon_config.transform.value(), output->wlr_output->name);
         }
         
         // Commit the output configuration
         if (!wlr_output_commit_state(output->wlr_output, &state)) {
-            LOG_ERROR("Failed to commit configuration for '{}'", output->wlr_output->name);
+            LOG_ERROR_FMT("Failed to commit configuration for '{}'", output->wlr_output->name);
         }
         
         // Cleanup output state
@@ -606,7 +631,7 @@ void Server::ApplyMonitorGroupConfiguration() {
         if (mon_config.position.has_value()) {
             auto [x, y] = mon_config.position.value();
             wlr_output_layout_add(output_layout, output->wlr_output, x, y);
-            LOG_INFO("Set position {}x{} for '{}'", x, y, output->wlr_output->name);
+            LOG_INFO_FMT("Set position {}x{} for '{}'", x, y, output->wlr_output->name);
         }
         
         // Create status bars for this monitor (handled by LayerManager)
@@ -618,11 +643,11 @@ void Server::ApplyMonitorGroupConfiguration() {
         );
     }
     
-    LOG_INFO("Monitor group '{}' configuration applied", group->name);
+    LOG_INFO_FMT("Monitor group '{}' configuration applied", group->name);
 }
 
 void Server::OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface) {
-    LOG_DEBUG("OnNewXdgSurface called, role={}, toplevel={}", 
+    LOG_DEBUG_FMT("OnNewXdgSurface called, role={}, toplevel={}", 
               static_cast<int>(xdg_surface->role),
               static_cast<void*>(xdg_surface->toplevel));
     
@@ -671,7 +696,7 @@ void Server::OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface) {
 
 void Server::OnNewXdgToplevel(struct wlr_xdg_toplevel* toplevel) {
     LOG_INFO("OnNewXdgToplevel called - this is the proper signal!");
-    LOG_DEBUG("Toplevel pointer: {}, base surface: {}", 
+    LOG_DEBUG_FMT("Toplevel pointer: {}, base surface: {}", 
               static_cast<void*>(toplevel),
               static_cast<void*>(toplevel->base));
     
@@ -679,10 +704,20 @@ void Server::OnNewXdgToplevel(struct wlr_xdg_toplevel* toplevel) {
     View* view = new View(toplevel, this);
     views.push_back(view);
     
-    // Add to scene graph
+    // Find first output's WorkingArea layer
+    struct wlr_scene_tree* parent_layer = &scene->tree;  // Fallback to root
+    if (!wl_list_empty(&outputs)) {
+        Output* first_output = wl_container_of(outputs.next, first_output, link);
+        if (first_output && first_output->layer_manager) {
+            parent_layer = first_output->layer_manager->GetLayer(Layer::WorkingArea);
+            LOG_DEBUG("Adding window to WorkingArea layer");
+        }
+    }
+    
+    // Add to scene graph working area layer (where windows go)
     // wlr_scene_xdg_surface_create automatically handles configure events
     view->scene_tree = wlr_scene_xdg_surface_create(
-        &scene->tree, toplevel->base);
+        parent_layer, toplevel->base);
     
     // CRITICAL: Link the xdg_surface to the scene_tree
     // This is required for wlroots scene helpers to work properly
@@ -690,7 +725,7 @@ void Server::OnNewXdgToplevel(struct wlr_xdg_toplevel* toplevel) {
     toplevel->base->data = view->scene_tree;
     
     LOG_DEBUG("Created scene tree for toplevel view");
-    LOG_DEBUG("Surface initialized: {}", toplevel->base->initialized);
+    LOG_DEBUG_FMT("Surface initialized: {}", toplevel->base->initialized);
     
     // NOTE: wlr_scene_xdg_surface_create() handles configure automatically
     // Do NOT manually call configure functions here
@@ -706,7 +741,7 @@ void Server::OnNewXdgToplevel(struct wlr_xdg_toplevel* toplevel) {
 }
 
 void Server::OnNewInput(struct wlr_input_device* device) {
-    LOG_INFO("New input device: {}", device->name);
+    LOG_INFO_FMT("New input device: {}", device->name);
     InputManager::HandleNewInput(this, device);
 }
 
@@ -730,7 +765,7 @@ void Server::LaunchDefaultTerminal() {
     }
     
     // Parent process
-    LOG_INFO("Launched alacritty terminal (PID: {})", pid);
+    LOG_INFO_FMT("Launched alacritty terminal (PID: {})", pid);
 }
 
 void Server::OnSessionActive(bool active) {
@@ -787,13 +822,13 @@ void Server::RemoveView(View* view) {
         return;
     }
     
-    LOG_DEBUG("RemoveView: Cleaning up view {}", static_cast<void*>(view));
+    LOG_DEBUG_FMT("RemoveView: Cleaning up view {}", static_cast<void*>(view));
     
     // Remove from views list
     auto it = std::find(views.begin(), views.end(), view);
     if (it != views.end()) {
         views.erase(it);
-        LOG_DEBUG("Removed view from server's view list, {} views remaining", views.size());
+        LOG_DEBUG_FMT("Removed view from server's view list, {} views remaining", views.size());
     }
     
     // Clear focus if this view was focused
@@ -812,9 +847,17 @@ void Server::RemoveView(View* view) {
     }
     
     if (client_to_remove) {
-        LOG_DEBUG("Found client for view, removing from seat");
+        LOG_DEBUG("Found client for view, removing from seat and deleting");
         core_seat_->RemoveClient(client_to_remove);
-        // Note: Client destructor will remove itself from clients_ vector
+        
+        // Remove from clients_ vector
+        auto client_it = std::find(clients_.begin(), clients_.end(), client_to_remove);
+        if (client_it != clients_.end()) {
+            clients_.erase(client_it);
+        }
+        
+        // Delete the client to prevent memory leak
+        delete client_to_remove;
     }
     
     // Retile remaining windows
@@ -831,20 +874,20 @@ void Server::TileViews() {
     }
     
     auto clients = tag->GetClients();
-    LOG_DEBUG("TileViews: Active tag has {} clients", clients.size());
+    LOG_DEBUG_FMT("TileViews: Active tag has {} clients", clients.size());
     
     // Filter mapped, non-floating views
     std::vector<View*> tiled_views;
     for (auto* client : clients) {
         auto* view = client->GetView();
-        LOG_DEBUG("  Client view: mapped={}, floating={}, fullscreen={}", 
+        LOG_DEBUG_FMT("  Client view: mapped={}, floating={}, fullscreen={}", 
                   view->mapped, view->is_floating, view->is_fullscreen);
         if (view->mapped && !view->is_floating && !view->is_fullscreen) {
             tiled_views.push_back(view);
         }
     }
     
-    LOG_DEBUG("TileViews: {} tiled views after filtering", tiled_views.size());
+    LOG_DEBUG_FMT("TileViews: {} tiled views after filtering", tiled_views.size());
     
     if (tiled_views.empty()) {
         LOG_DEBUG("TileViews: No tiled views, returning");
@@ -865,7 +908,7 @@ void Server::TileViews() {
         return;
     }
     
-    LOG_INFO("Tiling {} views on output '{}'", tiled_views.size(), first_output->wlr_output->name);
+    LOG_INFO_FMT("Tiling {} views on output '{}'", tiled_views.size(), first_output->wlr_output->name);
     
     // Delegate to the output's LayerManager
     first_output->layer_manager->TileViews(tiled_views, tag, layout_engine_.get());
@@ -1135,6 +1178,30 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
                 break;
             }
             
+            case IPC::CommandType::GET_PLUGIN_STATS: {
+                response.success = true;
+                
+                auto& plugin_manager = UI::WidgetPluginManager::Instance();
+                auto loaded_plugins = plugin_manager.GetLoadedPlugins();
+                LOG_DEBUG_FMT("IPC: GET_PLUGIN_STATS - {} plugins loaded", loaded_plugins.size());
+                
+                auto all_stats = plugin_manager.GetAllPluginMemoryStats();
+                LOG_DEBUG_FMT("IPC: Retrieved {} plugin stats", all_stats.size());
+                
+                for (const auto& [name, stats] : all_stats) {
+                    IPC::PluginStats info;
+                    info.name = name;
+                    info.rss_bytes = stats.rss_bytes;
+                    info.virtual_bytes = stats.virtual_bytes;
+                    info.instance_count = stats.instance_count;
+                    LOG_DEBUG_FMT("IPC: Plugin '{}' - RSS: {} bytes, Instances: {}", 
+                             name, stats.rss_bytes, stats.instance_count);
+                    response.plugin_stats.push_back(info);
+                }
+                LOG_DEBUG_FMT("IPC: Returning {} plugin stats in response", response.plugin_stats.size());
+                break;
+            }
+            
             case IPC::CommandType::SET_ACTIVE_TAG: {
                 if (!j.contains("args") || !j["args"].contains("tag")) {
                     response.error = "Missing 'tag' argument";
@@ -1174,7 +1241,7 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
 }
 
 void Server::OnNewXdgDecoration(struct wlr_xdg_toplevel_decoration_v1* decoration) {
-    LOG_INFO("New XDG decoration request for toplevel={}", 
+    LOG_INFO_FMT("New XDG decoration request for toplevel={}", 
              static_cast<void*>(decoration->toplevel));
     
     // Find the view for this toplevel
@@ -1188,7 +1255,7 @@ void Server::OnNewXdgDecoration(struct wlr_xdg_toplevel_decoration_v1* decoratio
     
     if (view) {
         view->decoration = decoration;
-        LOG_INFO("Associated decoration with view={}, will set mode after surface init", 
+        LOG_INFO_FMT("Associated decoration with view={}, will set mode after surface init", 
                  static_cast<void*>(view));
     } else {
         LOG_WARN("Could not find view for decoration");
@@ -1211,6 +1278,36 @@ Output* Server::FindOutput(struct wlr_output* wlr_output) {
         }
     }
     return nullptr;
+}
+
+bool Server::CheckStatusBarHover(int x, int y) {
+    Output* output = nullptr;
+    wl_list_for_each(output, &outputs, link) {
+        if (output->layer_manager) {
+            const auto& status_bars = output->layer_manager->GetStatusBars();
+            for (auto* bar : status_bars) {
+                if (bar->HandleHover(x, y)) {
+                    return true;  // Hover handled by a status bar
+                }
+            }
+        }
+    }
+    return false;  // Hover not over any status bar
+}
+
+bool Server::CheckStatusBarClick(int x, int y) {
+    Output* output = nullptr;
+    wl_list_for_each(output, &outputs, link) {
+        if (output->layer_manager) {
+            const auto& status_bars = output->layer_manager->GetStatusBars();
+            for (auto* bar : status_bars) {
+                if (bar->HandleClick(x, y)) {
+                    return true;  // Click handled by a status bar
+                }
+            }
+        }
+    }
+    return false;  // Click not on any status bar
 }
 
 Core::Screen* Server::GetFocusedScreen() const {

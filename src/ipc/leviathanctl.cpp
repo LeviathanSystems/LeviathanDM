@@ -17,6 +17,7 @@ void print_usage(const char* prog) {
     std::cout << "  get-active-tag          - Get currently active tag\n";
     std::cout << "  set-active-tag <name>   - Switch to specified tag\n";
     std::cout << "  get-layout              - Get current layout mode\n";
+    std::cout << "  get-plugin-stats        - Show memory usage per plugin\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << prog << " ping\n";
     std::cout << "  " << prog << " get-clients\n";
@@ -67,6 +68,8 @@ int main(int argc, char* argv[]) {
         args["tag"] = argv[2];
     } else if (command == "get-layout") {
         cmd_type = CommandType::GET_LAYOUT;
+    } else if (command == "get-plugin-stats") {
+        cmd_type = CommandType::GET_PLUGIN_STATS;
     } else {
         std::cerr << "Error: Unknown command '" << command << "'\n";
         print_usage(argv[0]);
@@ -124,6 +127,47 @@ int main(int argc, char* argv[]) {
             }
             
             std::cout << "  Enabled:     " << (output.enabled ? "yes" : "no") << "\n";
+        }
+    } else if (command == "get-plugin-stats" && !response->plugin_stats.empty()) {
+        std::cout << "Plugin Memory Statistics:\n\n";
+        
+        size_t total_rss = 0;
+        size_t total_virtual = 0;
+        int total_instances = 0;
+        
+        for (const auto& stats : response->plugin_stats) {
+            std::cout << "  Plugin:     " << stats.name << "\n";
+            std::cout << "  Instances:  " << stats.instance_count << "\n";
+            
+            // Format memory in human-readable units
+            auto format_bytes = [](size_t bytes) -> std::string {
+                if (bytes < 1024) return std::to_string(bytes) + " B";
+                if (bytes < 1024 * 1024) return std::to_string(bytes / 1024) + " KB";
+                return std::to_string(bytes / (1024 * 1024)) + " MB";
+            };
+            
+            std::cout << "  RSS:        " << format_bytes(stats.rss_bytes) << "\n";
+            std::cout << "  Virtual:    " << format_bytes(stats.virtual_bytes) << "\n";
+            std::cout << "\n";
+            
+            total_rss += stats.rss_bytes;
+            total_virtual += stats.virtual_bytes;
+            total_instances += stats.instance_count;
+        }
+        
+        if (response->plugin_stats.size() > 1) {
+            std::cout << "Total:\n";
+            std::cout << "  Plugins:    " << response->plugin_stats.size() << "\n";
+            std::cout << "  Instances:  " << total_instances << "\n";
+            
+            auto format_bytes = [](size_t bytes) -> std::string {
+                if (bytes < 1024) return std::to_string(bytes) + " B";
+                if (bytes < 1024 * 1024) return std::to_string(bytes / 1024) + " KB";
+                return std::to_string(bytes / (1024 * 1024)) + " MB";
+            };
+            
+            std::cout << "  Total RSS:  " << format_bytes(total_rss) << "\n";
+            std::cout << "  Total Virt: " << format_bytes(total_virtual) << "\n";
         }
     } else if (response->data.count("raw")) {
         std::cout << response->data["raw"];

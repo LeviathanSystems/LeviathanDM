@@ -20,6 +20,7 @@ enum class CommandType {
     SET_ACTIVE_TAG,     // Switch to a different tag
     GET_LAYOUT,         // Get current layout mode
     GET_VERSION,        // Get compositor version
+    GET_PLUGIN_STATS,   // Get plugin memory statistics
     PING,              // Simple ping/pong for testing
     UNKNOWN
 };
@@ -54,6 +55,13 @@ struct OutputInfo {
     bool enabled;
 };
 
+struct PluginStats {
+    std::string name;
+    size_t rss_bytes;
+    size_t virtual_bytes;
+    int instance_count;
+};
+
 struct Response {
     bool success;
     std::string error;
@@ -61,6 +69,7 @@ struct Response {
     std::vector<TagInfo> tags;
     std::vector<ClientInfo> clients;
     std::vector<OutputInfo> outputs;
+    std::vector<PluginStats> plugin_stats;
 };
 
 // IPC Server - runs in compositor

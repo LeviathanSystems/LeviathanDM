@@ -120,7 +120,7 @@ void TilingLayout::ApplyGrid(std::vector<View*>& views,
 void TilingLayout::MoveResizeView(View* view,
                                  int x, int y,
                                  int width, int height) {
-    LOG_DEBUG("MoveResizeView: view={}, pos=({},{}), size=({},{}), scene_tree={}", 
+    LOG_DEBUG_FMT("MoveResizeView: view={}, pos=({},{}), size=({},{}), scene_tree={}", 
               static_cast<void*>(view), x, y, width, height, 
               static_cast<void*>(view->scene_tree));
     

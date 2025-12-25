@@ -22,6 +22,7 @@ std::string CommandTypeToString(CommandType type) {
         case CommandType::SET_ACTIVE_TAG: return "set_active_tag";
         case CommandType::GET_LAYOUT: return "get_layout";
         case CommandType::GET_VERSION: return "get_version";
+        case CommandType::GET_PLUGIN_STATS: return "get_plugin_stats";
         case CommandType::PING: return "ping";
         default: return "unknown";
     }
@@ -35,6 +36,7 @@ CommandType StringToCommandType(const std::string& str) {
     if (str == "set_active_tag") return CommandType::SET_ACTIVE_TAG;
     if (str == "get_layout") return CommandType::GET_LAYOUT;
     if (str == "get_version") return CommandType::GET_VERSION;
+    if (str == "get_plugin_stats") return CommandType::GET_PLUGIN_STATS;
     if (str == "ping") return CommandType::PING;
     return CommandType::UNKNOWN;
 }
@@ -115,6 +117,19 @@ std::string SerializeResponse(const Response& response) {
         j["outputs"] = outputs_arr;
     }
     
+    if (!response.plugin_stats.empty()) {
+        json stats_arr = json::array();
+        for (const auto& stats : response.plugin_stats) {
+            stats_arr.push_back({
+                {"name", stats.name},
+                {"rss_bytes", stats.rss_bytes},
+                {"virtual_bytes", stats.virtual_bytes},
+                {"instance_count", stats.instance_count}
+            });
+        }
+        j["plugin_stats"] = stats_arr;
+    }
+    
     return j.dump() + "\n";
 }
 
@@ -138,7 +153,7 @@ bool Server::Initialize() {
     
     socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (socket_fd < 0) {
-        LOG_ERROR("Failed to create IPC socket: {}", strerror(errno));
+        LOG_ERROR_FMT("Failed to create IPC socket: {}", strerror(errno));
         return false;
     }
     
@@ -152,20 +167,20 @@ bool Server::Initialize() {
     strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
     
     if (bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        LOG_ERROR("Failed to bind IPC socket: {}", strerror(errno));
+        LOG_ERROR_FMT("Failed to bind IPC socket: {}", strerror(errno));
         close(socket_fd);
         socket_fd = -1;
         return false;
     }
     
     if (listen(socket_fd, 5) < 0) {
-        LOG_ERROR("Failed to listen on IPC socket: {}", strerror(errno));
+        LOG_ERROR_FMT("Failed to listen on IPC socket: {}", strerror(errno));
         close(socket_fd);
         socket_fd = -1;
         return false;
     }
     
-    LOG_INFO("IPC server listening on {}", socket_path);
+    LOG_INFO_FMT("IPC server listening on {}", socket_path);
     return true;
 }
 
@@ -177,7 +192,7 @@ void Server::AcceptClient() {
     int client_fd = accept(socket_fd, nullptr, nullptr);
     if (client_fd < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            LOG_ERROR("Failed to accept IPC client: {}", strerror(errno));
+            LOG_ERROR_FMT("Failed to accept IPC client: {}", strerror(errno));
         }
         return;
     }
@@ -187,7 +202,7 @@ void Server::AcceptClient() {
     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
     
     client_fds.push_back(client_fd);
-    LOG_DEBUG("IPC client connected (fd={})", client_fd);
+    LOG_DEBUG_FMT("IPC client connected (fd={})", client_fd);
 }
 
 void Server::HandleClient(int client_fd) {
@@ -196,7 +211,7 @@ void Server::HandleClient(int client_fd) {
     
     if (n <= 0) {
         if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-            LOG_DEBUG("IPC client disconnected (fd={})", client_fd);
+            LOG_DEBUG_FMT("IPC client disconnected (fd={})", client_fd);
             close(client_fd);
             client_fds.erase(std::remove(client_fds.begin(), client_fds.end(), client_fd), client_fds.end());
         }
@@ -362,7 +377,67 @@ std::optional<Response> Client::SendCommand(CommandType type, const std::map<std
             response.data = resp["data"].get<std::map<std::string, std::string>>();
         }
         
-        // Store raw response for now
+        // Parse tags array
+        if (resp.contains("tags")) {
+            for (const auto& tag_json : resp["tags"]) {
+                TagInfo tag;
+                tag.name = tag_json.value("name", "");
+                tag.visible = tag_json.value("visible", false);
+                tag.client_count = tag_json.value("client_count", 0);
+                response.tags.push_back(tag);
+            }
+        }
+        
+        // Parse clients array
+        if (resp.contains("clients")) {
+            for (const auto& client_json : resp["clients"]) {
+                ClientInfo client;
+                client.title = client_json.value("title", "");
+                client.app_id = client_json.value("app_id", "");
+                client.x = client_json.value("x", 0);
+                client.y = client_json.value("y", 0);
+                client.width = client_json.value("width", 0);
+                client.height = client_json.value("height", 0);
+                client.floating = client_json.value("floating", false);
+                client.fullscreen = client_json.value("fullscreen", false);
+                client.tag = client_json.value("tag", "");
+                response.clients.push_back(client);
+            }
+        }
+        
+        // Parse outputs array
+        if (resp.contains("outputs")) {
+            for (const auto& output_json : resp["outputs"]) {
+                OutputInfo output;
+                output.name = output_json.value("name", "");
+                output.description = output_json.value("description", "");
+                output.make = output_json.value("make", "");
+                output.model = output_json.value("model", "");
+                output.serial = output_json.value("serial", "");
+                output.width = output_json.value("width", 0);
+                output.height = output_json.value("height", 0);
+                output.refresh_mhz = output_json.value("refresh_mhz", 0);
+                output.phys_width_mm = output_json.value("phys_width_mm", 0);
+                output.phys_height_mm = output_json.value("phys_height_mm", 0);
+                output.scale = output_json.value("scale", 1.0f);
+                output.enabled = output_json.value("enabled", false);
+                response.outputs.push_back(output);
+            }
+        }
+        
+        // Parse plugin_stats array
+        if (resp.contains("plugin_stats")) {
+            for (const auto& stats_json : resp["plugin_stats"]) {
+                PluginStats stats;
+                stats.name = stats_json.value("name", "");
+                stats.rss_bytes = stats_json.value("rss_bytes", 0);
+                stats.virtual_bytes = stats_json.value("virtual_bytes", 0);
+                stats.instance_count = stats_json.value("instance_count", 0);
+                response.plugin_stats.push_back(stats);
+            }
+        }
+        
+        // Store raw response for debugging
         response.data["raw"] = std::string(buffer);
         
         return response;

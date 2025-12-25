@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui/BaseWidget.hpp"
+#include "BaseWidget.hpp"
 #include <string>
 #include <memory>
 #include <map>

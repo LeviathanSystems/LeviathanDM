@@ -13,8 +13,9 @@
 namespace Leviathan {
 namespace Wayland {
 
-LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output)
-    : output_(output) {
+LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, struct wl_event_loop* event_loop)
+    : output_(output),
+      event_loop_(event_loop) {
     // Create layer trees in order (bottom to top)
     layers_[static_cast<size_t>(Layer::Background)] = 
         wlr_scene_tree_create(&scene->tree);
@@ -25,21 +26,27 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output)
     layers_[static_cast<size_t>(Layer::Top)] = 
         wlr_scene_tree_create(&scene->tree);
     
-    //LOG_INFO("Created per-output layer hierarchy for '{}':", output->name);
-    //LOG_INFO("  - Background layer: {}", static_cast<void*>(layers_[0]));
-    //LOG_INFO("  - Working area layer: {}", static_cast<void*>(layers_[1]));
-    //LOG_INFO("  - Top layer: {}", static_cast<void*>(layers_[2]));
+    // Ensure proper stacking order - raise each layer in sequence
+    // This ensures Top layer is always above WorkingArea, which is above Background
+    wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::Background)]->node);
+    wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::WorkingArea)]->node);
+    wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::Top)]->node);
+    
+    //LOG_INFO_FMT("Created per-output layer hierarchy for '{}':", output->name);
+    //LOG_INFO_FMT("  - Background layer: {}", static_cast<void*>(layers_[0]));
+    //LOG_INFO_FMT("  - Working area layer: {}", static_cast<void*>(layers_[1]));
+    //LOG_INFO_FMT("  - Top layer: {}", static_cast<void*>(layers_[2]));
 }
 
 LayerManager::~LayerManager() {
     // Scene trees are cleaned up automatically by wlroots
-    LOG_DEBUG("Destroyed LayerManager for output '{}'", output_ ? output_->name : "unknown");
+    LOG_DEBUG_FMT("Destroyed LayerManager for output '{}'", output_ ? output_->name : "unknown");
 }
 
 struct wlr_scene_tree* LayerManager::GetLayer(Layer layer) {
     size_t index = static_cast<size_t>(layer);
     if (index >= static_cast<size_t>(Layer::COUNT)) {
-        LOG_ERROR("Invalid layer index: {}", index);
+        LOG_ERROR_FMT("Invalid layer index: {}", index);
         return nullptr;
     }
     return layers_[index];
@@ -47,7 +54,7 @@ struct wlr_scene_tree* LayerManager::GetLayer(Layer layer) {
 
 void LayerManager::SetReservedSpace(const ReservedSpace& space) {
     reserved_space_ = space;
-    LOG_INFO("Reserved space updated: top={}, bottom={}, left={}, right={}",
+    LOG_INFO_FMT("Reserved space updated: top={}, bottom={}, left={}, right={}",
              space.top, space.bottom, space.left, space.right);
 }
 
@@ -63,7 +70,7 @@ UsableArea LayerManager::CalculateUsableArea(int32_t output_x, int32_t output_y,
     area.width = output_width - reserved_space_.left - reserved_space_.right;
     area.height = output_height - reserved_space_.top - reserved_space_.bottom;
     
-    LOG_DEBUG("Usable area: x={}, y={}, w={}, h={}", 
+    LOG_DEBUG_FMT("Usable area: x={}, y={}, w={}, h={}", 
               area.x, area.y, area.width, area.height);
     
     return area;
@@ -73,21 +80,21 @@ void LayerManager::TileViews(std::vector<View*>& views,
                              Core::Tag* tag,
                              TilingLayout* layout_engine) {
     if (!output_ || !tag || !layout_engine) {
-        LOG_WARN("TileViews: Invalid parameters (output={}, tag={}, layout={})",
+        LOG_WARN_FMT("TileViews: Invalid parameters (output={}, tag={}, layout={})",
                  static_cast<void*>(output_), static_cast<void*>(tag), 
                  static_cast<void*>(layout_engine));
         return;
     }
     
     if (views.empty()) {
-        LOG_DEBUG("TileViews: No views to tile on output '{}'", output_->name);
+        LOG_DEBUG_FMT("TileViews: No views to tile on output '{}'", output_->name);
         return;
     }
     
     // Calculate usable workspace area for this output
     auto workspace = CalculateUsableArea(0, 0, output_->width, output_->height);
     
-    LOG_DEBUG("Tiling {} views on output '{}' in workspace: pos=({},{}), size=({}x{})",
+    LOG_DEBUG_FMT("Tiling {} views on output '{}' in workspace: pos=({},{}), size=({}x{})",
               views.size(), output_->name,
               workspace.x, workspace.y, workspace.width, workspace.height);
     
@@ -123,7 +130,7 @@ void LayerManager::TileViews(std::vector<View*>& views,
                 wlr_scene_node_set_position(&view->scene_tree->node,
                                            view->x + workspace.x,
                                            view->y + workspace.y);
-                LOG_DEBUG("  Offset view to ({},{}) for workspace at ({},{})",
+                LOG_DEBUG_FMT("  Offset view to ({},{}) for workspace at ({},{})",
                          view->x + workspace.x, view->y + workspace.y,
                          workspace.x, workspace.y);
             }
@@ -138,14 +145,14 @@ void LayerManager::AddStatusBar(Leviathan::StatusBar* bar) {
     }
     
     status_bars_.push_back(bar);
-    LOG_DEBUG("Added StatusBar to LayerManager for output '{}'", output_->name);
+    LOG_DEBUG_FMT("Added StatusBar to LayerManager for output '{}'", output_->name);
 }
 
 void LayerManager::RemoveStatusBar(Leviathan::StatusBar* bar) {
     auto it = std::find(status_bars_.begin(), status_bars_.end(), bar);
     if (it != status_bars_.end()) {
         status_bars_.erase(it);
-        LOG_DEBUG("Removed StatusBar from LayerManager for output '{}'", output_->name);
+        LOG_DEBUG_FMT("Removed StatusBar from LayerManager for output '{}'", output_->name);
     }
 }
 
@@ -154,11 +161,11 @@ void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
                                    uint32_t output_width,
                                    uint32_t output_height) {
     if (bar_names.empty()) {
-        LOG_DEBUG("No status bars to create for output '{}'", output_->name);
+        LOG_DEBUG_FMT("No status bars to create for output '{}'", output_->name);
         return;
     }
     
-    LOG_INFO("Creating {} status bar(s) for output '{}'", 
+    LOG_INFO_FMT("Creating {} status bar(s) for output '{}'", 
              bar_names.size(), output_->name);
     
     ReservedSpace reserved = reserved_space_;
@@ -167,7 +174,7 @@ void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
         const StatusBarConfig* bar_config = all_bars_config.FindByName(bar_name);
         
         if (!bar_config) {
-            LOG_WARN("Status bar '{}' not found in configuration", bar_name);
+            LOG_WARN_FMT("Status bar '{}' not found in configuration", bar_name);
             continue;
         }
         
@@ -175,37 +182,37 @@ void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
         switch (bar_config->position) {
             case StatusBarConfig::Position::Top:
                 reserved.top += bar_config->height;
-                LOG_INFO("Reserved {}px at top for status bar '{}'", 
+                LOG_INFO_FMT("Reserved {}px at top for status bar '{}'", 
                          bar_config->height, bar_name);
                 break;
             
             case StatusBarConfig::Position::Bottom:
                 reserved.bottom += bar_config->height;
-                LOG_INFO("Reserved {}px at bottom for status bar '{}'", 
+                LOG_INFO_FMT("Reserved {}px at bottom for status bar '{}'", 
                          bar_config->height, bar_name);
                 break;
             
             case StatusBarConfig::Position::Left:
                 reserved.left += bar_config->width;
-                LOG_INFO("Reserved {}px at left for status bar '{}'", 
+                LOG_INFO_FMT("Reserved {}px at left for status bar '{}'", 
                          bar_config->width, bar_name);
                 break;
             
             case StatusBarConfig::Position::Right:
                 reserved.right += bar_config->width;
-                LOG_INFO("Reserved {}px at right for status bar '{}'", 
+                LOG_INFO_FMT("Reserved {}px at right for status bar '{}'", 
                          bar_config->width, bar_name);
                 break;
         }
         
         // Create and render the StatusBar
-        Leviathan::StatusBar* bar = new Leviathan::StatusBar(*bar_config, this, output_width, output_height);
+        Leviathan::StatusBar* bar = new Leviathan::StatusBar(*bar_config, this, event_loop_, output_width, output_height);
         AddStatusBar(bar);
     }
     
     // Apply the accumulated reserved space
     SetReservedSpace(reserved);
-    LOG_DEBUG("Total reserved space: top={}, bottom={}, left={}, right={}", 
+    LOG_DEBUG_FMT("Total reserved space: top={}, bottom={}, left={}, right={}", 
              reserved.top, reserved.bottom, reserved.left, reserved.right);
 }
 

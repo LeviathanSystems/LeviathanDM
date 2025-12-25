@@ -19,13 +19,14 @@ public:
     Label(const std::string& text = "") 
         : text_(text), 
           font_size_(12),
+          font_family_("JetBrainsMono Nerd Font"),
           text_color_{1.0, 1.0, 1.0, 1.0},  // White
           bg_color_{0.0, 0.0, 0.0, 0.0}      // Transparent
     {}
     
     // Update text from background thread
     void SetText(const std::string& text) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (text_ != text) {
             text_ = text;
             dirty_ = true;
@@ -33,18 +34,24 @@ public:
     }
     
     std::string GetText() const {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         return text_;
     }
     
     void SetFontSize(int size) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         font_size_ = size;
         dirty_ = true;
     }
     
+    void SetFontFamily(const std::string& family) {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        font_family_ = family;
+        dirty_ = true;
+    }
+    
     void SetTextColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         text_color_[0] = r;
         text_color_[1] = g;
         text_color_[2] = b;
@@ -53,7 +60,7 @@ public:
     }
     
     void SetBackgroundColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         bg_color_[0] = r;
         bg_color_[1] = g;
         bg_color_[2] = b;
@@ -67,6 +74,7 @@ public:
 private:
     std::string text_;
     int font_size_;
+    std::string font_family_;
     double text_color_[4];
     double bg_color_[4];
     int padding_ = 4;
@@ -85,7 +93,7 @@ public:
     {}
     
     void SetText(const std::string& text) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (text_ != text) {
             text_ = text;
             dirty_ = true;
@@ -93,12 +101,12 @@ public:
     }
     
     void SetOnClick(std::function<void()> callback) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         on_click_ = callback;
     }
     
     void SetHovered(bool hovered) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (hovered_ != hovered) {
             hovered_ = hovered;
             dirty_ = true;
@@ -106,7 +114,7 @@ public:
     }
     
     void Click() {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (on_click_) {
             on_click_();
         }
@@ -133,14 +141,14 @@ public:
     virtual ~Container() = default;
     
     void AddChild(std::shared_ptr<Widget> child) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         child->SetParent(this);
         children_.push_back(child);
         dirty_ = true;
     }
     
     void RemoveChild(std::shared_ptr<Widget> child) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         auto it = std::find(children_.begin(), children_.end(), child);
         if (it != children_.end()) {
             (*it)->SetParent(nullptr);
@@ -150,7 +158,7 @@ public:
     }
     
     void ClearChildren() {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         for (auto& child : children_) {
             child->SetParent(nullptr);
         }
@@ -163,7 +171,7 @@ public:
     }
     
     void SetSpacing(int spacing) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         spacing_ = spacing;
         dirty_ = true;
     }
@@ -171,13 +179,21 @@ public:
     void Render(cairo_t* cr) override {
         if (!IsVisible()) return;
         
-        // Render all children
-        std::lock_guard<std::mutex> lock(mutex_);
+        // Save cairo state and clip to container bounds
+        cairo_save(cr);
+        cairo_rectangle(cr, x_, y_, width_, height_);
+        cairo_clip(cr);
+        
+        // Render all children (they will be clipped to container bounds)
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         for (auto& child : children_) {
             if (child->IsVisible()) {
                 child->Render(cr);
             }
         }
+        
+        // Restore cairo state (remove clipping)
+        cairo_restore(cr);
     }
 
 protected:
@@ -191,7 +207,7 @@ public:
     HBox() : align_(Align::Start) {}
     
     void SetAlign(Align align) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         align_ = align;
         dirty_ = true;
     }
@@ -208,7 +224,7 @@ public:
     VBox() : align_(Align::Start) {}
     
     void SetAlign(Align align) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
         align_ = align;
         dirty_ = true;
     }

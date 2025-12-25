@@ -63,12 +63,10 @@ View::View(struct wlr_xdg_toplevel* toplevel, Server* srv)
 }
 
 View::~View() {
-    LOG_DEBUG("View destructor called for {}", static_cast<void*>(this));
+    LOG_DEBUG_FMT("View destructor called for {}", static_cast<void*>(this));
     
-    // Let server handle the cleanup (removing from lists, retiling, etc.)
-    if (server) {
-        server->RemoveView(this);
-    }
+    // DON'T call RemoveView from destructor - it causes use-after-free!
+    // The destroy callback (view_handle_destroy) should handle cleanup BEFORE deleting
     
     // Remove wayland listeners
     wl_list_remove(&commit.link);
@@ -84,11 +82,11 @@ View::~View() {
 static void view_handle_commit(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, commit);
     
-    //LOG_DEBUG("Commit handler called! view={}, xdg_toplevel={}, base={}", 
+    //LOG_DEBUG_FMT("Commit handler called! view={}, xdg_toplevel={}, base={}", 
     //          static_cast<void*>(view),
     //          static_cast<void*>(view->xdg_toplevel),
     //          static_cast<void*>(view->xdg_toplevel->base));
-    //LOG_DEBUG("  initial_commit={}, initialized={}, mapped={}", 
+    //LOG_DEBUG_FMT("  initial_commit={}, initialized={}, mapped={}", 
     //          view->xdg_toplevel->base->initial_commit,
     //          view->xdg_toplevel->base->initialized,
     //          view->mapped);
@@ -97,7 +95,7 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
     // The compositor MUST send a configure event in response to initial_commit
     // or the client will never map the surface
     if (view->xdg_toplevel->base->initial_commit) {
-        LOG_INFO("Initial commit received for view={}, sending configure", 
+        LOG_INFO_FMT("Initial commit received for view={}, sending configure", 
                  static_cast<void*>(view));
         
         // Disable client-side decorations (no titlebar)
@@ -131,7 +129,7 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
 static void view_handle_map(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, map);
     view->mapped = true;
-    LOG_INFO("View mapped! view={}, xdg_toplevel={}", 
+    LOG_INFO_FMT("View mapped! view={}, xdg_toplevel={}", 
              static_cast<void*>(view),
              static_cast<void*>(view->xdg_toplevel));
     
@@ -157,7 +155,7 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
 static void view_handle_unmap(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, unmap);
     view->mapped = false;
-    LOG_INFO("View unmapped! view={}", static_cast<void*>(view));
+    LOG_INFO_FMT("View unmapped! view={}", static_cast<void*>(view));
     
     // Trigger tiling layout update when view is unmapped
     if (view->server) {
@@ -167,6 +165,12 @@ static void view_handle_unmap(struct wl_listener* listener, void* data) {
 
 static void view_handle_destroy(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, destroy);
+    
+    // Do cleanup BEFORE deleting the view
+    if (view->server) {
+        view->server->RemoveView(view);
+    }
+    
     delete view;
 }
 

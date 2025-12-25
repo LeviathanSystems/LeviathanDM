@@ -7,8 +7,13 @@
 #include <cstdlib>
 
 int main(int argc, char** argv) {
-    // Initialize logger
-    Leviathan::Logger::Init();
+    // Initialize logger with multi-sink architecture
+    // Creates both console sink (with colors) and file sink
+    Leviathan::SimpleLogger::Instance().Init(
+        "leviathan.log",              // Log file path
+        Leviathan::LogLevel::DEBUG,   // Minimum log level
+        true                          // Enable console colors
+    );
     
     LOG_INFO("LeviathanDM - Wayland Compositor");
     
@@ -48,7 +53,7 @@ int main(int argc, char** argv) {
     // Discover plugins from configured paths
     if (!config.plugins.plugin_paths.empty()) {
         for (const auto& path : config.plugins.plugin_paths) {
-            LOG_INFO("Searching for plugins in: {}", path);
+            LOG_INFO_FMT("Searching for plugins in: {}", path);
             plugin_manager.DiscoverPlugins(path);
         }
     } else {
@@ -58,12 +63,12 @@ int main(int argc, char** argv) {
     // Log loaded plugins
     auto loaded_plugins = plugin_manager.GetLoadedPlugins();
     if (!loaded_plugins.empty()) {
-        LOG_INFO("Loaded {} plugin(s):", loaded_plugins.size());
+        LOG_INFO_FMT("Loaded {} plugin(s):", loaded_plugins.size());
         for (const auto& plugin_name : loaded_plugins) {
             auto metadata = plugin_manager.GetPluginMetadata(plugin_name);
-            LOG_INFO("  ✓ {} v{} by {}", 
+            LOG_INFO_FMT("  ✓ {} v{} by {}", 
                      metadata.name, metadata.version, metadata.author);
-            LOG_INFO("    {}", metadata.description);
+            LOG_INFO_FMT("    {}", metadata.description);
         }
     } else {
         LOG_INFO("No plugins loaded");
@@ -71,17 +76,17 @@ int main(int argc, char** argv) {
     
     // Create plugin instances from config
     if (!config.plugins.plugins.empty()) {
-        LOG_INFO("Creating {} plugin instance(s) from config...", 
+        LOG_INFO_FMT("Creating {} plugin instance(s) from config...", 
                  config.plugins.plugins.size());
         
         for (const auto& plugin_cfg : config.plugins.plugins) {
-            LOG_INFO("Initializing: {}", plugin_cfg.name);
+            LOG_INFO_FMT("Initializing: {}", plugin_cfg.name);
             
             // Log config
             if (!plugin_cfg.config.empty()) {
                 LOG_DEBUG("  Configuration:");
                 for (const auto& [key, value] : plugin_cfg.config) {
-                    LOG_DEBUG("    {}: {}", key, value);
+                    LOG_DEBUG_FMT("    {}: {}", key, value);
                 }
             }
             
@@ -92,9 +97,9 @@ int main(int argc, char** argv) {
             );
             
             if (widget) {
-                LOG_INFO("  ✓ Successfully initialized {}", plugin_cfg.name);
+                LOG_INFO_FMT("  ✓ Successfully initialized {}", plugin_cfg.name);
             } else {
-                LOG_WARN("  ✗ Failed to initialize {}", plugin_cfg.name);
+                LOG_WARN_FMT("  ✗ Failed to initialize {}", plugin_cfg.name);
             }
         }
     } else {
@@ -125,6 +130,9 @@ int main(int argc, char** argv) {
     LOG_INFO("Unloading plugins...");
     plugin_manager.UnloadAll();
     LOG_INFO("Plugins unloaded");
+    
+    // Shutdown logger (flushes all sinks and stops worker thread)
+    Leviathan::SimpleLogger::Instance().Shutdown();
     
     return EXIT_SUCCESS;
 }

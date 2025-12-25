@@ -24,7 +24,7 @@ Output::~Output() {
         auto* core_seat = server->GetCoreSeat();
         if (core_seat) {
             core_seat->RemoveScreen(core_screen);
-            LOG_INFO("Removed screen '{}' from core seat", core_screen->GetName());
+            LOG_INFO_FMT("Removed screen '{}' from core seat", core_screen->GetName());
         }
     }
     

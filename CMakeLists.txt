@@ -8,16 +8,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)  # Use GNU extensions which are more lenient with C headers
 
-# Fetch spdlog for logging
-include(FetchContent)
-FetchContent_Declare(
-    spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.14.1
-)
-FetchContent_MakeAvailable(spdlog)
+# Enable position independent code for shared libraries
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Add our simple logger library
+add_subdirectory(logger)
 
 # Fetch nlohmann/json for IPC
+include(FetchContent)
 FetchContent_Declare(
     json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -173,6 +171,8 @@ pkg_check_modules(LIBINPUT REQUIRED libinput)
 pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
 pkg_check_modules(CAIRO REQUIRED cairo)
 pkg_check_modules(LIBDRM REQUIRED libdrm)
+pkg_check_modules(GIO REQUIRED gio-2.0)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
 
 # Include directories
 include_directories(
@@ -185,6 +185,8 @@ include_directories(
     ${DISPLAY_INFO_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${LIBDRM_INCLUDE_DIRS}
+    ${GIO_INCLUDE_DIRS}
+    ${GLIB_INCLUDE_DIRS}
 )
 
 # Source files
@@ -210,10 +212,12 @@ set(SOURCES
     src/layout/TilingLayout.cpp
     # UI
     src/ui/StatusBar.cpp
+    src/ui/ShmBuffer.cpp
     src/ui/Widget.cpp
     src/ui/WidgetPluginManager.cpp
     src/ui/CompositorState.cpp
     src/ui/PluginAPI.cpp
+    src/ui/DBusHelper.cpp
     # IPC
     src/ipc/IPC.cpp
 )
@@ -245,6 +249,39 @@ set(HEADERS
     include/ipc/IPC.hpp
 )
 
+# Create a shared library for UI components that plugins can link against
+add_library(leviathan-ui SHARED
+    src/ui/DBusHelper.cpp
+    src/ui/CompositorState.cpp
+    src/ui/PluginAPI.cpp
+)
+
+target_include_directories(leviathan-ui PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+    ${GIO_INCLUDE_DIRS}
+    ${GLIB_INCLUDE_DIRS}
+    ${CAIRO_INCLUDE_DIRS}
+)
+
+target_link_libraries(leviathan-ui
+    leviathan-logger
+    ${GIO_LIBRARIES}
+    ${GLIB_LIBRARIES}
+    ${CAIRO_LIBRARIES}
+)
+
+# Export all symbols
+set_target_properties(leviathan-ui PROPERTIES
+    LINK_FLAGS "-Wl,--export-dynamic"
+    ENABLE_EXPORTS ON
+)
+
+# Install the library so plugins can find it
+install(TARGETS leviathan-ui
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+)
+
 # Executable
 add_executable(leviathan ${SOURCES} ${HEADERS})
 
@@ -255,6 +292,8 @@ set_target_properties(leviathan PROPERTIES
 
 # Link libraries
 target_link_libraries(leviathan
+    leviathan-ui
+    leviathan-logger
     ${WLROOTS_LIBRARIES}
     ${WAYLAND_SERVER_LIBRARIES}
     ${XKB_LIBRARIES}
@@ -264,7 +303,8 @@ target_link_libraries(leviathan
     ${YAMLCPP_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${LIBDRM_LIBRARIES}
-    spdlog::spdlog
+    ${GIO_LIBRARIES}
+    ${GLIB_LIBRARIES}
     nlohmann_json::nlohmann_json
     dl  # For dynamic plugin loading
 )
@@ -275,7 +315,7 @@ add_executable(leviathanctl
     src/ipc/IPC.cpp
 )
 target_link_libraries(leviathanctl
-    spdlog::spdlog
+    leviathan-logger
     nlohmann_json::nlohmann_json
 )
 

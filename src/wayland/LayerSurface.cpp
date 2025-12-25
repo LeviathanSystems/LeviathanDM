@@ -32,7 +32,7 @@ void LayerSurfaceManager::HandleNewLayerSurface(struct wl_listener* listener, vo
     struct wlr_layer_surface_v1* wlr_layer_surface = 
         static_cast<struct wlr_layer_surface_v1*>(data);
     
-    LOG_INFO("New layer surface: namespace={}, layer={}", 
+    LOG_INFO_FMT("New layer surface: namespace={}, layer={}", 
              wlr_layer_surface->namespace_ ? wlr_layer_surface->namespace_ : "null",
              (int)wlr_layer_surface->current.layer);
     
@@ -73,24 +73,15 @@ void LayerSurfaceManager::HandleNewLayerSurface(struct wl_listener* listener, vo
         }
     }
     
-    // Send initial configure event so the surface can commit and map
-    if (wlr_layer_surface->output) {
-        uint32_t width = wlr_layer_surface->current.desired_width;
-        uint32_t height = wlr_layer_surface->current.desired_height;
-        
-        // If client didn't specify size, use output size
-        if (width == 0) width = wlr_layer_surface->output->width;
-        if (height == 0) height = wlr_layer_surface->output->height;
-        
-        wlr_layer_surface_v1_configure(wlr_layer_surface, width, height);
-        LOG_DEBUG("Configured layer surface: {}x{}", width, height);
-    }
+    // Note: We don't send configure here! The initial configure must be sent
+    // AFTER the first commit when the surface becomes initialized.
+    // See HandleCommit() for the configure logic.
 }
 
 void LayerSurfaceManager::HandleMap(struct wl_listener* listener, void* data) {
     LayerSurface* layer_surface = wl_container_of(listener, layer_surface, map);
     
-    LOG_INFO("Layer surface mapped: namespace={}", 
+    LOG_INFO_FMT("Layer surface mapped: namespace={}", 
              layer_surface->wlr_layer_surface->namespace_ ? 
              layer_surface->wlr_layer_surface->namespace_ : "null");
     
@@ -188,6 +179,24 @@ void LayerSurfaceManager::HandleCommit(struct wl_listener* listener, void* data)
     LayerSurface* layer_surface = wl_container_of(listener, layer_surface, commit);
     struct wlr_layer_surface_v1* wlr_ls = layer_surface->wlr_layer_surface;
     
+    // Send initial configure on first commit after the surface is initialized
+    // The surface becomes initialized after receiving its first commit from the client
+    if (wlr_ls->initialized && wlr_ls->initial_commit) {
+        if (wlr_ls->output) {
+            uint32_t width = wlr_ls->current.desired_width;
+            uint32_t height = wlr_ls->current.desired_height;
+            
+            // If client didn't specify size, use output size
+            if (width == 0) width = wlr_ls->output->width;
+            if (height == 0) height = wlr_ls->output->height;
+            
+            wlr_layer_surface_v1_configure(wlr_ls, width, height);
+            LOG_DEBUG_FMT("Sent initial configure to layer surface: {}x{}", width, height);
+        } else {
+            LOG_ERROR("Layer surface initialized but has no output!");
+        }
+    }
+    
     // Check if layer changed
     if (wlr_ls->current.committed & WLR_LAYER_SURFACE_V1_STATE_LAYER) {
         LOG_DEBUG("Layer surface layer changed");
@@ -209,7 +218,7 @@ void LayerSurfaceManager::ArrangeLayer(struct wlr_output* output,
                                        enum zwlr_layer_shell_v1_layer layer) {
     // This would implement the layer-shell exclusive zone logic
     // For now, wlroots scene graph handles basic positioning
-    LOG_DEBUG("Arranging layer {} on output", (int)layer);
+    LOG_DEBUG_FMT("Arranging layer {} on output", (int)layer);
     
     // The scene layer surface automatically handles positioning based on
     // the layer surface's anchor and exclusive zone

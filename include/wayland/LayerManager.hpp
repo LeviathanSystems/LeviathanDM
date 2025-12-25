@@ -10,6 +10,7 @@
 struct wlr_scene;
 struct wlr_scene_tree;
 struct wlr_output;
+struct wl_event_loop;
 
 namespace Leviathan {
 
@@ -65,7 +66,7 @@ struct UsableArea {
 
 class LayerManager {
 public:
-    LayerManager(struct wlr_scene* scene, struct wlr_output* output);
+    LayerManager(struct wlr_scene* scene, struct wlr_output* output, struct wl_event_loop* event_loop);
     ~LayerManager();
     
     // Get scene tree for a specific layer
@@ -110,6 +111,7 @@ private:
     struct wlr_scene_tree* layers_[static_cast<size_t>(Layer::COUNT)];
     ReservedSpace reserved_space_;
     struct wlr_output* output_;  // The output this manager belongs to
+    struct wl_event_loop* event_loop_;  // For timers and events
     std::vector<Leviathan::StatusBar*> status_bars_;  // Status bars on this output
 };
 

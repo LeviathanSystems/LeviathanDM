@@ -43,10 +43,14 @@ struct GeneralConfig {
     bool remove_client_titlebars = true;
 };
 
-// Widget configuration for status bars
+// Forward declaration for recursive structure
+struct WidgetConfig;
+
+// Widget configuration for status bars (supports nested containers)
 struct WidgetConfig {
-    std::string type;  // "label", "clock", "battery", "workspaces", etc.
+    std::string type;  // "label", "clock", "battery", "hbox", "vbox", etc.
     std::map<std::string, std::string> properties;  // Widget-specific properties
+    std::vector<WidgetConfig> children;  // For containers (hbox, vbox) - nested widgets
 };
 
 // Container configuration (HBox, VBox)
@@ -83,7 +87,10 @@ struct StatusBarConfig {
     int font_size = 12;
     std::string font_family = "monospace";
     
-    // Layout sections
+    // Root widget (usually an HBox or VBox containing the entire layout)
+    WidgetConfig root;
+    
+    // Legacy layout sections (deprecated - use root instead)
     ContainerConfig left;    // Left section (for horizontal bars) or top (for vertical bars)
     ContainerConfig center;  // Center section
     ContainerConfig right;   // Right section (for horizontal bars) or bottom (for vertical bars)

@@ -26,15 +26,15 @@ Tag::~Tag() {
 void Tag::SetVisible(bool visible) {
     visible_ = visible;
     
-    LOG_INFO("Tag '{}' visibility changed to: {}", name_, visible);
-    LOG_DEBUG("Tag has {} clients", clients_.size());
+    LOG_INFO_FMT("Tag '{}' visibility changed to: {}", name_, visible);
+    LOG_DEBUG_FMT("Tag has {} clients", clients_.size());
     
     // Show/hide all clients in this tag
     for (auto* client : clients_) {
         auto* view = client->GetView();
         if (view && view->scene_tree) {
             wlr_scene_node_set_enabled(&view->scene_tree->node, visible);
-            LOG_DEBUG("  - Set scene node enabled={} for view={}", 
+            LOG_DEBUG_FMT("  - Set scene node enabled={} for view={}", 
                      visible, static_cast<void*>(view));
         }
     }
@@ -42,7 +42,7 @@ void Tag::SetVisible(bool visible) {
 
 void Tag::AddClient(Client* client) {
     clients_.push_back(client);
-    LOG_INFO("Added client to tag '{}' (total clients: {})", name_, clients_.size());
+    LOG_INFO_FMT("Added client to tag '{}' (total clients: {})", name_, clients_.size());
     
     // If tag is visible, make sure the new client is visible too
     if (visible_) {

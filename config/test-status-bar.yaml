@@ -1,0 +1,54 @@
+# Test Status Bar Configuration
+# Simple test to verify the refactored container-based layout
+
+# Define status bars with unique names
+status-bars:
+  # Test bar
+  - name: test-bar
+    position: top
+    height: 30
+    background_color: "#2E3440"  # Nord polar night
+    foreground_color: "#D8DEE9"  # Nord snow storm
+    font_size: 12
+    font_family: "JetBrains Mono"
+    
+    left:
+      spacing: 10
+      alignment: left
+      padding: 5
+      widgets:
+        - type: label
+          properties:
+            text: "Left Section"
+            font-size: "12"
+            color: "#88C0D0"
+    
+    center:
+      spacing: 10
+      alignment: center
+      padding: 5
+      widgets:
+        - type: ClockWidget
+          properties:
+            format: "%H:%M:%S"
+            update_interval: "1"
+            font-size: "14"
+    
+    right:
+      spacing: 10
+      alignment: right
+      padding: 5
+      widgets:
+        - type: BatteryWidget
+          properties:
+            update_interval: "5"
+            show_percentage: "true"
+
+# Monitor Groups - Assign status bars to monitors
+# If no monitor groups defined, all status bars appear on all monitors
+monitor-groups:
+  - name: all-monitors
+    # Empty monitors list means "match all monitors"
+    monitors: []
+    status_bars:
+      - test-bar
