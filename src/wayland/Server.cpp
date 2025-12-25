@@ -5,6 +5,7 @@
 #include "wayland/LayerSurface.hpp"
 #include "ui/StatusBar.hpp"
 #include "ui/WidgetPluginManager.hpp"
+#include "ui/NotificationDaemon.hpp"
 #include "config/ConfigParser.hpp"
 #include "Logger.hpp"
 #include <nlohmann/json.hpp>
@@ -133,6 +134,12 @@ Server::Server()
 
 Server::~Server() {
     LOG_INFO("Server destructor - cleaning up resources");
+    
+    // Shutdown notification daemon
+    if (notification_daemon_) {
+        notification_daemon_->Shutdown();
+        notification_daemon_.reset();
+    }
     
     // Clean up remaining views (in case they weren't destroyed by Wayland)
     // Note: Normally Wayland destroy callbacks handle this, but we clean up for safety
@@ -301,17 +308,8 @@ bool Server::Initialize() {
     // Create core seat
     core_seat_ = std::make_unique<Core::Seat>();
     
-    // Create default tags
-    int tag_count = config.general.workspace_count;
-    for (int i = 0; i < tag_count; ++i) {
-        auto* tag = new Core::Tag(std::to_string(i + 1));
-        core_seat_->AddTag(tag);
-    }
-    
-    // Activate first tag
-    if (tag_count > 0) {
-        core_seat_->SwitchToTag(0);
-    }
+    // NOTE: Tags are now created per-output by LayerManager in HandleNewOutput()
+    // Each screen will have its own independent set of tags (AwesomeWM model)
     
     // Initialize IPC server
     ipc_server_ = std::make_unique<IPC::Server>();
@@ -322,6 +320,16 @@ bool Server::Initialize() {
         ipc_server_->SetCommandProcessor([this](const std::string& cmd) {
             return this->ProcessIPCCommand(cmd);
         });
+    }
+    
+    // Register this server as the global compositor state for widgets
+    UI::SetCompositorState(this);
+    
+    // Initialize notification daemon
+    notification_daemon_ = std::make_unique<UI::NotificationDaemon>(this);
+    if (!notification_daemon_->Initialize()) {
+        LOG_WARN("Failed to initialize notification daemon");
+        notification_daemon_.reset();
     }
     
     std::cout << "Compositor initialized successfully\n";
@@ -367,6 +375,11 @@ void Server::Run() {
         // Handle IPC events
         if (ipc_server_) {
             ipc_server_->HandleEvents();
+        }
+        
+        // Update notification daemon (process expired notifications)
+        if (notification_daemon_) {
+            notification_daemon_->Update();
         }
         
         // Process Wayland events
@@ -437,6 +450,22 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     output->layer_manager = new LayerManager(scene, wlr_output, wl_event_loop);
     LOG_INFO_FMT("Created LayerManager for output '{}'", wlr_output->name);
     
+    // Initialize tags for this output/screen
+    auto& config = Config();
+    if (!config.general.tags.empty()) {
+        output->layer_manager->InitializeTags(config.general.tags);
+    } else {
+        // Create default numbered tags
+        std::vector<TagConfig> default_tags;
+        for (int i = 0; i < config.general.workspace_count; ++i) {
+            TagConfig tag;
+            tag.id = i;
+            tag.name = std::to_string(i + 1);
+            default_tags.push_back(tag);
+        }
+        output->layer_manager->InitializeTags(default_tags);
+    }
+    
     // CRITICAL: Connect the output to the scene layout so the scene knows where to render
     wlr_scene_output_layout_add_output(scene_layout, layout_output, output->scene_output);
     LOG_INFO_FMT("Connected output '{}' to scene layout", wlr_output->name);
@@ -460,8 +489,6 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     if (cursor_mgr) {
         wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
     }
-    
-    TileViews();
 }
 
 void Server::ApplyMonitorGroupConfiguration() {
@@ -688,8 +715,24 @@ void Server::OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface) {
     auto* client = new Core::Client(view);
     clients_.push_back(client);
     
-    // Add to core seat (will add to active tag)
+    // Add to core seat
     core_seat_->AddClient(client);
+    
+    // Add to the focused screen's active tag
+    auto* focused_screen = core_seat_->GetFocusedScreen();
+    if (focused_screen) {
+        Output* iter;
+        wl_list_for_each(iter, &outputs, link) {
+            if (iter->core_screen == focused_screen && iter->layer_manager) {
+                auto* tag = iter->layer_manager->GetCurrentTag();
+                if (tag) {
+                    tag->AddClient(client);
+                    LOG_DEBUG("Added client to current tag");
+                }
+                break;
+            }
+        }
+    }
     
     LOG_INFO("View fully initialized");
 }
@@ -734,8 +777,24 @@ void Server::OnNewXdgToplevel(struct wlr_xdg_toplevel* toplevel) {
     auto* client = new Core::Client(view);
     clients_.push_back(client);
     
-    // Add to core seat (will add to active tag)
+    // Add to core seat
     core_seat_->AddClient(client);
+    
+    // Add to the focused screen's active tag
+    auto* focused_screen = core_seat_->GetFocusedScreen();
+    if (focused_screen) {
+        Output* iter;
+        wl_list_for_each(iter, &outputs, link) {
+            if (iter->core_screen == focused_screen && iter->layer_manager) {
+                auto* tag = iter->layer_manager->GetCurrentTag();
+                if (tag) {
+                    tag->AddClient(client);
+                    LOG_DEBUG("Added client to current tag");
+                }
+                break;
+            }
+        }
+    }
     
     LOG_INFO("Toplevel view fully initialized and added to active tag");
 }
@@ -783,7 +842,15 @@ void Server::FocusView(View* view) {
         return;
     }
     
+    // Update border colors - unfocus previous view
+    if (focused_view_ && focused_view_ != view) {
+        focused_view_->UpdateBorderColor(border_unfocused_);
+    }
+    
     focused_view_ = view;
+    
+    // Update border color for newly focused view
+    view->UpdateBorderColor(border_focused_);
     
     // Raise view in scene graph
     wlr_scene_node_raise_to_top(&view->scene_tree->node);
@@ -848,6 +915,27 @@ void Server::RemoveView(View* view) {
     
     if (client_to_remove) {
         LOG_DEBUG("Found client for view, removing from seat and deleting");
+        
+        // Remove from tag first
+        auto* focused_screen = core_seat_->GetFocusedScreen();
+        if (focused_screen) {
+            Output* iter;
+            wl_list_for_each(iter, &outputs, link) {
+                if (iter->core_screen == focused_screen && iter->layer_manager) {
+                    // Try to find the client in any tag
+                    for (auto* tag : iter->layer_manager->GetTags()) {
+                        const auto& tag_clients = tag->GetClients();
+                        if (std::find(tag_clients.begin(), tag_clients.end(), client_to_remove) != tag_clients.end()) {
+                            tag->RemoveClient(client_to_remove);
+                            LOG_DEBUG("Removed client from tag");
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        
         core_seat_->RemoveClient(client_to_remove);
         
         // Remove from clients_ vector
@@ -859,117 +947,6 @@ void Server::RemoveView(View* view) {
         // Delete the client to prevent memory leak
         delete client_to_remove;
     }
-    
-    // Retile remaining windows
-    TileViews();
-}
-
-void Server::TileViews() {
-    LOG_DEBUG("TileViews() called");
-    
-    auto* tag = core_seat_->GetActiveTag();
-    if (!tag) {
-        LOG_INFO("TileViews: No active tag");
-        return;
-    }
-    
-    auto clients = tag->GetClients();
-    LOG_DEBUG_FMT("TileViews: Active tag has {} clients", clients.size());
-    
-    // Filter mapped, non-floating views
-    std::vector<View*> tiled_views;
-    for (auto* client : clients) {
-        auto* view = client->GetView();
-        LOG_DEBUG_FMT("  Client view: mapped={}, floating={}, fullscreen={}", 
-                  view->mapped, view->is_floating, view->is_fullscreen);
-        if (view->mapped && !view->is_floating && !view->is_fullscreen) {
-            tiled_views.push_back(view);
-        }
-    }
-    
-    LOG_DEBUG_FMT("TileViews: {} tiled views after filtering", tiled_views.size());
-    
-    if (tiled_views.empty()) {
-        LOG_DEBUG("TileViews: No tiled views, returning");
-        return;
-    }
-    
-    // For now, tile all views on the first available output
-    // TODO: Multi-monitor support - assign views to specific outputs
-    Output* first_output = nullptr;
-    Output* iter;
-    wl_list_for_each(iter, &outputs, link) {
-        first_output = iter;
-        break;
-    }
-    
-    if (!first_output || !first_output->layer_manager) {
-        LOG_WARN("TileViews: No output or LayerManager available");
-        return;
-    }
-    
-    LOG_INFO_FMT("Tiling {} views on output '{}'", tiled_views.size(), first_output->wlr_output->name);
-    
-    // Delegate to the output's LayerManager
-    first_output->layer_manager->TileViews(tiled_views, tag, layout_engine_.get());
-}
-
-void Server::SetLayout(LayoutType layout) {
-    auto* tag = core_seat_->GetActiveTag();
-    if (tag) {
-        tag->SetLayout(layout);
-        TileViews();
-    }
-}
-
-void Server::IncreaseMasterCount() {
-    auto* tag = core_seat_->GetActiveTag();
-    if (tag) {
-        tag->SetMasterCount(tag->GetMasterCount() + 1);
-        TileViews();
-    }
-}
-
-void Server::DecreaseMasterCount() {
-    auto* tag = core_seat_->GetActiveTag();
-    if (tag && tag->GetMasterCount() > 0) {
-        tag->SetMasterCount(tag->GetMasterCount() - 1);
-        TileViews();
-    }
-}
-
-void Server::IncreaseMasterRatio() {
-    auto* tag = core_seat_->GetActiveTag();
-    if (tag) {
-        float ratio = std::min(0.95f, tag->GetMasterRatio() + 0.05f);
-        tag->SetMasterRatio(ratio);
-        TileViews();
-    }
-}
-
-void Server::DecreaseMasterRatio() {
-    auto* tag = core_seat_->GetActiveTag();
-    if (tag) {
-        float ratio = std::max(0.05f, tag->GetMasterRatio() - 0.05f);
-        tag->SetMasterRatio(ratio);
-        TileViews();
-    }
-}
-
-void Server::SwitchToTag(int index) {
-    core_seat_->SwitchToTag(index);
-    TileViews();
-}
-
-void Server::MoveClientToTag(int index) {
-    auto* focused_client = core_seat_->GetFocusedClient();
-    if (!focused_client) {
-        return;
-    }
-    
-    core_seat_->MoveClientToTag(focused_client, index);
-    focused_view_ = nullptr;
-    TileViews();
 }
 
 void Server::FocusNext() {
@@ -989,47 +966,13 @@ void Server::FocusPrev() {
 }
 
 void Server::SwapWithNext() {
-    auto* tag = core_seat_->GetActiveTag();
-    if (!tag) return;
-    
-    auto clients = tag->GetClients();
-    if (clients.size() < 2) return;
-    
-    auto* focused = core_seat_->GetFocusedClient();
-    if (!focused) return;
-    
-    auto it = std::find(clients.begin(), clients.end(), focused);
-    if (it != clients.end()) {
-        auto next_it = it + 1;
-        if (next_it == clients.end()) {
-            next_it = clients.begin();
-        }
-        std::iter_swap(it, next_it);
-        TileViews();
-    }
+    // TODO: Update to work with per-screen tags from LayerManager
+    LOG_WARN("SwapWithNext temporarily disabled during per-screen tag refactoring");
 }
 
 void Server::SwapWithPrev() {
-    auto* tag = core_seat_->GetActiveTag();
-    if (!tag) return;
-    
-    auto clients = tag->GetClients();
-    if (clients.size() < 2) return;
-    
-    auto* focused = core_seat_->GetFocusedClient();
-    if (!focused) return;
-    
-    auto it = std::find(clients.begin(), clients.end(), focused);
-    if (it != clients.end()) {
-        auto prev_it = it;
-        if (it == clients.begin()) {
-            prev_it = clients.end() - 1;
-        } else {
-            prev_it = it - 1;
-        }
-        std::iter_swap(it, prev_it);
-        TileViews();
-    }
+    // TODO: Update to work with per-screen tags from LayerManager
+    LOG_WARN("SwapWithPrev temporarily disabled during per-screen tag refactoring");
 }
 
 View* Server::FindView(struct wlr_surface* surface) {
@@ -1070,8 +1013,8 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
                 
             case IPC::CommandType::GET_TAGS: {
                 response.success = true;
-                auto tags = core_seat_->GetTags();
-                auto active_tag = core_seat_->GetActiveTag();
+                auto tags = GetTags();  // Use Server's method which gets from focused screen
+                auto active_tag = GetActiveTag();
                 
                 for (const auto* tag : tags) {
                     IPC::TagInfo info;
@@ -1085,7 +1028,7 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
             
             case IPC::CommandType::GET_ACTIVE_TAG: {
                 response.success = true;
-                auto active_tag = core_seat_->GetActiveTag();
+                auto active_tag = GetActiveTag();  // Use Server's method
                 if (active_tag) {
                     response.data["tag"] = active_tag->GetName();
                     response.data["client_count"] = std::to_string(active_tag->GetClients().size());
@@ -1100,7 +1043,7 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
                 response.success = true;
                 
                 // Iterate through all tags to find which tag each client belongs to
-                auto tags = core_seat_->GetTags();
+                auto tags = GetTags();  // Use Server's method
                 for (const auto* tag : tags) {
                     for (const auto* client : tag->GetClients()) {
                         IPC::ClientInfo info;
@@ -1209,7 +1152,7 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
                 }
                 
                 std::string tag_name = j["args"]["tag"];
-                auto tags = core_seat_->GetTags();
+                auto tags = GetTags();  // Use Server's method
                 
                 bool found = false;
                 for (size_t i = 0; i < tags.size(); i++) {
@@ -1318,17 +1261,74 @@ Core::Screen* Server::GetFocusedScreen() const {
 }
 
 std::vector<Core::Tag*> Server::GetTags() const {
+    // Get tags from the focused screen's LayerManager
     if (!core_seat_) {
         return {};
     }
-    return core_seat_->GetTags();
+    
+    auto* focused_screen = core_seat_->GetFocusedScreen();
+    if (!focused_screen) {
+        return {};
+    }
+    
+    // Find the output for this screen and get its LayerManager
+    Output* iter;
+    wl_list_for_each(iter, &outputs, link) {
+        if (iter->core_screen == focused_screen && iter->layer_manager) {
+            return iter->layer_manager->GetTags();
+        }
+    }
+    
+    return {};
 }
 
 Core::Tag* Server::GetActiveTag() const {
+    // Get active tag from the focused screen's LayerManager
     if (!core_seat_) {
         return nullptr;
     }
-    return core_seat_->GetActiveTag();
+    
+    auto* focused_screen = core_seat_->GetFocusedScreen();
+    if (!focused_screen) {
+        return nullptr;
+    }
+    
+    // Find the output for this screen and get its LayerManager
+    Output* iter;
+    wl_list_for_each(iter, &outputs, link) {
+        if (iter->core_screen == focused_screen && iter->layer_manager) {
+            return iter->layer_manager->GetCurrentTag();
+        }
+    }
+    
+    return nullptr;
+}
+
+void Server::SwitchToTag(int tag_index) {
+    if (!core_seat_) {
+        LOG_WARN("Cannot switch tag: core_seat_ is null");
+        return;
+    }
+    
+    LOG_DEBUG_FMT("Plugin requested tag switch to index {}", tag_index);
+    
+    // Switch tag on the focused screen's LayerManager
+    auto* focused_screen = core_seat_->GetFocusedScreen();
+    if (!focused_screen) {
+        LOG_WARN("Cannot switch tag: no focused screen");
+        return;
+    }
+    
+    // Find the output for this screen and switch tag
+    Output* iter;
+    wl_list_for_each(iter, &outputs, link) {
+        if (iter->core_screen == focused_screen && iter->layer_manager) {
+            iter->layer_manager->SwitchToTag(tag_index);
+            return;
+        }
+    }
+    
+    LOG_WARN("Cannot switch tag: LayerManager not found for focused screen");
 }
 
 std::vector<Core::Client*> Server::GetAllClients() const {
@@ -1360,6 +1360,21 @@ Core::Client* Server::GetFocusedClient() const {
         return nullptr;
     }
     return core_seat_->GetFocusedClient();
+}
+
+LayerManager* Server::GetLayerManagerForScreen(Core::Screen* screen) const {
+    if (!screen) {
+        return nullptr;
+    }
+    
+    Output* iter;
+    wl_list_for_each(iter, &outputs, link) {
+        if (iter->core_screen == screen) {
+            return iter->layer_manager;
+        }
+    }
+    
+    return nullptr;
 }
 
 } // namespace Wayland

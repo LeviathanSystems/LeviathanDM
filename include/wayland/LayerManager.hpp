@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <vector>
 #include <string>
+#include <memory>
+#include "config/ConfigParser.hpp"
 
 // Forward declarations
 struct wlr_scene;
@@ -15,13 +17,16 @@ struct wl_event_loop;
 namespace Leviathan {
 
 // Forward declarations
+namespace Core {
+    class Tag;
+    class Client;
+}
+
+// Forward declarations
 class TilingLayout;
 struct StatusBarsConfig;
 class StatusBar;
-
-namespace Core {
-    class Tag;
-}
+enum class LayoutType;
 
 namespace Wayland {
 
@@ -107,12 +112,41 @@ public:
                          uint32_t output_width,
                          uint32_t output_height);
     
+    // Tag management (per-screen workspaces)
+    void InitializeTags(const std::vector<TagConfig>& tag_configs);
+    void SwitchToTag(int index);
+    Core::Tag* GetCurrentTag();
+    std::vector<Core::Tag*> GetTags() const;
+    int GetCurrentTagIndex() const { return current_tag_index_; }
+    
+    // Layout management for current tag
+    void SetLayout(LayoutType layout);
+    void IncreaseMasterCount();
+    void DecreaseMasterCount();
+    void IncreaseMasterRatio();
+    void DecreaseMasterRatio();
+    
+    // Client management
+    void AddView(class View* view);  // Add view and auto-tile
+    void RemoveView(class View* view);  // Remove view and auto-tile
+    void MoveClientToTag(Core::Client* client, int target_tag_index);
+    
+    // Auto-tile current tag's views
+    void AutoTile();
+    
 private:
     struct wlr_scene_tree* layers_[static_cast<size_t>(Layer::COUNT)];
     ReservedSpace reserved_space_;
     struct wlr_output* output_;  // The output this manager belongs to
     struct wl_event_loop* event_loop_;  // For timers and events
     std::vector<Leviathan::StatusBar*> status_bars_;  // Status bars on this output
+    
+    // Per-screen tags (workspaces)
+    std::vector<std::unique_ptr<Core::Tag>> tags_;
+    int current_tag_index_ = 0;
+    
+    // Layout engine for tiling
+    TilingLayout* layout_engine_ = nullptr;
 };
 
 } // namespace Wayland

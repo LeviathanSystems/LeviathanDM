@@ -17,6 +17,8 @@ A lightweight, customizable tiling Wayland compositor built with wlroots and C++
 
 - **Vim-like Keybindings**: Familiar navigation (hjkl)
 
+- **Built-in Notification Daemon**: Desktop Notifications spec support (org.freedesktop.Notifications) - no external daemon needed
+
 - **Layer-Shell Protocol**: Support for panels, notifications, and overlays (wlr-layer-shell-v1)
 
 - **Built-in Help**: Press `Super + F1` for an overlay showing all keybindings

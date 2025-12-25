@@ -12,6 +12,13 @@
 #include "wayland/WaylandTypes.hpp"
 #include "ui/CompositorState.hpp"
 
+// Forward declarations
+namespace Leviathan {
+namespace UI {
+    class NotificationDaemon;
+}
+}
+
 // Layer shell needs special handling for 'namespace' keyword
 #define namespace namespace_
 extern "C" {
@@ -39,18 +46,6 @@ public:
     void CloseView(View* view);
     void RemoveView(View* view);  // Called by View destructor to clean up
     
-    // Layout operations
-    void TileViews();
-    void SetLayout(LayoutType layout);
-    void IncreaseMasterCount();
-    void DecreaseMasterCount();
-    void IncreaseMasterRatio();
-    void DecreaseMasterRatio();
-    
-    // Tag operations (replacing workspace)
-    void SwitchToTag(int index);
-    void MoveClientToTag(int index);
-    
     // Navigation
     void FocusNext();
     void FocusPrev();
@@ -67,6 +62,8 @@ public:
     const std::vector<Core::Client*>& GetClients() const { return clients_; }
     TilingLayout* GetLayoutEngine() { return layout_engine_.get(); }
     KeyBindings* GetKeyBindings() { return keybindings_.get(); }
+    View* GetFocusedView() const { return focused_view_; }
+    UI::NotificationDaemon* GetNotificationDaemon() { return notification_daemon_.get(); }
     
     // Find Output struct by wlr_output
     Output* FindOutput(struct wlr_output* wlr_output);
@@ -84,10 +81,14 @@ public:
     Core::Screen* GetFocusedScreen() const override;
     std::vector<Core::Tag*> GetTags() const override;
     Core::Tag* GetActiveTag() const override;
+    void SwitchToTag(int tag_index) override;  // Also used for keybindings (line 51)
     std::vector<Core::Client*> GetAllClients() const override;
     std::vector<Core::Client*> GetClientsOnTag(Core::Tag* tag) const override;
     std::vector<Core::Client*> GetClientsOnScreen(Core::Screen* screen) const override;
     Core::Client* GetFocusedClient() const override;
+    
+    // LayerManager access
+    LayerManager* GetLayerManagerForScreen(Core::Screen* screen) const;
     
     // IPC command processor
     IPC::Response ProcessIPCCommand(const std::string& command_json);
@@ -185,6 +186,9 @@ private:
     
     // IPC server
     std::unique_ptr<IPC::Server> ipc_server_;
+    
+    // Notification daemon
+    std::unique_ptr<UI::NotificationDaemon> notification_daemon_;
     
     // Colors (RGBA format for wlroots)
     float border_focused_[4];

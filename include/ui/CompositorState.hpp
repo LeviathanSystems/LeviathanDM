@@ -33,6 +33,9 @@ public:
     virtual std::vector<Core::Tag*> GetTags() const = 0;
     virtual Core::Tag* GetActiveTag() const = 0;  // Tag on focused screen
     
+    // Tag actions
+    virtual void SwitchToTag(int tag_index) = 0;
+    
     // Client queries
     virtual std::vector<Core::Client*> GetAllClients() const = 0;
     virtual std::vector<Core::Client*> GetClientsOnTag(Core::Tag* tag) const = 0;

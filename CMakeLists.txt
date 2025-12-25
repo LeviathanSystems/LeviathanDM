@@ -204,6 +204,7 @@ set(SOURCES
     src/core/Screen.cpp
     src/core/Tag.cpp
     src/core/Client.cpp
+    src/core/Events.cpp
     # Config
     src/config/ConfigParser.cpp
     # Utilities
@@ -214,10 +215,13 @@ set(SOURCES
     src/ui/StatusBar.cpp
     src/ui/ShmBuffer.cpp
     src/ui/Widget.cpp
+    src/ui/reusable-widgets/Label.cpp
+    src/ui/reusable-widgets/Button.cpp
     src/ui/WidgetPluginManager.cpp
     src/ui/CompositorState.cpp
     src/ui/PluginAPI.cpp
     src/ui/DBusHelper.cpp
+    src/ui/NotificationDaemon.cpp
     # IPC
     src/ipc/IPC.cpp
 )

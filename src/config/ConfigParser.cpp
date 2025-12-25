@@ -207,6 +207,31 @@ void ConfigParser::ParseGeneral(const YAML::Node& node) {
     if (node["workspace_count"]) {
         general.workspace_count = node["workspace_count"].as<int>();
     }
+    
+    // Parse tags (new format)
+    if (node["tags"]) {
+        general.tags.clear();
+        for (const auto& tag_node : node["tags"]) {
+            TagConfig tag;
+            
+            if (tag_node["id"]) {
+                tag.id = tag_node["id"].as<int>();
+            }
+            if (tag_node["name"]) {
+                tag.name = tag_node["name"].as<std::string>();
+            }
+            if (tag_node["icon"]) {
+                tag.icon = tag_node["icon"].as<std::string>();
+            }
+            
+            // Only add if name is not empty
+            if (!tag.name.empty()) {
+                general.tags.push_back(tag);
+                LOG_DEBUG_FMT("Tag {}: {} {}", tag.id, tag.icon.empty() ? "" : tag.icon, tag.name);
+            }
+        }
+    }
+    
     if (node["focus_follows_mouse"]) {
         general.focus_follows_mouse = node["focus_follows_mouse"].as<bool>();
     }

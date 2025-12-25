@@ -13,10 +13,11 @@ namespace Core {
 /**
  * Seat represents the user's session
  * - Manages all screens (monitors)
- * - Manages all tags (workspaces)
  * - Manages all clients (windows)
  * - Handles global input
  * - Top-level coordinator
+ * 
+ * NOTE: Tags are now managed per-screen by LayerManager (AwesomeWM model)
  */
 class Seat {
 public:
@@ -28,13 +29,6 @@ public:
     void RemoveScreen(Screen* screen);
     Screen* GetFocusedScreen();
     const std::vector<Screen*>& GetScreens() const { return screens_; }
-    
-    // Tag management
-    void AddTag(Tag* tag);
-    Tag* GetTag(int index);
-    Tag* GetActiveTag();
-    void SwitchToTag(int index);
-    const std::vector<Tag*>& GetTags() const { return tags_; }
     
     // Client (window) management
     void AddClient(Client* client);
@@ -55,11 +49,9 @@ public:
     
 private:
     std::vector<Screen*> screens_;
-    std::vector<Tag*> tags_;
     std::vector<Client*> clients_;
     Screen* focused_screen_;
     Client* focused_client_;
-    int active_tag_index_;
 };
 
 } // namespace Core

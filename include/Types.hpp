@@ -59,6 +59,12 @@ struct View {
     struct wlr_scene_tree* scene_tree;
     Server* server;  // Reference to server for callbacks
     
+    // Border rectangles (top, right, bottom, left)
+    struct wlr_scene_rect* border_top;
+    struct wlr_scene_rect* border_right;
+    struct wlr_scene_rect* border_bottom;
+    struct wlr_scene_rect* border_left;
+    
     int x, y;
     int width, height;
     bool is_floating;
@@ -77,6 +83,12 @@ struct View {
     
     View(struct wlr_xdg_toplevel* toplevel, Server* server);
     ~View();
+    
+    // Border management
+    void CreateBorders(int border_width, const float color[4]);
+    void UpdateBorderColor(const float color[4]);
+    void UpdateBorderSize(int border_width);
+    void DestroyBorders();
 };
 
 // Output (monitor) information structure  

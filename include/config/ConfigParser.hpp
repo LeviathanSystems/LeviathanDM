@@ -30,6 +30,13 @@ struct LibInputConfig {
     } keyboard;
 };
 
+// Tag configuration
+struct TagConfig {
+    int id = 0;
+    std::string name;
+    std::string icon;  // Optional icon/emoji for the tag
+};
+
 struct GeneralConfig {
     std::string terminal = "alacritty";
     bool auto_launch_terminal = true;
@@ -37,7 +44,8 @@ struct GeneralConfig {
     std::string border_color_focused = "#5E81AC";     // Nord blue
     std::string border_color_unfocused = "#3B4252";   // Nord dark gray
     int gap_size = 0;
-    int workspace_count = 9;
+    int workspace_count = 9;  // Deprecated - use tags instead
+    std::vector<TagConfig> tags;  // Named tags with icons
     bool focus_follows_mouse = true;
     bool click_to_focus = true;
     bool remove_client_titlebars = true;

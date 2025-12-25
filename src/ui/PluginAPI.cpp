@@ -2,10 +2,60 @@
 #include "core/Tag.hpp"
 #include "core/Client.hpp"
 #include "core/Screen.hpp"
+#include "core/Events.hpp"
 
 namespace Leviathan {
 namespace UI {
 namespace Plugin {
+
+// Event subscription
+int SubscribeToEvent(EventType type, EventListener listener) {
+    // Convert plugin EventType to Core::EventType
+    Core::EventType core_type;
+    switch (type) {
+        case EventType::TagSwitched:
+            core_type = Core::EventType::TagSwitched;
+            break;
+        case EventType::TagVisibilityChanged:
+            core_type = Core::EventType::TagVisibilityChanged;
+            break;
+        case EventType::ClientAdded:
+            core_type = Core::EventType::ClientAdded;
+            break;
+        case EventType::ClientRemoved:
+            core_type = Core::EventType::ClientRemoved;
+            break;
+        case EventType::ClientTagChanged:
+            core_type = Core::EventType::ClientTagChanged;
+            break;
+        case EventType::ClientFocused:
+            core_type = Core::EventType::ClientFocused;
+            break;
+        case EventType::ScreenAdded:
+            core_type = Core::EventType::ScreenAdded;
+            break;
+        case EventType::ScreenRemoved:
+            core_type = Core::EventType::ScreenRemoved;
+            break;
+        case EventType::LayoutChanged:
+            core_type = Core::EventType::LayoutChanged;
+            break;
+        default:
+            return -1;
+    }
+    
+    // Subscribe through the event bus
+    return Core::EventBus::Instance().Subscribe(core_type, [listener](const Core::Event& core_event) {
+        // Convert Core::Event to Plugin::Event
+        // The event structures are identical, so we can safely cast
+        const auto& plugin_event = reinterpret_cast<const Event&>(core_event);
+        listener(plugin_event);
+    });
+}
+
+void UnsubscribeFromEvent(int subscription_id) {
+    Core::EventBus::Instance().Unsubscribe(subscription_id);
+}
 
 // Tag queries
 std::string GetTagName(Core::Tag* tag) {
@@ -47,6 +97,17 @@ bool IsClientFloating(Core::Client* client) {
 bool IsClientFullscreen(Core::Client* client) {
     if (!client) return false;
     return client->IsFullscreen();
+}
+
+// Tag actions
+void SwitchToTag(int tag_index) {
+    auto* compositor = UI::GetCompositorState();
+    if (!compositor) {
+        LOG_WARN("PluginAPI::SwitchToTag: GetCompositorState() returned nullptr");
+        return;
+    }
+    
+    compositor->SwitchToTag(tag_index);
 }
 
 // Screen queries

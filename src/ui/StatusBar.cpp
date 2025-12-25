@@ -582,6 +582,31 @@ void StatusBar::RenderPopoverToTopLayer() {
         return;
     }
     
+    // Adjust popover position to keep it on screen (anchor point logic)
+    // Check right edge - if popover extends beyond screen, shift it left
+    if (popover_x + popover_width > static_cast<int>(output_width_)) {
+        popover_x = output_width_ - popover_width;
+        LOG_DEBUG_FMT("Adjusted popover left to prevent overflow: x={}", popover_x);
+    }
+    
+    // Check bottom edge - if popover extends beyond screen, shift it up
+    if (popover_y + popover_height > static_cast<int>(output_height_)) {
+        popover_y = output_height_ - popover_height;
+        LOG_DEBUG_FMT("Adjusted popover up to prevent overflow: y={}", popover_y);
+    }
+    
+    // Check left edge - clamp to 0
+    if (popover_x < 0) {
+        popover_x = 0;
+        LOG_DEBUG("Clamped popover to left edge");
+    }
+    
+    // Check top edge - clamp to 0
+    if (popover_y < 0) {
+        popover_y = 0;
+        LOG_DEBUG("Clamped popover to top edge");
+    }
+    
     LOG_DEBUG_FMT("Rendering popover at ({}, {}) size {}x{}", 
               popover_x, popover_y, popover_width, popover_height);
     

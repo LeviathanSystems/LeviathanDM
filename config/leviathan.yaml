@@ -19,7 +19,37 @@ general:
   border_color_unfocused: "#3B4252"   # Nord dark gray for unfocused windows
   
   # Workspace/Tag settings
-  workspace_count: 9
+  # workspace_count: 9  # Deprecated - use tags instead
+  
+  # Named tags with optional icons
+  tags:
+    - id: 1
+      name: "Terminal"
+      icon: ""  # Terminal emoji
+    - id: 2
+      name: "Web"
+      icon: "🌐"  # Globe emoji
+    - id: 3
+      name: "Code"
+      icon: ""  # Laptop emoji
+    - id: 4
+      name: "Music"
+      icon: "🎵"  # Music note emoji
+    - id: 5
+      name: "Chat"
+      icon: "💬"  # Chat bubble emoji
+    - id: 6
+      name: "Files"
+      icon: "📁"  # Folder emoji
+    - id: 7
+      name: "Video"
+      icon: "🎬"  # Clapper board emoji
+    - id: 8
+      name: "Games"
+      icon: "🎮"  # Game controller emoji
+    - id: 9
+      name: "Misc"
+      icon: "📦"  # Package emoji
   
   # Focus behavior
   # focus_follows_mouse: Window gains focus when you hover over it with mouse (sloppy focus)

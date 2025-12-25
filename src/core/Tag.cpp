@@ -1,5 +1,6 @@
 #include "core/Tag.hpp"
 #include "core/Client.hpp"
+#include "core/Events.hpp"
 #include "Logger.hpp"
 
 extern "C" {
@@ -24,6 +25,10 @@ Tag::~Tag() {
 }
 
 void Tag::SetVisible(bool visible) {
+    if (visible_ == visible) {
+        return;  // No change
+    }
+    
     visible_ = visible;
     
     LOG_INFO_FMT("Tag '{}' visibility changed to: {}", name_, visible);
@@ -38,6 +43,10 @@ void Tag::SetVisible(bool visible) {
                      visible, static_cast<void*>(view));
         }
     }
+    
+    // Fire visibility changed event
+    TagVisibilityChangedEvent event(this, visible);
+    EventBus::Instance().Publish(event);
 }
 
 void Tag::AddClient(Client* client) {
@@ -52,6 +61,10 @@ void Tag::AddClient(Client* client) {
             LOG_DEBUG("  - Enabled scene node for new client (tag is visible)");
         }
     }
+    
+    // Fire client added event
+    ClientAddedEvent event(client, this);
+    EventBus::Instance().Publish(event);
 }
 
 void Tag::RemoveClient(Client* client) {
@@ -61,6 +74,10 @@ void Tag::RemoveClient(Client* client) {
         if (focused_client_ == client) {
             focused_client_ = clients_.empty() ? nullptr : clients_[0];
         }
+        
+        // Fire client removed event
+        ClientRemovedEvent event(client, this);
+        EventBus::Instance().Publish(event);
     }
 }
 

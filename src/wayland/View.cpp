@@ -29,6 +29,10 @@ View::View(struct wlr_xdg_toplevel* toplevel, Server* srv)
     , surface(toplevel->base->surface)
     , scene_tree(nullptr)
     , server(srv)
+    , border_top(nullptr)
+    , border_right(nullptr)
+    , border_bottom(nullptr)
+    , border_left(nullptr)
     , x(0), y(0)
     , width(0), height(0)
     , is_floating(false)
@@ -64,6 +68,9 @@ View::View(struct wlr_xdg_toplevel* toplevel, Server* srv)
 
 View::~View() {
     LOG_DEBUG_FMT("View destructor called for {}", static_cast<void*>(this));
+    
+    // Clean up borders
+    DestroyBorders();
     
     // DON'T call RemoveView from destructor - it causes use-after-free!
     // The destroy callback (view_handle_destroy) should handle cleanup BEFORE deleting
@@ -122,7 +129,27 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
             }
         }
     } else {
-        //LOG_DEBUG("Not initial commit, skipping configure");
+        // After initial commit, check if surface size changed and update borders
+        if (view->border_top && view->server) {
+            auto* surface = view->xdg_toplevel->base->surface;
+            int surface_width = surface->current.width;
+            int surface_height = surface->current.height;
+            
+            // Only update if the surface size has actually changed
+            if (surface_width > 0 && surface_height > 0 &&
+                (surface_width != view->width || surface_height != view->height)) {
+                LOG_DEBUG_FMT("Surface size changed from {}x{} to {}x{}, updating borders",
+                             view->width, view->height, surface_width, surface_height);
+                
+                // Update view dimensions to match surface
+                view->width = surface_width;
+                view->height = surface_height;
+                
+                // Update border positions/sizes to match new surface dimensions
+                auto& config = Config();
+                view->UpdateBorderSize(config.general.border_width);
+            }
+        }
     }
 }
 
@@ -144,11 +171,17 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
     if (view->server) {
         view->server->FocusView(view);
         LOG_DEBUG("Gave keyboard focus to newly mapped view");
-    }
-    
-    // Trigger tiling layout update
-    if (view->server) {
-        view->server->TileViews();
+        
+        // Trigger auto-tiling on the focused screen's LayerManager
+        // This will create borders via MoveResizeView after setting dimensions
+        auto* focused_screen = view->server->GetFocusedScreen();
+        if (focused_screen) {
+            auto* layer_mgr = view->server->GetLayerManagerForScreen(focused_screen);
+            if (layer_mgr) {
+                layer_mgr->AutoTile();
+                LOG_DEBUG("Triggered auto-tile after view mapped");
+            }
+        }
     }
 }
 
@@ -157,9 +190,16 @@ static void view_handle_unmap(struct wl_listener* listener, void* data) {
     view->mapped = false;
     LOG_INFO_FMT("View unmapped! view={}", static_cast<void*>(view));
     
-    // Trigger tiling layout update when view is unmapped
+    // Trigger auto-tiling to reorganize remaining views
     if (view->server) {
-        view->server->TileViews();
+        auto* focused_screen = view->server->GetFocusedScreen();
+        if (focused_screen) {
+            auto* layer_mgr = view->server->GetLayerManagerForScreen(focused_screen);
+            if (layer_mgr) {
+                layer_mgr->AutoTile();
+                LOG_DEBUG("Triggered auto-tile after view unmapped");
+            }
+        }
     }
 }
 
@@ -224,6 +264,103 @@ void ViewManager::HandleRequestMaximize(struct wl_listener* listener, void* data
 
 void ViewManager::HandleRequestFullscreen(struct wl_listener* listener, void* data) {
     view_handle_request_fullscreen(listener, data);
+}
+
+void View::CreateBorders(int border_width, const float color[4]) {
+    if (!scene_tree || border_width <= 0) {
+        return;
+    }
+    
+    // Destroy existing borders first
+    DestroyBorders();
+    
+    LOG_DEBUG_FMT("CreateBorders: view={}, width={}, height={}, border_width={}", 
+                  static_cast<void*>(this), width, height, border_width);
+    
+    // Create 4 border rectangles around the view
+    // Use scene_tree->node.parent to add borders as siblings, not children
+    auto* parent = scene_tree->node.parent;
+    if (!parent) {
+        LOG_WARN("Cannot create borders: scene_tree has no parent");
+        return;
+    }
+    
+    // Top border
+    border_top = wlr_scene_rect_create(parent, width + 2 * border_width, border_width, color);
+    wlr_scene_node_set_position(&border_top->node, -border_width, -border_width);
+    LOG_DEBUG_FMT("  Created top border: size={}x{}, pos=({},{})", 
+                  width + 2 * border_width, border_width, -border_width, -border_width);
+    
+    // Right border
+    border_right = wlr_scene_rect_create(parent, border_width, height, color);
+    wlr_scene_node_set_position(&border_right->node, width, 0);
+    LOG_DEBUG_FMT("  Created right border: size={}x{}, pos=({},{})", 
+                  border_width, height, width, 0);
+    
+    // Bottom border
+    border_bottom = wlr_scene_rect_create(parent, width + 2 * border_width, border_width, color);
+    wlr_scene_node_set_position(&border_bottom->node, -border_width, height);
+    LOG_DEBUG_FMT("  Created bottom border: size={}x{}, pos=({},{})", 
+                  width + 2 * border_width, border_width, -border_width, height);
+    
+    // Left border
+    border_left = wlr_scene_rect_create(parent, border_width, height, color);
+    wlr_scene_node_set_position(&border_left->node, -border_width, 0);
+    LOG_DEBUG_FMT("  Created left border: size={}x{}, pos=({},{})", 
+                  border_width, height, -border_width, 0);
+}
+
+void View::UpdateBorderColor(const float color[4]) {
+    if (border_top) wlr_scene_rect_set_color(border_top, color);
+    if (border_right) wlr_scene_rect_set_color(border_right, color);
+    if (border_bottom) wlr_scene_rect_set_color(border_bottom, color);
+    if (border_left) wlr_scene_rect_set_color(border_left, color);
+}
+
+void View::UpdateBorderSize(int border_width) {
+    if (!scene_tree || border_width <= 0) {
+        DestroyBorders();
+        return;
+    }
+    
+    if (border_top) {
+        wlr_scene_rect_set_size(border_top, width + 2 * border_width, border_width);
+        wlr_scene_node_set_position(&border_top->node, -border_width, -border_width);
+    }
+    
+    if (border_right) {
+        wlr_scene_rect_set_size(border_right, border_width, height);
+        wlr_scene_node_set_position(&border_right->node, width, 0);
+    }
+    
+    if (border_bottom) {
+        wlr_scene_rect_set_size(border_bottom, width + 2 * border_width, border_width);
+        wlr_scene_node_set_position(&border_bottom->node, -border_width, height);
+    }
+    
+    if (border_left) {
+        wlr_scene_rect_set_size(border_left, border_width, height);
+        wlr_scene_node_set_position(&border_left->node, -border_width, 0);
+    }
+}
+
+void View::DestroyBorders() {
+    if (border_top) {
+        wlr_scene_node_destroy(&border_top->node);
+        border_top = nullptr;
+    }
+    if (border_right) {
+        wlr_scene_node_destroy(&border_right->node);
+        border_right = nullptr;
+    }
+    if (border_bottom) {
+        wlr_scene_node_destroy(&border_bottom->node);
+        border_bottom = nullptr;
+    }
+    if (border_left) {
+        wlr_scene_node_destroy(&border_left->node);
+        border_left = nullptr;
+    }
 }
 
 } // namespace Wayland

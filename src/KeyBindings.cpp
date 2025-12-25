@@ -52,32 +52,53 @@ void KeyBindings::SetupDefaultBindings() {
     
     // Layout control
     bindings_.push_back({mod, XKB_KEY_h, [this]() {
-        server_->DecreaseMasterRatio();
+        auto* screen = server_->GetFocusedScreen();
+        if (!screen) return;
+        auto* mgr = server_->GetLayerManagerForScreen(screen);
+        if (mgr) mgr->DecreaseMasterRatio();
     }});
     
     bindings_.push_back({mod, XKB_KEY_l, [this]() {
-        server_->IncreaseMasterRatio();
+        auto* screen = server_->GetFocusedScreen();
+        if (!screen) return;
+        auto* mgr = server_->GetLayerManagerForScreen(screen);
+        if (mgr) mgr->IncreaseMasterRatio();
     }});
     
     bindings_.push_back({mod, XKB_KEY_i, [this]() {
-        server_->IncreaseMasterCount();
+        auto* screen = server_->GetFocusedScreen();
+        if (!screen) return;
+        auto* mgr = server_->GetLayerManagerForScreen(screen);
+        if (mgr) mgr->IncreaseMasterCount();
     }});
     
     bindings_.push_back({mod, XKB_KEY_d, [this]() {
-        server_->DecreaseMasterCount();
+        auto* screen = server_->GetFocusedScreen();
+        if (!screen) return;
+        auto* mgr = server_->GetLayerManagerForScreen(screen);
+        if (mgr) mgr->DecreaseMasterCount();
     }});
     
     // Layout switching
     bindings_.push_back({mod, XKB_KEY_t, [this]() {
-        server_->SetLayout(LayoutType::MASTER_STACK);
+        auto* screen = server_->GetFocusedScreen();
+        if (!screen) return;
+        auto* mgr = server_->GetLayerManagerForScreen(screen);
+        if (mgr) mgr->SetLayout(LayoutType::MASTER_STACK);
     }});
     
     bindings_.push_back({mod, XKB_KEY_m, [this]() {
-        server_->SetLayout(LayoutType::MONOCLE);
+        auto* screen = server_->GetFocusedScreen();
+        if (!screen) return;
+        auto* mgr = server_->GetLayerManagerForScreen(screen);
+        if (mgr) mgr->SetLayout(LayoutType::MONOCLE);
     }});
     
     bindings_.push_back({mod, XKB_KEY_g, [this]() {
-        server_->SetLayout(LayoutType::GRID);
+        auto* screen = server_->GetFocusedScreen();
+        if (!screen) return;
+        auto* mgr = server_->GetLayerManagerForScreen(screen);
+        if (mgr) mgr->SetLayout(LayoutType::GRID);
     }});
     
     // Workspace switching (1-9)
@@ -89,7 +110,11 @@ void KeyBindings::SetupDefaultBindings() {
         
         // Move window to tag
         bindings_.push_back({mod | MOD_SHIFT, key, [this, i]() {
-            server_->MoveClientToTag(i - 1);
+            auto* screen = server_->GetFocusedScreen();
+            if (!screen) return;
+            auto* mgr = server_->GetLayerManagerForScreen(screen);
+            auto* client = server_->GetFocusedClient();
+            if (mgr && client) mgr->MoveClientToTag(client, i - 1);
         }});
     }
     
