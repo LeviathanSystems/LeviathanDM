@@ -668,6 +668,9 @@ void Server::ApplyMonitorGroupConfiguration() {
             output->wlr_output->width,
             output->wlr_output->height
         );
+        
+        // Pass monitor config to LayerManager (triggers wallpaper initialization if configured)
+        output->layer_manager->SetMonitorConfig(mon_config);
     }
     
     LOG_INFO_FMT("Monitor group '{}' configuration applied", group->name);

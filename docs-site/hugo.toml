@@ -1,37 +1,68 @@
-baseURL = 'https://leviathansystems.github.io/LeviathanDM/'
-languageCode = 'en-us'
-title = 'LeviathanDM Documentation'
-theme = 'hugo-book'
-
+baseURL = "https://leviathansystems.github.io/LeviathanDM/"
+title = "LeviathanDM Documentation"
+languageCode = "en-us"
+contentDir = "content/en"
+defaultContentLanguage = "en"
+enableRobotsTXT = true
 enableGitInfo = true
-disableKinds = ['taxonomy', 'term']
+enableEmoji = true
 
-[params]
-  BookTheme = 'auto'
-  BookToC = true
-  BookMenuBundle = '/menu'
-  BookSection = 'docs'
-  BookRepo = 'https://github.com/LeviathanSystems/LeviathanDM'
-  BookEditPath = 'edit/master/docs'
-  BookSearch = true
-  BookComments = false
-  description = 'A lightweight, customizable tiling Wayland compositor built with wlroots and C++'
-  author = 'LeviathanSystems'
-  
+[languages]
+  [languages.en]
+    languageName = "English"
+    contentDir = "content/en"
+
+[module]
+  proxy = "direct"
+  [[module.imports]]
+    path = "github.com/google/docsy"
+  [[module.imports]]
+    path = "github.com/google/docsy/dependencies"
+
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
-  [markup.tableOfContents]
-    endLevel = 4
-    startLevel = 2
+  [markup.highlight]
+    style = "tango"
+
+[params]
+  copyright = "LeviathanDM Contributors"
+  github_repo = "https://github.com/LeviathanSystems/LeviathanDM"
+  github_branch = "master"
+  
+  # Version information
+  version_menu = "Versions"
+  version = "latest"
+  url_latest_version = "https://leviathansystems.github.io/LeviathanDM/docs/"
+  
+  [params.ui]
+    sidebar_menu_compact = false
+    breadcrumb_disable = false
+    sidebar_search_disable = false
+    navbar_logo = true
+    navbar_translucent_over_cover_disable = false
+    
+    [params.ui.feedback]
+      enable = true
+      yes = 'Glad to hear it! Please <a href="https://github.com/LeviathanSystems/LeviathanDM/issues/new">tell us how we can improve</a>.'
+      no = 'Sorry to hear that. Please <a href="https://github.com/LeviathanSystems/LeviathanDM/issues/new">tell us how we can improve</a>.'
+    
+  # Version dropdown configuration
+  [[params.versions]]
+    version = "latest (development)"
+    url = "https://leviathansystems.github.io/LeviathanDM/docs/"
+  
+  [[params.versions]]
+    version = "v0.1.0"
+    url = "https://leviathansystems.github.io/LeviathanDM/v0.1.0/"
 
 [menu]
-  [[menu.before]]
-    identifier = 'github'
-    name = 'GitHub'
-    url = 'https://github.com/LeviathanSystems/LeviathanDM'
-    weight = 10
-    
-[outputs]
-  home = ['HTML', 'RSS', 'JSON']
+  [[menu.main]]
+    name = "Documentation"
+    weight = 1
+    url = "/docs/"
+  [[menu.main]]
+    name = "GitHub"
+    weight = 50
+    url = "https://github.com/LeviathanSystems/LeviathanDM"

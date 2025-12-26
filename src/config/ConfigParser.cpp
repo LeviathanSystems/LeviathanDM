@@ -35,6 +35,13 @@ bool ConfigParser::Load(const std::string& config_path) {
             ParseMonitorGroups(config["monitor-groups"]);
         }
         
+        if (config["wallpapers"]) {
+            LOG_DEBUG("Found wallpapers section in config");
+            ParseWallpapers(config["wallpapers"]);
+        } else {
+            LOG_WARN("No wallpapers section found in config");
+        }
+        
         LOG_INFO_FMT("Loaded configuration from: {}", config_path);
         return true;
     } catch (const YAML::Exception& e) {
@@ -83,6 +90,13 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
         
         if (config["monitor-groups"]) {
             ParseMonitorGroups(config["monitor-groups"]);
+        }
+        
+        if (config["wallpapers"]) {
+            LOG_DEBUG("Found wallpapers section in config (LoadWithIncludes)");
+            ParseWallpapers(config["wallpapers"]);
+        } else {
+            LOG_WARN("No wallpapers section found in config (LoadWithIncludes)");
         }
         
         LOG_INFO_FMT("Loaded configuration with includes from: {}", main_config);
@@ -601,6 +615,11 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
                     mon.status_bars.push_back(mon_node["status-bar"].as<std::string>());
                 }
                 
+                // Parse wallpaper reference for this specific monitor
+                if (mon_node["wallpaper"]) {
+                    mon.wallpaper = mon_node["wallpaper"].as<std::string>();
+                }
+                
                 // Parse position (e.g., "1920x0" or "0x1080")
                 if (mon_node["pos"] || mon_node["position"]) {
                     std::string pos_str = mon_node["pos"] ? 
@@ -725,6 +744,106 @@ const MonitorGroup* MonitorGroupsConfig::FindMatchingGroup(
     
     // No specific group matched, return default
     return GetDefaultGroup();
+}
+
+void ConfigParser::ParseWallpapers(const YAML::Node& node) {
+    LOG_DEBUG("Parsing wallpapers section");
+    
+    if (!node.IsSequence()) {
+        LOG_WARN("wallpapers should be a sequence");
+        return;
+    }
+    
+    wallpapers.wallpapers.clear();
+    
+    for (const auto& wp_node : node) {
+        WallpaperConfig wp;
+        
+        if (wp_node["name"]) {
+            wp.name = wp_node["name"].as<std::string>();
+        } else {
+            LOG_WARN("Wallpaper config missing 'name', skipping");
+            continue;
+        }
+        
+        // Parse wallpaper paths - can be a single string or sequence
+        if (wp_node["wallpaper"]) {
+            const auto& path_node = wp_node["wallpaper"];
+            if (path_node.IsScalar()) {
+                // Single wallpaper path
+                wp.wallpapers.push_back(path_node.as<std::string>());
+            } else if (path_node.IsSequence()) {
+                // Multiple wallpaper paths
+                for (const auto& path : path_node) {
+                    wp.wallpapers.push_back(path.as<std::string>());
+                }
+            }
+        }
+        
+        // Check if any paths are folders and expand them
+        std::vector<std::string> expanded_wallpapers;
+        for (const auto& path : wp.wallpapers) {
+            std::filesystem::path fs_path(path);
+            
+            // Expand ~ to home directory
+            if (path.size() > 0 && path[0] == '~') {
+                const char* home = std::getenv("HOME");
+                if (home) {
+                    fs_path = std::string(home) + path.substr(1);
+                }
+            }
+            
+            if (std::filesystem::is_directory(fs_path)) {
+                // It's a folder, scan for image files
+                LOG_INFO_FMT("Scanning wallpaper folder: {}", fs_path.string());
+                try {
+                    for (const auto& entry : std::filesystem::directory_iterator(fs_path)) {
+                        if (entry.is_regular_file()) {
+                            auto ext = entry.path().extension().string();
+                            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                            // Support common image formats
+                            if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || 
+                                ext == ".bmp" || ext == ".webp") {
+                                expanded_wallpapers.push_back(entry.path().string());
+                            }
+                        }
+                    }
+                } catch (const std::filesystem::filesystem_error& e) {
+                    LOG_ERROR_FMT("Failed to read wallpaper folder {}: {}", fs_path.string(), e.what());
+                }
+            } else if (std::filesystem::exists(fs_path)) {
+                // It's a file
+                expanded_wallpapers.push_back(fs_path.string());
+            } else {
+                LOG_WARN_FMT("Wallpaper path does not exist: {}", path);
+            }
+        }
+        
+        wp.wallpapers = expanded_wallpapers;
+        
+        // Parse change interval
+        if (wp_node["change_every_seconds"]) {
+            wp.change_interval_seconds = wp_node["change_every_seconds"].as<int>();
+        } else if (wp_node["change-every-seconds"]) {
+            wp.change_interval_seconds = wp_node["change-every-seconds"].as<int>();
+        } else if (wp_node["change_interval"]) {
+            wp.change_interval_seconds = wp_node["change_interval"].as<int>();
+        }
+        
+        LOG_INFO_FMT("Loaded wallpaper config '{}' with {} wallpaper(s), change interval: {}s", 
+                     wp.name, wp.wallpapers.size(), wp.change_interval_seconds);
+        
+        wallpapers.wallpapers.push_back(wp);
+    }
+}
+
+const WallpaperConfig* WallpapersConfig::FindByName(const std::string& name) const {
+    for (const auto& wp : wallpapers) {
+        if (wp.name == name) {
+            return &wp;
+        }
+    }
+    return nullptr;
 }
 
 const StatusBarConfig* StatusBarsConfig::FindByName(const std::string& name) const {

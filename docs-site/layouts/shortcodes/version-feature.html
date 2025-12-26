@@ -1,0 +1,50 @@
+{{/*
+  Version-specific content shortcode - conditionally show content based on version
+  Usage: {{< version-feature since="v0.2.0" >}}Content here{{< /version-feature >}}
+  Usage: {{< version-feature since="v0.2.0" until="v0.5.0" >}}Content only for specific versions{{< /version-feature >}}
+*/}}
+
+{{ $since := .Get "since" }}
+{{ $until := .Get "until" | default "" }}
+{{ $currentVersion := .Page.Params.version | default "latest" }}
+
+{{ $show := false }}
+
+{{/* Always show for "latest" version */}}
+{{ if eq $currentVersion "latest" }}
+  {{ $show = true }}
+{{ else }}
+  {{/* Compare versions - simplified comparison */}}
+  {{ if $since }}
+    {{ $show = (ge $currentVersion $since) }}
+  {{ end }}
+  
+  {{ if and $show $until }}
+    {{ $show = (lt $currentVersion $until) }}
+  {{ end }}
+{{ end }}
+
+{{ if $show }}
+<div class="version-feature alert alert-light border-start border-primary border-4" role="alert">
+  {{ if $since }}
+  <div class="mb-2">
+    <span class="badge bg-primary">
+      <svg width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+      </svg>
+      Available since {{ $since }}
+    </span>
+    {{ if $until }}
+    <span class="badge bg-warning text-dark ms-1">
+      Deprecated in {{ $until }}
+    </span>
+    {{ end }}
+  </div>
+  {{ end }}
+  
+  <div class="version-feature-content">
+    {{ .Inner | markdownify }}
+  </div>
+</div>
+{{ end }}

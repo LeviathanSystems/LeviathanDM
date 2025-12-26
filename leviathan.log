@@ -1,0 +1,208 @@
+[17:41:17.891] [info] Logger initialized with 2 sink(s): console + leviathan.log
+[17:41:17.891] [info] LeviathanDM - Wayland Compositor
+[17:41:17.892] [debug] Mouse speed: 0.5
+[17:41:17.892] [debug] Terminal: alacritty
+[17:41:17.892] [debug] Tag 1:  Terminal
+[17:41:17.892] [debug] Tag 2: 🌐 Web
+[17:41:17.892] [debug] Tag 3:  Code
+[17:41:17.892] [debug] Tag 4: 🎵 Music
+[17:41:17.892] [debug] Tag 5: 💬 Chat
+[17:41:17.892] [debug] Tag 6: 📁 Files
+[17:41:17.892] [debug] Tag 7: 🎬 Video
+[17:41:17.892] [debug] Tag 8: 🎮 Games
+[17:41:17.892] [debug] Tag 9: 📦 Misc
+[17:41:17.892] [debug] Using default plugin paths
+[17:41:17.892] [info] Plugin search path: /home/romeo/.config/leviathan/plugins
+[17:41:17.892] [info] Plugin search path: /usr/local/lib/leviathan/plugins
+[17:41:17.892] [info] Plugin search path: /usr/lib/leviathan/plugins
+[17:41:17.892] [debug] Plugin: ClockWidget
+[17:41:17.892] [debug]   format: %H:%M:%S
+[17:41:17.892] [debug]   update_interval: 1
+[17:41:17.892] [debug]   font_size: 12
+[17:41:17.892] [debug] Plugin: BatteryWidget
+[17:41:17.892] [debug] Plugin: TagsWidget
+[17:41:17.892] [debug] Loaded status bar config: 'laptop-bar'
+[17:41:17.892] [info] Loaded 1 status bar configuration(s)
+[17:41:17.892] [info] Loaded monitor group 'Default' with 1 monitors (default)
+[17:41:17.892] [info] Loaded monitor group 'Testing' with 1 monitors
+[17:41:17.892] [info] Loaded monitor group 'Home' with 2 monitors
+[17:41:17.892] [debug] Found wallpapers section in config (LoadWithIncludes)
+[17:41:17.892] [debug] Parsing wallpapers section
+[17:41:17.892] [info] Loaded wallpaper config 'casual' with 1 wallpaper(s), change interval: 0s
+[17:41:17.892] [info] Loaded configuration with includes from: /home/romeo/.config/leviathan/leviathan.yaml
+[17:41:17.892] [info] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[17:41:17.892] [info] Loading Widget Plugins
+[17:41:17.892] [info] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[17:41:17.892] [info] Searching for plugins in: /home/romeo/.config/leviathan/plugins
+[17:41:17.892] [info] Discovering widget plugins in: /home/romeo/.config/leviathan/plugins
+[17:41:17.892] [info] Loading widget plugin: /home/romeo/.config/leviathan/plugins/tags-widget.so
+[17:41:17.893] [info] Successfully loaded plugin: TagsWidget v1.0.0 by LeviathanDM
+[17:41:17.893] [debug] Plugin description: Displays workspace tags with active and occupied states
+[17:41:17.893] [debug] Memory delta - RSS: 1212 KB, Virtual: 1728 KB
+[17:41:17.893] [info] Loading widget plugin: /home/romeo/.config/leviathan/plugins/clock-widget.so
+[17:41:17.893] [info] Successfully loaded plugin: ClockWidget v1.0.0.20 by LeviathanDM
+[17:41:17.893] [debug] Plugin description: Displays current time with configurable format
+[17:41:17.893] [debug] Memory delta - RSS: 136 KB, Virtual: 136 KB
+[17:41:17.893] [info] Loading widget plugin: /home/romeo/.config/leviathan/plugins/libbattery-widget.so
+[17:41:17.893] [debug] Disconnected from DBus
+[17:41:17.893] [info] Successfully loaded plugin: BatteryWidget v1.0.0.21 by LeviathanDM
+[17:41:17.893] [debug] Plugin description: Battery status with UPower integration - shows main battery and connected devices
+[17:41:17.893] [debug] Memory delta - RSS: 244 KB, Virtual: 244 KB
+[17:41:17.893] [info] Discovered and loaded 3 widget plugins from /home/romeo/.config/leviathan/plugins
+[17:41:17.893] [info] Searching for plugins in: /usr/local/lib/leviathan/plugins
+[17:41:17.893] [info] Discovering widget plugins in: /usr/local/lib/leviathan/plugins
+[17:41:17.893] [warn] Plugin directory does not exist: /usr/local/lib/leviathan/plugins
+[17:41:17.893] [info] Searching for plugins in: /usr/lib/leviathan/plugins
+[17:41:17.893] [info] Discovering widget plugins in: /usr/lib/leviathan/plugins
+[17:41:17.893] [warn] Plugin directory does not exist: /usr/lib/leviathan/plugins
+[17:41:17.893] [info] Loaded 3 plugin(s):
+[17:41:17.893] [info]   ✓ BatteryWidget v1.0.0.21 by LeviathanDM
+[17:41:17.893] [info]     Battery status with UPower integration - shows main battery and connected devices
+[17:41:17.894] [info]   ✓ ClockWidget v1.0.0.20 by LeviathanDM
+[17:41:17.894] [info]     Displays current time with configurable format
+[17:41:17.894] [info]   ✓ TagsWidget v1.0.0 by LeviathanDM
+[17:41:17.894] [info]     Displays workspace tags with active and occupied states
+[17:41:17.894] [info] Creating 3 plugin instance(s) from config...
+[17:41:17.894] [info] Initializing: ClockWidget
+[17:41:17.894] [debug]   Configuration:
+[17:41:17.894] [debug]     font_size: 12
+[17:41:17.894] [debug]     format: %H:%M:%S
+[17:41:17.894] [debug]     update_interval: 1
+[17:41:17.894] [info] Created instance of plugin widget: ClockWidget v1.0.0.20
+[17:41:17.894] [info]   ✓ Successfully initialized ClockWidget
+[17:41:17.994] [info] Initializing: BatteryWidget
+[17:41:17.995] [info] Connected to system DBus
+[17:41:17.995] [debug] Created DBus proxy: org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower
+[17:41:17.995] [debug] Subscribed to signal 'DeviceAdded' (id: 2)
+[17:41:17.995] [debug] Subscribed to signal 'DeviceRemoved' (id: 3)
+[17:41:17.995] [info] BatteryWidget v1.0.0.21 initialized successfully
+[17:41:17.995] [info] Created instance of plugin widget: BatteryWidget v1.0.0.21
+[17:41:17.995] [info]   ✓ Successfully initialized BatteryWidget
+[17:41:17.995] [debug] Disconnected from DBus
+[17:41:18.096] [info] Initializing: TagsWidget
+[17:41:18.097] [debug] EventBus: Subscription 1 added for event type 0
+[17:41:18.097] [debug] EventBus: Subscription 2 added for event type 2
+[17:41:18.097] [debug] EventBus: Subscription 3 added for event type 3
+[17:41:18.097] [info] Created instance of plugin widget: TagsWidget v1.0.0
+[17:41:18.097] [info]   ✓ Successfully initialized TagsWidget
+[17:41:18.097] [debug] EventBus: Subscription 1 removed
+[17:41:18.197] [info] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[17:41:18.197] [info] Starting compositor...
+[17:41:18.290] [info] Clipboard and primary selection support enabled
+[17:41:18.290] [info] Layer shell v1 initialized
+[17:41:18.295] [info] No session (probably nested) - VT switching unavailable
+[17:41:18.295] [debug] Border colors - Focused: #ff0000, Unfocused: #3B4252
+[17:41:18.295] [info] IPC server listening on /run/user/1000/leviathan-ipc.sock
+[17:41:18.295] [info] Initializing notification daemon
+[17:41:18.296] [info] Connected to session DBus
+[17:41:18.296] [debug] NotificationDaemon: DBus connection established
+[17:41:18.296] [info] Acquired DBus name 'org.freedesktop.Notifications'
+[17:41:18.296] [info] Notification daemon initialized successfully
+[17:41:18.296] [info] New input device: wayland-keyboard-seat0
+[17:41:18.299] [info] New input device: wayland-touch-seat0
+[17:41:18.299] [info] New output: WL-1
+[17:41:18.304] [debug] Added Output to outputs list
+[17:41:18.304] [info] Created scene output for 'WL-1' at {:p}
+[17:41:18.304] [info] Screen: WL-1 - WL-1 (WL-1)
+[17:41:18.304] [debug]   Resolution: 1280x720 @ {:.1f}x
+[17:41:18.304] [info] Added screen 'WL-1' to core seat
+[17:41:18.304] [info] Created LayerManager for output 'WL-1'
+[17:41:18.304] [info] Tag 'Terminal' visibility changed to: 1
+[17:41:18.304] [debug] Tag has 0 clients
+[17:41:18.304] [debug] Created tag 1 for output 'WL-1': Terminal
+[17:41:18.304] [debug] Created tag 2 for output 'WL-1': 🌐 Web
+[17:41:18.304] [debug] Created tag 3 for output 'WL-1': Code
+[17:41:18.304] [debug] Created tag 4 for output 'WL-1': 🎵 Music
+[17:41:18.304] [debug] Created tag 5 for output 'WL-1': 💬 Chat
+[17:41:18.304] [debug] Created tag 6 for output 'WL-1': 📁 Files
+[17:41:18.304] [debug] Created tag 7 for output 'WL-1': 🎬 Video
+[17:41:18.304] [debug] Created tag 8 for output 'WL-1': 🎮 Games
+[17:41:18.304] [debug] Created tag 9 for output 'WL-1': 📦 Misc
+[17:41:18.304] [info] Initialized 9 tags for output 'WL-1'
+[17:41:18.304] [info] Connected output 'WL-1' to scene layout
+[17:41:18.304] [info] Registered frame listener for output 'WL-1'
+[17:41:18.304] [info] Output 'WL-1' fully configured and enabled
+[17:41:18.304] [info] Applying monitor group: 'Testing'
+[17:41:18.304] [info] Configuring output 'WL-1' from monitor group
+[17:41:18.304] [warn] Mode 1280x720 not available for 'WL-1'
+[17:41:18.304] [info] Set scale 1 for 'WL-1'
+[17:41:18.304] [info] Set position 0x0 for 'WL-1'
+[17:41:18.304] [info] Creating 1 status bar(s) for output 'WL-1'
+[17:41:18.304] [info] Reserved 30px at top for status bar 'laptop-bar'
+[17:41:18.304] [info] Creating status bar 'laptop-bar' at position 0 with size 1280x30
+[17:41:18.304] [debug] Status bar 'laptop-bar' scene nodes created at (0, 0)
+[17:41:18.304] [debug] Popover scene node created in Top layer
+[17:41:18.304] [info] Creating widgets for status bar 'laptop-bar'
+[17:41:18.304] [info] Using new root widget structure
+[17:41:18.304] [debug] Creating plugin widget: TagsWidget
+[17:41:18.305] [debug] EventBus: Subscription 4 added for event type 0
+[17:41:18.305] [debug] EventBus: Subscription 5 added for event type 2
+[17:41:18.305] [debug] EventBus: Subscription 6 added for event type 3
+[17:41:18.305] [info] Created instance of plugin widget: TagsWidget v1.0.0
+[17:41:18.305] [debug] Creating plugin widget: ClockWidget
+[17:41:18.305] [info] Created instance of plugin widget: ClockWidget v1.0.0.20
+[17:41:18.305] [debug] Creating plugin widget: BatteryWidget
+[17:41:18.306] [info] Connected to system DBus
+[17:41:18.306] [debug] Created DBus proxy: org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower
+[17:41:18.306] [debug] Subscribed to signal 'DeviceAdded' (id: 7)
+[17:41:18.306] [debug] Subscribed to signal 'DeviceRemoved' (id: 8)
+[17:41:18.306] [info] BatteryWidget v1.0.0.21 initialized successfully
+[17:41:18.306] [info] Created instance of plugin widget: BatteryWidget v1.0.0.21
+[17:41:18.306] [debug] Manually initialized wlr_buffer struct at 0x558318dcc410
+[17:41:18.306] [info] Created ShmBuffer: 1280x30, fd=39, size=153600 bytes
+[17:41:18.307] [info] Created Cairo surface 1280x30 with SHM buffer
+[17:41:18.345] [info] Saved status bar rendering to /tmp/statusbar_debug.png for debugging
+[17:41:18.345] [debug] Got renderer from output
+[17:41:18.345] [info] Attaching SHM buffer to scene_buffer (first time)
+[17:41:18.346] [debug] Status bar dirty check timer created (interval: 100ms)
+[17:41:18.346] [info] Status bar 'laptop-bar' created successfully
+[17:41:18.346] [debug] Added StatusBar to LayerManager for output 'WL-1'
+[17:41:18.346] [info] Reserved space updated: top=30, bottom=0, left=0, right=0
+[17:41:18.346] [debug] Total reserved space: top=30, bottom=0, left=0, right=0
+[17:41:18.346] [info] Setting wallpaper for output 'WL-1': /home/romeo/Pictures/background/index.jpg
+[17:41:18.397] [debug] Loaded wallpaper image: 1920x1080 from '/home/romeo/Pictures/background/index.jpg'
+[17:41:18.397] [debug] Manually initialized wlr_buffer struct at 0x558318eea0a0
+[17:41:18.397] [info] Created ShmBuffer: 1280x720, fd=45, size=3686400 bytes
+[17:41:18.411] [debug] Property 'OnBattery' not in cache, fetching...
+[17:41:18.431] [info] Scaled wallpaper from 1920x1080 to 1280x720 (scale: {:.2f})
+[17:41:18.431] [info] Monitor group 'Testing' configuration applied
+[17:41:18.433] [info] New input device: wayland-pointer-seat0
+[17:41:18.433] [info] Running compositor on WAYLAND_DISPLAY=wayland-1
+[17:41:18.435] [info] Launched alacritty terminal (PID: 3283833)
+[17:41:18.571] [info] OnNewXdgToplevel called - this is the proper signal!
+[17:41:18.571] [debug] Toplevel pointer: 0x558318e4c270, base surface: 0x558318ef5c70
+[17:41:18.571] [debug] Adding window to WorkingArea layer
+[17:41:18.571] [debug] Created scene tree for toplevel view
+[17:41:18.571] [debug] Surface initialized: 0
+[17:41:18.571] [info] Added client to tag 'Terminal' (total clients: 1)
+[17:41:18.571] [debug]   - Enabled scene node for new client (tag is visible)
+[17:41:18.571] [error] EventBus: Exception in event listener: Invalid argument
+[17:41:18.571] [debug] Added client to current tag
+[17:41:18.571] [info] Toplevel view fully initialized and added to active tag
+[17:41:18.571] [info] New XDG decoration request for toplevel=0x558318e4c270
+[17:41:18.571] [info] Associated decoration with view=0x558318ef9320, will set mode after surface init
+[17:41:18.571] [info] Initial commit received for view=0x558318ef9320, sending configure
+[17:41:18.571] [info] Set decoration mode to SERVER_SIDE (no client decorations)
+[17:41:18.606] [info] View mapped! view=0x558318ef9320, xdg_toplevel=0x558318e4c270
+[17:41:18.606] [debug] Raised scene tree to top and enabled it
+[17:41:18.606] [debug] Gave keyboard focus to newly mapped view
+[17:41:18.606] [debug] Usable area: x=0, y=30, w=1280, h=690
+[17:41:18.606] [debug] Tiling 1 views on output 'WL-1' in workspace: pos=(0,30), size=(1280x690)
+[17:41:18.606] [debug] MoveResizeView: view=0x558318ef9320, pos=(0,0), size=(1280,690)
+[17:41:18.606] [debug]   - Set scene node position
+[17:41:18.606] [debug]   - Set toplevel size
+[17:41:18.606] [debug]   Offset view to (0,30) for workspace at (0,30)
+[17:41:18.606] [debug] Auto-tiled 1 views on output 'WL-1'
+[17:41:18.606] [debug] Triggered auto-tile after view mapped
+[17:41:20.002] [debug] StatusBar::HandleClick at (493, 510)
+[17:41:21.945] [info] View unmapped! view=0x558318ef9320
+[17:41:21.945] [debug] Triggered auto-tile after view unmapped
+[17:41:21.945] [debug] RemoveView: Cleaning up view 0x558318ef9320
+[17:41:21.945] [debug] Removed view from server's view list, 0 views remaining
+[17:41:21.945] [debug] Cleared focused_view since it was the destroyed view
+[17:41:21.945] [debug] Found client for view, removing from seat and deleting
+[17:41:21.946] [error] EventBus: Exception in event listener: Invalid argument
+[17:41:21.946] [debug] Removed client from tag
+[17:41:21.946] [debug] View destructor called for 0x558318ef9320
+[17:41:23.415] [debug] Property 'OnBattery' not in cache, fetching...
+[17:41:28.419] [debug] Property 'OnBattery' not in cache, fetching...

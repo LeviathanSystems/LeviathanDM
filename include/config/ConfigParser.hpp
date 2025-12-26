@@ -116,6 +116,9 @@ struct MonitorConfig {
     // Can have multiple bars at different positions
     std::vector<std::string> status_bars;  // Names of status bars to show
     
+    // Wallpaper config for this specific monitor
+    std::string wallpaper;  // Name of wallpaper config (optional)
+    
     // Optional position (e.g., "0x0", "1920x0")
     // If not set, wlroots auto-arranges
     std::optional<std::pair<int, int>> position;  // x, y
@@ -135,7 +138,7 @@ struct MonitorConfig {
 struct MonitorGroup {
     std::string name;
     std::vector<MonitorConfig> monitors;
-    bool is_default = false;  // Fallback group
+    bool is_default = false;             // Fallback group
 };
 
 // Monitor groups configuration
@@ -161,6 +164,25 @@ struct PluginsConfig {
     std::vector<PluginConfig> plugins;                  // List of plugins to load with their configs
 };
 
+// Wallpaper configuration
+struct WallpaperConfig {
+    std::string name;                    // Name of the wallpaper config (e.g., "casual", "work")
+    std::vector<std::string> wallpapers; // Path(s) to wallpaper file(s) or folder
+    int change_interval_seconds;         // How often to rotate wallpapers (0 = no rotation)
+    
+    WallpaperConfig() 
+        : name("default")
+        , change_interval_seconds(0) {}
+};
+
+// Wallpapers configuration - collection of wallpaper configs
+struct WallpapersConfig {
+    std::vector<WallpaperConfig> wallpapers;  // All defined wallpaper configs
+    
+    // Find a wallpaper config by name
+    const WallpaperConfig* FindByName(const std::string& name) const;
+};
+
 // Status bars configuration
 struct StatusBarsConfig {
     std::vector<StatusBarConfig> bars;  // All defined status bars
@@ -175,6 +197,7 @@ struct ConfigParser {
     PluginsConfig plugins;
     StatusBarsConfig status_bars;
     MonitorGroupsConfig monitor_groups;
+    WallpapersConfig wallpapers;
     
     // Load configuration from file
     bool Load(const std::string& config_path);
@@ -194,6 +217,7 @@ private:
     void ParsePlugins(const YAML::Node& node);
     void ParseStatusBars(const YAML::Node& node);
     void ParseMonitorGroups(const YAML::Node& node);
+    void ParseWallpapers(const YAML::Node& node);
     void ProcessIncludes(const YAML::Node& node, const std::string& base_path);
     
     std::vector<std::string> loaded_files_;  // Track loaded files to prevent circular includes

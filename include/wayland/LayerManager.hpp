@@ -11,8 +11,10 @@
 // Forward declarations
 struct wlr_scene;
 struct wlr_scene_tree;
+struct wlr_scene_node;
 struct wlr_output;
 struct wl_event_loop;
+struct wl_event_source;
 
 namespace Leviathan {
 
@@ -26,6 +28,7 @@ namespace Core {
 class TilingLayout;
 struct StatusBarsConfig;
 class StatusBar;
+class ShmBuffer;
 enum class LayoutType;
 
 namespace Wayland {
@@ -73,6 +76,9 @@ class LayerManager {
 public:
     LayerManager(struct wlr_scene* scene, struct wlr_output* output, struct wl_event_loop* event_loop);
     ~LayerManager();
+    
+    // Set monitor configuration (includes wallpaper config)
+    void SetMonitorConfig(const MonitorConfig& config);
     
     // Get scene tree for a specific layer
     struct wlr_scene_tree* GetLayer(Layer layer);
@@ -147,6 +153,24 @@ private:
     
     // Layout engine for tiling
     TilingLayout* layout_engine_ = nullptr;
+    
+    // Monitor configuration
+    const MonitorConfig* monitor_config_ = nullptr;
+    
+    // Wallpaper state (managed internally)
+    struct wlr_scene_node* wallpaper_node_ = nullptr;
+    class ShmBuffer* wallpaper_buffer_ = nullptr;
+    std::string current_wallpaper_path_;
+    size_t wallpaper_index_ = 0;
+    std::vector<std::string> wallpaper_paths_;
+    struct wl_event_source* wallpaper_timer_ = nullptr;
+    
+    // Wallpaper helpers (private)
+    class ShmBuffer* LoadWallpaperImage(const std::string& path, int width, int height);
+    void InitializeWallpaper();
+    void ClearWallpaper();
+    void NextWallpaper();
+    static int WallpaperRotationCallback(void* data);
 };
 
 } // namespace Wayland

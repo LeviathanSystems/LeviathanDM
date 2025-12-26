@@ -28,7 +28,7 @@ Output::~Output() {
         }
     }
     
-    // Clean up layer manager
+    // Clean up layer manager (wallpaper cleanup is handled in LayerManager destructor)
     if (layer_manager) {
         delete layer_manager;
     }

@@ -7,11 +7,16 @@
 #include "layout/TilingLayout.hpp"
 #include "config/ConfigParser.hpp"
 #include "ui/StatusBar.hpp"
+#include "ui/ShmBuffer.hpp"
 #include "Logger.hpp"
 #include "Types.hpp"  // For LayoutType
 
 #include <wlr/types/wlr_scene.h>
+#include <cairo/cairo.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <gdk/gdk.h>
 #include <algorithm>
+#include <cstring>
 
 namespace Leviathan {
 namespace Wayland {
@@ -38,6 +43,8 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, s
     // Create layout engine for this output
     layout_engine_ = new TilingLayout();
     
+    // Wallpaper will be initialized when SetMonitorConfig is called
+    
     //LOG_INFO_FMT("Created per-output layer hierarchy for '{}':", output->name);
     //LOG_INFO_FMT("  - Background layer: {}", static_cast<void*>(layers_[0]));
     //LOG_INFO_FMT("  - Working area layer: {}", static_cast<void*>(layers_[1]));
@@ -45,11 +52,23 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, s
 }
 
 LayerManager::~LayerManager() {
+    // Clean up wallpaper
+    ClearWallpaper();
+    
     // Clean up layout engine
     delete layout_engine_;
     
     // Scene trees are cleaned up automatically by wlroots
     LOG_DEBUG_FMT("Destroyed LayerManager for output '{}'", output_ ? output_->name : "unknown");
+}
+
+void LayerManager::SetMonitorConfig(const MonitorConfig& config) {
+    monitor_config_ = &config;
+    
+    // Initialize wallpaper if configured
+    if (!config.wallpaper.empty()) {
+        InitializeWallpaper();
+    }
 }
 
 struct wlr_scene_tree* LayerManager::GetLayer(Layer layer) {
@@ -449,6 +468,208 @@ void LayerManager::AutoTile() {
         TileViews(tiled_views, tag, layout_engine_);
         LOG_DEBUG_FMT("Auto-tiled {} views on output '{}'", tiled_views.size(), output_->name);
     }
+}
+
+// Helper function to load and scale wallpaper image
+ShmBuffer* LayerManager::LoadWallpaperImage(const std::string& path, int target_width, int target_height) {
+    GError* error = nullptr;
+    
+    // Load the image using gdk-pixbuf (supports PNG, JPEG, BMP, WebP, etc.)
+    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(path.c_str(), &error);
+    
+    if (!pixbuf) {
+        LOG_ERROR_FMT("Failed to load wallpaper image '{}': {}", 
+                      path, error ? error->message : "unknown error");
+        if (error) g_error_free(error);
+        return nullptr;
+    }
+    
+    int img_width = gdk_pixbuf_get_width(pixbuf);
+    int img_height = gdk_pixbuf_get_height(pixbuf);
+    
+    LOG_DEBUG_FMT("Loaded wallpaper image: {}x{} from '{}'", img_width, img_height, path);
+    
+    // Create SHM buffer for the scaled wallpaper
+    ShmBuffer* buffer = ShmBuffer::Create(target_width, target_height);
+    if (!buffer) {
+        LOG_ERROR("Failed to create SHM buffer for wallpaper");
+        g_object_unref(pixbuf);
+        return nullptr;
+    }
+    
+    // Create Cairo surface for the buffer
+    cairo_surface_t* target_surface = cairo_image_surface_create_for_data(
+        reinterpret_cast<unsigned char*>(buffer->GetData()),
+        CAIRO_FORMAT_ARGB32,
+        target_width,
+        target_height,
+        buffer->GetStride()
+    );
+    
+    cairo_t* cr = cairo_create(target_surface);
+    
+    // Calculate scaling to cover the entire output (like CSS background-size: cover)
+    double scale_x = static_cast<double>(target_width) / img_width;
+    double scale_y = static_cast<double>(target_height) / img_height;
+    double scale = std::max(scale_x, scale_y);  // Use larger scale to cover
+    
+    // Center the image
+    double scaled_width = img_width * scale;
+    double scaled_height = img_height * scale;
+    double offset_x = (target_width - scaled_width) / 2.0;
+    double offset_y = (target_height - scaled_height) / 2.0;
+    
+    // Apply transformations and draw
+    cairo_translate(cr, offset_x, offset_y);
+    cairo_scale(cr, scale, scale);
+    
+    // Convert GdkPixbuf to Cairo surface and draw
+    gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+    cairo_paint(cr);
+    
+    // Cleanup
+    cairo_destroy(cr);
+    cairo_surface_destroy(target_surface);
+    g_object_unref(pixbuf);
+    
+    LOG_INFO_FMT("Scaled wallpaper from {}x{} to {}x{} (scale: {:.2f})", 
+                 img_width, img_height, target_width, target_height, scale);
+    
+    return buffer;
+}
+
+void LayerManager::InitializeWallpaper() {
+    if (!monitor_config_ || monitor_config_->wallpaper.empty()) {
+        return;
+    }
+    
+    auto& config = Config();
+    
+    // Find the wallpaper config by name
+    const auto* wallpaper_config = config.wallpapers.FindByName(monitor_config_->wallpaper);
+    if (!wallpaper_config) {
+        LOG_WARN_FMT("Wallpaper config '{}' not found for output '{}'", 
+                     monitor_config_->wallpaper, output_->name);
+        return;
+    }
+    
+    if (wallpaper_config->wallpapers.empty()) {
+        LOG_WARN_FMT("Wallpaper config '{}' has no wallpaper paths", monitor_config_->wallpaper);
+        return;
+    }
+    
+    // Store wallpaper paths for rotation
+    wallpaper_paths_ = wallpaper_config->wallpapers;
+    wallpaper_index_ = 0;
+    
+    // Load and render the first wallpaper
+    const std::string& wallpaper_path = wallpaper_paths_[wallpaper_index_];
+    LOG_INFO_FMT("Setting wallpaper for output '{}': {}", output_->name, wallpaper_path);
+    
+    // Load the image and create buffer
+    wallpaper_buffer_ = LoadWallpaperImage(wallpaper_path, output_->width, output_->height);
+    if (!wallpaper_buffer_) {
+        LOG_ERROR_FMT("Failed to load wallpaper image '{}'", wallpaper_path);
+        return;
+    }
+    
+    // Create scene buffer node in background layer
+    struct wlr_scene_buffer* scene_buffer = wlr_scene_buffer_create(
+        GetBackgroundLayer(),
+        wallpaper_buffer_->GetWlrBuffer()
+    );
+    
+    if (!scene_buffer) {
+        LOG_ERROR("Failed to create scene buffer for wallpaper");
+        // Drop our reference to the buffer since we're not using it
+        wlr_buffer_drop(wallpaper_buffer_->GetWlrBuffer());
+        wallpaper_buffer_ = nullptr;
+        return;
+    }
+    
+    wallpaper_node_ = &scene_buffer->node;
+    wlr_scene_node_set_position(wallpaper_node_, 0, 0);
+
+    
+    current_wallpaper_path_ = wallpaper_path;
+    
+    // Setup rotation timer if configured
+    if (wallpaper_config->change_interval_seconds > 0 && wallpaper_paths_.size() > 1) {
+        wallpaper_timer_ = wl_event_loop_add_timer(event_loop_, WallpaperRotationCallback, this);
+        if (wallpaper_timer_) {
+            wl_event_source_timer_update(wallpaper_timer_, 
+                                        wallpaper_config->change_interval_seconds * 1000);
+            LOG_INFO_FMT("Started wallpaper rotation every {} seconds for output '{}'",
+                        wallpaper_config->change_interval_seconds, output_->name);
+        }
+    }
+}
+
+void LayerManager::ClearWallpaper() {
+    // Remove rotation timer
+    if (wallpaper_timer_) {
+        wl_event_source_remove(wallpaper_timer_);
+        wallpaper_timer_ = nullptr;
+    }
+    
+    // Destroy wallpaper scene node (this will also drop the buffer reference)
+    if (wallpaper_node_) {
+        wlr_scene_node_destroy(wallpaper_node_);
+        wallpaper_node_ = nullptr;
+    }
+    
+    // Drop our reference to the buffer if we still have one
+    // (normally the scene node destruction handles this)
+    if (wallpaper_buffer_) {
+        // The buffer is reference counted and will be freed when refcount reaches 0
+        wallpaper_buffer_ = nullptr;
+    }
+    
+    // Clear state
+    wallpaper_paths_.clear();
+    current_wallpaper_path_.clear();
+    wallpaper_index_ = 0;
+}
+
+void LayerManager::NextWallpaper() {
+    if (wallpaper_paths_.empty()) {
+        return;
+    }
+    
+    // Move to next wallpaper in the list
+    wallpaper_index_ = (wallpaper_index_ + 1) % wallpaper_paths_.size();
+    const std::string& wallpaper_path = wallpaper_paths_[wallpaper_index_];
+    
+    LOG_INFO_FMT("Rotating to next wallpaper for output '{}': {}", output_->name, wallpaper_path);
+    
+    // Note: We don't drop the old buffer reference here because the scene
+    // buffer node holds it. When we call wlr_scene_buffer_set_buffer, it will
+    // drop the old buffer and take a reference to the new one.
+    
+    // Load the new wallpaper image
+    ShmBuffer* new_buffer = LoadWallpaperImage(wallpaper_path, output_->width, output_->height);
+    if (!new_buffer) {
+        LOG_ERROR_FMT("Failed to load wallpaper image '{}' during rotation", wallpaper_path);
+        return;
+    }
+    
+    // Update the scene buffer with the new image
+    if (wallpaper_node_) {
+        struct wlr_scene_buffer* scene_buffer = wlr_scene_buffer_from_node(wallpaper_node_);
+        if (scene_buffer) {
+            // This will drop the old buffer and lock the new one
+            wlr_scene_buffer_set_buffer(scene_buffer, new_buffer->GetWlrBuffer());
+            wallpaper_buffer_ = new_buffer;  // Update our pointer
+        }
+    }
+    
+    current_wallpaper_path_ = wallpaper_path;
+}
+
+int LayerManager::WallpaperRotationCallback(void* data) {
+    LayerManager* manager = static_cast<LayerManager*>(data);
+    manager->NextWallpaper();
+    return 0;  // Timer will be re-armed in SetWallpaper if needed
 }
 
 } // namespace Wayland

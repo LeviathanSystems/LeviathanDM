@@ -1,0 +1,45 @@
+# Documentation Versions Configuration
+# This file defines available documentation versions and their metadata
+
+[versions]
+  # Current development version
+  [[versions.entries]]
+    name = "latest"
+    title = "Latest (Development)"
+    path = "/docs"
+    default = true
+    badge = "Dev"
+    badge_color = "#ff6b6b"
+    
+  # Stable releases
+  [[versions.entries]]
+    name = "v0.2.0"
+    title = "v0.2.0 (Stable)"
+    path = "/v0.2.0"
+    badge = "Stable"
+    badge_color = "#51cf66"
+    
+  [[versions.entries]]
+    name = "v0.1.0"
+    title = "v0.1.0"
+    path = "/v0.1.0"
+    badge = "Legacy"
+    badge_color = "#868e96"
+
+[features]
+  # Feature availability by version
+  [features.wallpapers]
+    since = "v0.1.0"
+    description = "Wallpaper system with rotation support"
+    
+  [features.notifications]
+    since = "v0.1.0"
+    description = "Built-in notification daemon"
+    
+  [features.status-bar]
+    since = "v0.1.0"
+    description = "Customizable status bar"
+    
+  [features.plugins]
+    since = "v0.1.0"
+    description = "Widget plugin system"

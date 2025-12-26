@@ -1,0 +1,53 @@
+{{/*
+  Version warning shortcode - works with Docsy
+  Usage: {{< version-warning type="deprecated" version="v0.3.0" >}}This feature is deprecated{{< /version-warning >}}
+*/}}
+
+{{ $type := .Get "type" | default "info" }}
+{{ $version := .Get "version" }}
+
+{{ $alertType := "info" }}
+{{ $icon := "" }}
+{{ $title := "" }}
+
+{{ if eq $type "deprecated" }}
+  {{ $alertType = "warning" }}
+  {{ $icon = "exclamation-triangle-fill" }}
+  {{ $title = "Deprecated" }}
+{{ else if eq $type "new" }}
+  {{ $alertType = "success" }}
+  {{ $icon = "star-fill" }}
+  {{ $title = "New Feature" }}
+{{ else if eq $type "changed" }}
+  {{ $alertType = "info" }}
+  {{ $icon = "info-circle-fill" }}
+  {{ $title = "Changed" }}
+{{ else }}
+  {{ $alertType = "info" }}
+  {{ $icon = "info-circle-fill" }}
+  {{ $title = "Note" }}
+{{ end }}
+
+<div class="alert alert-{{ $alertType }} version-warning" role="alert">
+  <div class="d-flex align-items-start">
+    <svg width="18" height="18" fill="currentColor" class="me-2 mt-1 flex-shrink-0" viewBox="0 0 16 16">
+      {{ if eq $icon "exclamation-triangle-fill" }}
+      <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+      {{ else if eq $icon "star-fill" }}
+      <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+      {{ else }}
+      <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+      {{ end }}
+    </svg>
+    <div class="flex-grow-1">
+      <strong>{{ $title }}</strong>
+      {{ if $version }}
+      <span class="badge bg-secondary ms-2">{{ $version }}</span>
+      {{ end }}
+      <div class="mt-2">
+        {{ .Inner | markdownify }}
+      </div>
+    </div>
+  </div>
+</div>
+</style>
