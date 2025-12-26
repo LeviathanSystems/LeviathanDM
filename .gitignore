@@ -43,3 +43,5 @@ Thumbs.db
 docs-site/public/
 docs-site/resources/_gen/
 docs-site/.hugo_build.lock
+
+*.log
