@@ -1,3 +1,6 @@
 [submodule "docs-site/themes/hugo-book"]
 	path = docs-site/themes/hugo-book
 	url = https://github.com/alex-shpak/hugo-book
+[submodule "subprojects/linux-wallpaperengine"]
+	path = subprojects/linux-wallpaperengine
+	url = https://github.com/Almamu/linux-wallpaperengine

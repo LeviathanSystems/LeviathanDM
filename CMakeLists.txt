@@ -161,14 +161,6 @@ pkg_check_modules(XKB REQUIRED xkbcommon)
 pkg_check_modules(PIXMAN REQUIRED pixman-1)
 pkg_check_modules(LIBINPUT REQUIRED libinput)
 pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
-
-# Common dependencies (always from system)
-pkg_check_modules(WAYLAND_SERVER REQUIRED wayland-server)
-pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
-pkg_check_modules(XKB REQUIRED xkbcommon)
-pkg_check_modules(PIXMAN REQUIRED pixman-1)
-pkg_check_modules(LIBINPUT REQUIRED libinput)
-pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
 pkg_check_modules(CAIRO REQUIRED cairo)
 pkg_check_modules(GDK_PIXBUF REQUIRED gdk-pixbuf-2.0)
 pkg_check_modules(GDK3 REQUIRED gdk-3.0)
@@ -228,6 +220,7 @@ set(SOURCES
     src/ui/NotificationDaemon.cpp
     # IPC
     src/ipc/IPC.cpp
+    src/wayland/WallpaperManager.cpp
 )
 
 # Headers
@@ -255,6 +248,8 @@ set(HEADERS
     include/ui/StatusBar.hpp
     # IPC
     include/ipc/IPC.hpp
+    include/wayland/WallpaperManager.hpp
+    include/wayland/WallpaperEngineRenderer.hpp
 )
 
 # Create a shared library for UI components that plugins can link against

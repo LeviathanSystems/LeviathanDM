@@ -766,6 +766,26 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
             continue;
         }
         
+        // Parse wallpaper type (default to static image)
+        if (wp_node["type"]) {
+            std::string type_str = wp_node["type"].as<std::string>();
+            std::transform(type_str.begin(), type_str.end(), type_str.begin(), ::tolower);
+            
+            if (type_str == "static" || type_str == "image" || type_str == "static_image") {
+                wp.type = WallpaperType::StaticImage;
+            } else if (type_str == "wallpaper_engine" || type_str == "wallpaperengine" || type_str == "we") {
+                // WallpaperEngine support disabled for now
+                LOG_WARN("WallpaperEngine support is currently disabled, using static image instead");
+                wp.type = WallpaperType::StaticImage;
+            } else {
+                LOG_WARN_FMT("Unknown wallpaper type '{}', defaulting to static image", type_str);
+                wp.type = WallpaperType::StaticImage;
+            }
+        } else {
+            // Default to static image if type not specified
+            wp.type = WallpaperType::StaticImage;
+        }
+        
         // Parse wallpaper paths - can be a single string or sequence
         if (wp_node["wallpaper"]) {
             const auto& path_node = wp_node["wallpaper"];
@@ -780,7 +800,7 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
             }
         }
         
-        // Check if any paths are folders and expand them
+        // Check if any paths are folders and expand them (only for static images)
         std::vector<std::string> expanded_wallpapers;
         for (const auto& path : wp.wallpapers) {
             std::filesystem::path fs_path(path);
@@ -793,7 +813,9 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
                 }
             }
             
-            if (std::filesystem::is_directory(fs_path)) {
+            // For static images, scan directories for image files
+            // For Wallpaper Engine, paths should point to project.json files or directories
+            if (wp.type == WallpaperType::StaticImage && std::filesystem::is_directory(fs_path)) {
                 // It's a folder, scan for image files
                 LOG_INFO_FMT("Scanning wallpaper folder: {}", fs_path.string());
                 try {
@@ -812,7 +834,7 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
                     LOG_ERROR_FMT("Failed to read wallpaper folder {}: {}", fs_path.string(), e.what());
                 }
             } else if (std::filesystem::exists(fs_path)) {
-                // It's a file
+                // It's a file or Wallpaper Engine project directory
                 expanded_wallpapers.push_back(fs_path.string());
             } else {
                 LOG_WARN_FMT("Wallpaper path does not exist: {}", path);
@@ -830,8 +852,9 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
             wp.change_interval_seconds = wp_node["change_interval"].as<int>();
         }
         
-        LOG_INFO_FMT("Loaded wallpaper config '{}' with {} wallpaper(s), change interval: {}s", 
-                     wp.name, wp.wallpapers.size(), wp.change_interval_seconds);
+        const char* type_name = (wp.type == WallpaperType::StaticImage) ? "static" : "wallpaper_engine";
+        LOG_INFO_FMT("Loaded wallpaper config '{}' (type: {}) with {} wallpaper(s), change interval: {}s", 
+                     wp.name, type_name, wp.wallpapers.size(), wp.change_interval_seconds);
         
         wallpapers.wallpapers.push_back(wp);
     }

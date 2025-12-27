@@ -164,14 +164,22 @@ struct PluginsConfig {
     std::vector<PluginConfig> plugins;                  // List of plugins to load with their configs
 };
 
+// Wallpaper type enumeration
+enum class WallpaperType {
+    StaticImage,       // Static image files (PNG, JPEG, etc.)
+    WallpaperEngine    // Wallpaper Engine animated wallpapers
+};
+
 // Wallpaper configuration
 struct WallpaperConfig {
     std::string name;                    // Name of the wallpaper config (e.g., "casual", "work")
+    WallpaperType type;                  // Type of wallpaper (static or wallpaper engine)
     std::vector<std::string> wallpapers; // Path(s) to wallpaper file(s) or folder
     int change_interval_seconds;         // How often to rotate wallpapers (0 = no rotation)
     
     WallpaperConfig() 
         : name("default")
+        , type(WallpaperType::StaticImage)
         , change_interval_seconds(0) {}
 };
 
