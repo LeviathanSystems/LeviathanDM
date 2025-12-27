@@ -40,15 +40,21 @@ struct TagConfig {
 struct GeneralConfig {
     std::string terminal = "alacritty";
     bool auto_launch_terminal = true;
-    int border_width = 2;
-    std::string border_color_focused = "#5E81AC";     // Nord blue
-    std::string border_color_unfocused = "#3B4252";   // Nord dark gray
     int gap_size = 0;
     int workspace_count = 9;  // Deprecated - use tags instead
     std::vector<TagConfig> tags;  // Named tags with icons
     bool focus_follows_mouse = true;
     bool click_to_focus = true;
     bool remove_client_titlebars = true;
+    
+    // Window styling
+    float window_opacity = 1.0f;                      // Window opacity (0.0 - 1.0)
+    float window_opacity_inactive = 1.0f;             // Inactive window opacity (0.0 - 1.0)
+    int border_radius = 0;                            // Border radius in pixels (rounded corners)
+    bool enable_shadows = false;                      // Enable window shadows
+    int shadow_size = 10;                             // Shadow size/blur radius in pixels
+    std::string shadow_color = "#000000";             // Shadow color
+    float shadow_opacity = 0.5f;                      // Shadow opacity (0.0 - 1.0)
 };
 
 // Forward declaration for recursive structure
@@ -191,6 +197,84 @@ struct WallpapersConfig {
     const WallpaperConfig* FindByName(const std::string& name) const;
 };
 
+// Window decoration configuration group
+struct WindowDecorationConfig {
+    std::string name;                         // Unique identifier (e.g., "default", "floating", "transparent")
+    
+    // Border settings
+    int border_width = 2;
+    std::string border_color_focused = "#5E81AC";
+    std::string border_color_unfocused = "#3B4252";
+    int border_radius = 0;                    // Rounded corners in pixels
+    
+    // Opacity/transparency
+    float opacity = 1.0f;                     // Window opacity (0.0 - 1.0)
+    float opacity_inactive = 1.0f;            // Inactive window opacity
+    
+    // Shadow settings
+    bool enable_shadows = false;
+    int shadow_size = 10;                     // Shadow blur radius in pixels
+    std::string shadow_color = "#000000";
+    float shadow_opacity = 0.5f;
+    int shadow_offset_x = 0;                  // Shadow horizontal offset
+    int shadow_offset_y = 0;                  // Shadow vertical offset
+    
+    // Dimming
+    bool dim_inactive = false;                // Dim inactive windows
+    float dim_amount = 0.3f;                  // How much to dim (0.0 - 1.0)
+    
+    WindowDecorationConfig() = default;
+};
+
+// Window decorations configuration - collection of decoration groups
+struct WindowDecorationsConfig {
+    std::vector<WindowDecorationConfig> decorations;  // All defined decoration groups
+    
+    // Find decoration group by name (returns nullptr if not found)
+    const WindowDecorationConfig* FindByName(const std::string& name) const;
+    
+    // Get default decoration (first one or built-in defaults)
+    const WindowDecorationConfig* GetDefault() const;
+};
+
+// Window rule configuration - matches windows and applies decoration
+struct WindowRuleConfig {
+    std::string name;                         // Rule identifier for logging/debugging
+    
+    // Match criteria (any can be used, all specified must match)
+    std::string app_id;                       // Match app_id (e.g., "firefox", "alacritty")
+    std::string title;                        // Match window title (supports wildcards: *)
+    std::string class_name;                   // Match window class
+    bool match_floating = false;              // Only match floating windows
+    bool match_tiled = false;                 // Only match tiled windows
+    
+    // Actions
+    std::string decoration_group;             // Apply this decoration group
+    bool force_floating = false;              // Force window to float
+    bool force_tiled = false;                 // Force window to tile
+    std::optional<int> opacity_override;      // Override opacity (0-100)
+    std::optional<int> tag;                   // Move to specific tag
+    
+    WindowRuleConfig() = default;
+    
+    // Check if this rule matches a window
+    bool Matches(const std::string& window_app_id, 
+                 const std::string& window_title,
+                 const std::string& window_class,
+                 bool is_floating) const;
+};
+
+// Window rules configuration - collection of rules
+struct WindowRulesConfig {
+    std::vector<WindowRuleConfig> rules;      // All defined window rules
+    
+    // Find first matching rule for a window
+    const WindowRuleConfig* FindMatch(const std::string& app_id,
+                                      const std::string& title, 
+                                      const std::string& class_name,
+                                      bool is_floating) const;
+};
+
 // Status bars configuration
 struct StatusBarsConfig {
     std::vector<StatusBarConfig> bars;  // All defined status bars
@@ -206,6 +290,8 @@ struct ConfigParser {
     StatusBarsConfig status_bars;
     MonitorGroupsConfig monitor_groups;
     WallpapersConfig wallpapers;
+    WindowDecorationsConfig window_decorations;
+    WindowRulesConfig window_rules;
     
     // Load configuration from file
     bool Load(const std::string& config_path);
@@ -226,6 +312,8 @@ private:
     void ParseStatusBars(const YAML::Node& node);
     void ParseMonitorGroups(const YAML::Node& node);
     void ParseWallpapers(const YAML::Node& node);
+    void ParseWindowDecorations(const YAML::Node& node);
+    void ParseWindowRules(const YAML::Node& node);
     void ProcessIncludes(const YAML::Node& node, const std::string& base_path);
     
     std::vector<std::string> loaded_files_;  // Track loaded files to prevent circular includes

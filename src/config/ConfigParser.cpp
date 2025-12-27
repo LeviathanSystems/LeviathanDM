@@ -42,6 +42,14 @@ bool ConfigParser::Load(const std::string& config_path) {
             LOG_WARN("No wallpapers section found in config");
         }
         
+        if (config["window-decorations"]) {
+            ParseWindowDecorations(config["window-decorations"]);
+        }
+        
+        if (config["window-rules"]) {
+            ParseWindowRules(config["window-rules"]);
+        }
+        
         LOG_INFO_FMT("Loaded configuration from: {}", config_path);
         return true;
     } catch (const YAML::Exception& e) {
@@ -97,6 +105,14 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
             ParseWallpapers(config["wallpapers"]);
         } else {
             LOG_WARN("No wallpapers section found in config (LoadWithIncludes)");
+        }
+        
+        if (config["window-decorations"]) {
+            ParseWindowDecorations(config["window-decorations"]);
+        }
+        
+        if (config["window-rules"]) {
+            ParseWindowRules(config["window-rules"]);
         }
         
         LOG_INFO_FMT("Loaded configuration with includes from: {}", main_config);
@@ -202,19 +218,6 @@ void ConfigParser::ParseGeneral(const YAML::Node& node) {
     if (node["auto_launch_terminal"]) {
         general.auto_launch_terminal = node["auto_launch_terminal"].as<bool>();
     }
-    if (node["border_width"]) {
-        general.border_width = node["border_width"].as<int>();
-    }
-    if (node["border_color_focused"]) {
-        general.border_color_focused = node["border_color_focused"].as<std::string>();
-    }
-    if (node["border_color_unfocused"]) {
-        general.border_color_unfocused = node["border_color_unfocused"].as<std::string>();
-    }
-    // Legacy support for old config
-    if (node["border_color"]) {
-        general.border_color_focused = node["border_color"].as<std::string>();
-    }
     if (node["gap_size"]) {
         general.gap_size = node["gap_size"].as<int>();
     }
@@ -254,6 +257,35 @@ void ConfigParser::ParseGeneral(const YAML::Node& node) {
     }
     if (node["remove_client_titlebars"]) {
         general.remove_client_titlebars = node["remove_client_titlebars"].as<bool>();
+    }
+    
+    // Window styling
+    if (node["window_opacity"]) {
+        general.window_opacity = node["window_opacity"].as<float>();
+        // Clamp between 0.0 and 1.0
+        general.window_opacity = std::max(0.0f, std::min(1.0f, general.window_opacity));
+    }
+    if (node["window_opacity_inactive"]) {
+        general.window_opacity_inactive = node["window_opacity_inactive"].as<float>();
+        general.window_opacity_inactive = std::max(0.0f, std::min(1.0f, general.window_opacity_inactive));
+    }
+    if (node["border_radius"]) {
+        general.border_radius = node["border_radius"].as<int>();
+        general.border_radius = std::max(0, general.border_radius);
+    }
+    if (node["enable_shadows"]) {
+        general.enable_shadows = node["enable_shadows"].as<bool>();
+    }
+    if (node["shadow_size"]) {
+        general.shadow_size = node["shadow_size"].as<int>();
+        general.shadow_size = std::max(0, general.shadow_size);
+    }
+    if (node["shadow_color"]) {
+        general.shadow_color = node["shadow_color"].as<std::string>();
+    }
+    if (node["shadow_opacity"]) {
+        general.shadow_opacity = node["shadow_opacity"].as<float>();
+        general.shadow_opacity = std::max(0.0f, std::min(1.0f, general.shadow_opacity));
     }
 }
 
@@ -873,6 +905,238 @@ const StatusBarConfig* StatusBarsConfig::FindByName(const std::string& name) con
     for (const auto& bar : bars) {
         if (bar.name == name) {
             return &bar;
+        }
+    }
+    return nullptr;
+}
+
+void ConfigParser::ParseWindowDecorations(const YAML::Node& node) {
+    if (!node.IsSequence()) {
+        LOG_WARN("window-decorations should be a sequence/list");
+        return;
+    }
+    
+    for (const auto& decoration_node : node) {
+        WindowDecorationConfig decoration;
+        
+        if (decoration_node["name"]) {
+            decoration.name = decoration_node["name"].as<std::string>();
+        } else {
+            LOG_WARN("Window decoration group missing 'name', skipping");
+            continue;
+        }
+        
+        // Border settings
+        if (decoration_node["border_width"]) {
+            decoration.border_width = decoration_node["border_width"].as<int>();
+        }
+        if (decoration_node["border_color_focused"]) {
+            decoration.border_color_focused = decoration_node["border_color_focused"].as<std::string>();
+        }
+        if (decoration_node["border_color_unfocused"]) {
+            decoration.border_color_unfocused = decoration_node["border_color_unfocused"].as<std::string>();
+        }
+        if (decoration_node["border_radius"]) {
+            decoration.border_radius = decoration_node["border_radius"].as<int>();
+            decoration.border_radius = std::max(0, decoration.border_radius);
+        }
+        
+        // Opacity
+        if (decoration_node["opacity"]) {
+            decoration.opacity = decoration_node["opacity"].as<float>();
+            decoration.opacity = std::max(0.0f, std::min(1.0f, decoration.opacity));
+        }
+        if (decoration_node["opacity_inactive"]) {
+            decoration.opacity_inactive = decoration_node["opacity_inactive"].as<float>();
+            decoration.opacity_inactive = std::max(0.0f, std::min(1.0f, decoration.opacity_inactive));
+        }
+        
+        // Shadow settings
+        if (decoration_node["enable_shadows"]) {
+            decoration.enable_shadows = decoration_node["enable_shadows"].as<bool>();
+        }
+        if (decoration_node["shadow_size"]) {
+            decoration.shadow_size = decoration_node["shadow_size"].as<int>();
+            decoration.shadow_size = std::max(0, decoration.shadow_size);
+        }
+        if (decoration_node["shadow_color"]) {
+            decoration.shadow_color = decoration_node["shadow_color"].as<std::string>();
+        }
+        if (decoration_node["shadow_opacity"]) {
+            decoration.shadow_opacity = decoration_node["shadow_opacity"].as<float>();
+            decoration.shadow_opacity = std::max(0.0f, std::min(1.0f, decoration.shadow_opacity));
+        }
+        if (decoration_node["shadow_offset_x"]) {
+            decoration.shadow_offset_x = decoration_node["shadow_offset_x"].as<int>();
+        }
+        if (decoration_node["shadow_offset_y"]) {
+            decoration.shadow_offset_y = decoration_node["shadow_offset_y"].as<int>();
+        }
+        
+        // Dimming
+        if (decoration_node["dim_inactive"]) {
+            decoration.dim_inactive = decoration_node["dim_inactive"].as<bool>();
+        }
+        if (decoration_node["dim_amount"]) {
+            decoration.dim_amount = decoration_node["dim_amount"].as<float>();
+            decoration.dim_amount = std::max(0.0f, std::min(1.0f, decoration.dim_amount));
+        }
+        
+        LOG_INFO_FMT("Loaded window decoration group '{}': border_width={}, opacity={}, border_radius={}", 
+                     decoration.name, decoration.border_width, decoration.opacity, decoration.border_radius);
+        
+        window_decorations.decorations.push_back(decoration);
+    }
+}
+
+void ConfigParser::ParseWindowRules(const YAML::Node& node) {
+    if (!node.IsSequence()) {
+        LOG_WARN("window-rules should be a sequence/list");
+        return;
+    }
+    
+    for (const auto& rule_node : node) {
+        WindowRuleConfig rule;
+        
+        // Name (optional, for debugging)
+        if (rule_node["name"]) {
+            rule.name = rule_node["name"].as<std::string>();
+        }
+        
+        // Match criteria
+        if (rule_node["app_id"]) {
+            rule.app_id = rule_node["app_id"].as<std::string>();
+        }
+        if (rule_node["title"]) {
+            rule.title = rule_node["title"].as<std::string>();
+        }
+        if (rule_node["class"]) {
+            rule.class_name = rule_node["class"].as<std::string>();
+        }
+        if (rule_node["match_floating"]) {
+            rule.match_floating = rule_node["match_floating"].as<bool>();
+        }
+        if (rule_node["match_tiled"]) {
+            rule.match_tiled = rule_node["match_tiled"].as<bool>();
+        }
+        
+        // Must have at least one match criterion
+        if (rule.app_id.empty() && rule.title.empty() && rule.class_name.empty() && 
+            !rule.match_floating && !rule.match_tiled) {
+            LOG_WARN("Window rule has no match criteria, skipping");
+            continue;
+        }
+        
+        // Actions
+        if (rule_node["decoration_group"]) {
+            rule.decoration_group = rule_node["decoration_group"].as<std::string>();
+        }
+        if (rule_node["force_floating"]) {
+            rule.force_floating = rule_node["force_floating"].as<bool>();
+        }
+        if (rule_node["force_tiled"]) {
+            rule.force_tiled = rule_node["force_tiled"].as<bool>();
+        }
+        if (rule_node["opacity_override"]) {
+            rule.opacity_override = rule_node["opacity_override"].as<int>();
+        }
+        if (rule_node["tag"]) {
+            rule.tag = rule_node["tag"].as<int>();
+        }
+        
+        std::string rule_desc = rule.name.empty() ? "unnamed" : rule.name;
+        LOG_INFO_FMT("Loaded window rule '{}': app_id='{}', title='{}', decoration_group='{}'",
+                     rule_desc, rule.app_id, rule.title, rule.decoration_group);
+        
+        window_rules.rules.push_back(rule);
+    }
+}
+
+const WindowDecorationConfig* WindowDecorationsConfig::FindByName(const std::string& name) const {
+    for (const auto& decoration : decorations) {
+        if (decoration.name == name) {
+            return &decoration;
+        }
+    }
+    return nullptr;
+}
+
+const WindowDecorationConfig* WindowDecorationsConfig::GetDefault() const {
+    if (!decorations.empty()) {
+        return &decorations[0];  // First one is default
+    }
+    return nullptr;
+}
+
+bool WindowRuleConfig::Matches(const std::string& window_app_id,
+                                 const std::string& window_title,
+                                 const std::string& window_class,
+                                 bool is_floating) const {
+    // Check app_id match (supports * wildcard)
+    if (!app_id.empty()) {
+        if (app_id == "*") {
+            // Wildcard matches all
+        } else if (app_id != window_app_id) {
+            return false;
+        }
+    }
+    
+    // Check title match (supports * wildcard)
+    if (!title.empty()) {
+        if (title == "*") {
+            // Wildcard matches all
+        } else if (title.find('*') != std::string::npos) {
+            // Simple wildcard matching (only supports * at start or end)
+            if (title[0] == '*' && title[title.length() - 1] == '*') {
+                // *substring* - contains
+                std::string substr = title.substr(1, title.length() - 2);
+                if (window_title.find(substr) == std::string::npos) {
+                    return false;
+                }
+            } else if (title[0] == '*') {
+                // *suffix - ends with
+                std::string suffix = title.substr(1);
+                if (window_title.length() < suffix.length() ||
+                    window_title.compare(window_title.length() - suffix.length(), suffix.length(), suffix) != 0) {
+                    return false;
+                }
+            } else if (title[title.length() - 1] == '*') {
+                // prefix* - starts with
+                std::string prefix = title.substr(0, title.length() - 1);
+                if (window_title.compare(0, prefix.length(), prefix) != 0) {
+                    return false;
+                }
+            }
+        } else if (title != window_title) {
+            return false;
+        }
+    }
+    
+    // Check class match
+    if (!class_name.empty() && class_name != "*") {
+        if (class_name != window_class) {
+            return false;
+        }
+    }
+    
+    // Check floating/tiled state
+    if (match_floating && !is_floating) {
+        return false;
+    }
+    if (match_tiled && is_floating) {
+        return false;
+    }
+    
+    return true;
+}
+
+const WindowRuleConfig* WindowRulesConfig::FindMatch(const std::string& app_id,
+                                                       const std::string& title,
+                                                       const std::string& class_name,
+                                                       bool is_floating) const {
+    for (const auto& rule : rules) {
+        if (rule.Matches(app_id, title, class_name, is_floating)) {
+            return &rule;
         }
     }
     return nullptr;

@@ -8,28 +8,10 @@
 #include "ui/NotificationDaemon.hpp"
 #include "config/ConfigParser.hpp"
 #include "Logger.hpp"
+#include "wayland/WaylandTypes.hpp"
 #include <nlohmann/json.hpp>
 #include <algorithm>
-
-extern "C" {
-#include <wlr/backend.h>
-#include <wlr/backend/wayland.h>
-#include <wlr/backend/session.h>
-#include <wlr/render/wlr_renderer.h>
-#include <wlr/render/allocator.h>
-#include <wlr/types/wlr_compositor.h>
-#include <wlr/types/wlr_subcompositor.h>
-#include <wlr/types/wlr_data_device.h>
-#include <wlr/types/wlr_output.h>
-#include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_scene.h>
-#include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/backend/interface.h>
-#include <wlr/util/log.h>
-}
-
 #include <iostream>
-#include <algorithm>
 #include <cstring>
 #include <unistd.h>  // For fork(), execlp(), setenv()
 #include <sys/types.h>  // For pid_t
@@ -294,13 +276,7 @@ bool Server::Initialize() {
         LOG_INFO("No session (probably nested) - VT switching unavailable");
     }
     
-    // Load border colors from global config
-    auto& config = Config();
-    ConfigParser::HexToRGBA(config.general.border_color_focused, border_focused_);
-    ConfigParser::HexToRGBA(config.general.border_color_unfocused, border_unfocused_);
-    LOG_DEBUG_FMT("Border colors - Focused: {}, Unfocused: {}", 
-             config.general.border_color_focused,
-             config.general.border_color_unfocused);
+    // Border colors are now handled by window decoration system
     
     layout_engine_ = std::make_unique<TilingLayout>();
     keybindings_ = std::make_unique<KeyBindings>(this);

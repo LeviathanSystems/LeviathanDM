@@ -130,3 +130,66 @@ plugins:
     #     api_key: "your_api_key"
     #     update_interval: "1800"    # 30 minutes
 
+# Window Decorations - Define reusable decoration styles
+window-decorations:
+  # Default decoration for most windows
+  - name: default
+    border_width: 2
+    border_color_focused: "#5E81AC"      # Nord blue
+    border_color_unfocused: "#3B4252"    # Nord dark gray
+    opacity_focused: 1.0
+    opacity_unfocused: 1.0
+    border_radius: 0
+    shadows:
+      enabled: false
+  
+  # Transparent terminal style
+  - name: transparent
+    border_width: 2
+    border_color_focused: "#88C0D0"      # Nord frost cyan
+    border_color_unfocused: "#3B4252"
+    opacity_focused: 0.90                 # 90% opacity when focused
+    opacity_unfocused: 0.75               # 75% opacity when unfocused
+    border_radius: 0
+    shadows:
+      enabled: false
+  
+  # Floating windows with shadows
+  - name: floating
+    border_width: 2
+    border_color_focused: "#A3BE8C"      # Nord green
+    border_color_unfocused: "#4C566A"
+    opacity_focused: 1.0
+    opacity_unfocused: 0.95
+    border_radius: 8
+    shadows:
+      enabled: true
+      color: "#000000"
+      offset: 2
+      blur: 8
+
+# Window Rules - Apply decorations and actions to specific windows
+window-rules:
+  # Terminal applications - transparent
+  - name: kitty-terminal
+    app_id: "kitty"
+    decoration_group: transparent
+  
+  - name: alacritty-terminal
+    app_id: "Alacritty"
+    decoration_group: transparent
+  
+  - name: other-terminals
+    app_id: "*term*"                     # Matches any terminal (wterm, xterm, etc.)
+    decoration_group: transparent
+  
+  # Floating windows - fancy style with shadows
+  - name: floating-windows
+    match_mode: floating
+    decoration_group: floating
+  
+  # Default catch-all - must be last
+  - name: default-all
+    app_id: "*"
+    decoration_group: default
+

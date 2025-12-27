@@ -11,6 +11,14 @@ Explore LeviathanDM's built-in features and capabilities.
 
 ## Available Features
 
+{{< if ge .Site.Params.version "0.0.2" >}}
+### [Window Decorations](window-decorations)
+{{< hint info >}}
+**Since v0.0.2**  
+Advanced window styling with customizable borders, opacity, shadows, and pattern-matched rules.
+{{< /hint >}}
+{{< /if >}}
+
 ### [Wallpapers](wallpapers)
 {{< version-warning type="new" version="v0.1.0" >}}
 Built-in wallpaper system with support for static images, rotating slideshows, and per-monitor configuration.

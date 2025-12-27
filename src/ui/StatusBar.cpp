@@ -3,12 +3,9 @@
 #include "wayland/LayerManager.hpp"
 #include "ui/WidgetPluginManager.hpp"
 #include "Logger.hpp"
+#include "wayland/WaylandTypes.hpp"
 #include <ctime>
 #include <cstring>
-#include <wlr/types/wlr_scene.h>
-#include <wlr/types/wlr_buffer.h>
-#include <wlr/render/wlr_renderer.h>
-#include <wlr/render/wlr_texture.h>
 #include <drm_fourcc.h>
 
 namespace Leviathan {

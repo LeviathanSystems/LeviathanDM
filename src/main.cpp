@@ -3,10 +3,46 @@
 #include "ui/WidgetPluginManager.hpp"
 #include "ui/CompositorState.hpp"
 #include "Logger.hpp"
+#include "version.h"
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
+
+void print_version() {
+    std::cout << LEVIATHAN_NAME << " v" << LEVIATHAN_VERSION << std::endl;
+    std::cout << LEVIATHAN_DESCRIPTION << std::endl;
+    std::cout << std::endl;
+    std::cout << "Version: " << LEVIATHAN_VERSION_MAJOR << "." 
+              << LEVIATHAN_VERSION_MINOR << "." 
+              << LEVIATHAN_VERSION_PATCH << std::endl;
+    std::cout << "Built with wlroots 0.19.2" << std::endl;
+}
+
+void print_help(const char* prog_name) {
+    std::cout << "Usage: " << prog_name << " [OPTIONS]" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  -h, --help     Show this help message" << std::endl;
+    std::cout << "  -v, --version  Show version information" << std::endl;
+    std::cout << std::endl;
+}
 
 int main(int argc, char** argv) {
+    // Parse command line arguments
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
+            print_version();
+            return 0;
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            print_help(argv[0]);
+            return 0;
+        } else {
+            std::cerr << "Unknown option: " << argv[i] << std::endl;
+            print_help(argv[0]);
+            return 1;
+        }
+    }
+    
     // Initialize logger with multi-sink architecture
     // Creates both console sink (with colors) and file sink
     Leviathan::SimpleLogger::Instance().Init(
@@ -15,7 +51,10 @@ int main(int argc, char** argv) {
         true                          // Enable console colors
     );
     
-    LOG_INFO("LeviathanDM - Wayland Compositor");
+    LOG_INFO("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    LOG_INFO_FMT("{} v{}", LEVIATHAN_NAME, LEVIATHAN_VERSION);
+    LOG_INFO_FMT("{}", LEVIATHAN_DESCRIPTION);
+    LOG_INFO("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
     // Load configuration from standard locations
     auto& config = Leviathan::Config();

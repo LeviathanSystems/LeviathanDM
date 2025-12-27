@@ -140,24 +140,7 @@ void TilingLayout::MoveResizeView(View* view,
     wlr_xdg_toplevel_set_size(view->xdg_toplevel, width, height);
     LOG_DEBUG("  - Set toplevel size");
     
-    // Update or create borders with the new dimensions
-    if (view->server) {
-        auto& config = Config();
-        if (view->border_top) {
-            // Borders exist, just update size
-            view->UpdateBorderSize(config.general.border_width);
-        } else {
-            // No borders yet, create them
-            float border_color[4];
-            // Check if this view is focused
-            if (view == view->server->GetFocusedView()) {
-                ConfigParser::HexToRGBA(config.general.border_color_focused, border_color);
-            } else {
-                ConfigParser::HexToRGBA(config.general.border_color_unfocused, border_color);
-            }
-            view->CreateBorders(config.general.border_width, border_color);
-        }
-    }
+    // Border management is now handled by window decoration system
 }
 
 } // namespace Leviathan

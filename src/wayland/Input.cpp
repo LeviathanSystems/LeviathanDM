@@ -2,18 +2,9 @@
 #include "wayland/Server.hpp"
 #include "config/ConfigParser.hpp"
 #include "Logger.hpp"
-
-extern "C" {
-#include <wlr/types/wlr_keyboard.h>
-#include <wlr/types/wlr_seat.h>
-#include <wlr/types/wlr_scene.h>
-#include <wlr/types/wlr_cursor.h>
-#include <wlr/backend/multi.h>
-#include <wlr/backend/libinput.h>
-#include <libinput.h>
+#include "wayland/WaylandTypes.hpp"
+#include <cstdlib>
 #include <linux/input-event-codes.h>
-#include <stdlib.h>
-}
 
 namespace Leviathan {
 namespace Wayland {

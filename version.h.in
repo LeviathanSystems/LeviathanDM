@@ -1,0 +1,12 @@
+#pragma once
+
+// LeviathanDM Version Information
+// This file is auto-generated from version.h.in during the build process
+
+#define LEVIATHAN_VERSION "@LEVIATHAN_VERSION@"
+#define LEVIATHAN_VERSION_MAJOR @LEVIATHAN_VERSION_MAJOR@
+#define LEVIATHAN_VERSION_MINOR @LEVIATHAN_VERSION_MINOR@
+#define LEVIATHAN_VERSION_PATCH @LEVIATHAN_VERSION_PATCH@
+
+#define LEVIATHAN_NAME "LeviathanDM"
+#define LEVIATHAN_DESCRIPTION "A modern Wayland compositor built with wlroots"

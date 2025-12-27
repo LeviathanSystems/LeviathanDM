@@ -1,5 +1,27 @@
 cmake_minimum_required(VERSION 3.15)
-project(LeviathanDM VERSION 1.0.0 LANGUAGES C CXX)
+
+# Read version from VERSION file
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" LEVIATHAN_VERSION)
+string(STRIP "${LEVIATHAN_VERSION}" LEVIATHAN_VERSION)
+string(REPLACE "." ";" VERSION_LIST ${LEVIATHAN_VERSION})
+list(GET VERSION_LIST 0 LEVIATHAN_VERSION_MAJOR)
+list(GET VERSION_LIST 1 LEVIATHAN_VERSION_MINOR)
+list(GET VERSION_LIST 2 LEVIATHAN_VERSION_PATCH)
+
+project(LeviathanDM VERSION ${LEVIATHAN_VERSION} LANGUAGES C CXX)
+
+message(STATUS "")
+message(STATUS "==================================================")
+message(STATUS "Building LeviathanDM v${LEVIATHAN_VERSION}")
+message(STATUS "==================================================")
+message(STATUS "")
+
+# Generate version header
+configure_file(
+    ${CMAKE_SOURCE_DIR}/version.h.in
+    ${CMAKE_BINARY_DIR}/version.h
+    @ONLY
+)
 
 # Set C and C++ standards
 set(CMAKE_C_STANDARD 11)
@@ -171,6 +193,7 @@ pkg_check_modules(GLIB REQUIRED glib-2.0)
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_BINARY_DIR}  # For generated version.h
     ${WLROOTS_INCLUDE_DIRS}
     ${CMAKE_BINARY_DIR}/wlroots-build/protocol
     ${WAYLAND_SERVER_INCLUDE_DIRS}

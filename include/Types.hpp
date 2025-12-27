@@ -15,6 +15,7 @@ namespace Leviathan {
 
 // Forward declarations
 class StatusBar;  // For Output
+struct WindowDecorationConfig;  // For View decoration
 
 namespace Core {
     class Seat;
@@ -65,11 +66,19 @@ struct View {
     struct wlr_scene_rect* border_bottom;
     struct wlr_scene_rect* border_left;
     
+    // Shadow rectangles (for drop shadow effect)
+    struct wlr_scene_rect* shadow_top;
+    struct wlr_scene_rect* shadow_right;
+    struct wlr_scene_rect* shadow_bottom;
+    struct wlr_scene_rect* shadow_left;
+    
     int x, y;
     int width, height;
     bool is_floating;
     bool is_fullscreen;
     bool mapped;
+    float opacity;  // Current window opacity (0.0 - 1.0)
+    int border_radius;  // Border radius in pixels
     
     struct wl_listener commit;
     struct wl_listener map;
@@ -89,6 +98,13 @@ struct View {
     void UpdateBorderColor(const float color[4]);
     void UpdateBorderSize(int border_width);
     void DestroyBorders();
+    
+    // Styling
+    void SetOpacity(float opacity);
+    void SetBorderRadius(int radius);
+    void CreateShadows(int shadow_size, const float color[4], float opacity);
+    void DestroyShadows();
+    void ApplyDecorationConfig(const WindowDecorationConfig& config, bool is_focused);
 };
 
 // Output (monitor) information structure  

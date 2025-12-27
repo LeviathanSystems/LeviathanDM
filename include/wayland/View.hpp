@@ -3,11 +3,6 @@
 
 #include "Types.hpp"
 
-extern "C" {
-#include <wayland-server-core.h>
-#include <wlr/types/wlr_xdg_shell.h>
-}
-
 namespace Leviathan {
 namespace Wayland {
 

@@ -4,12 +4,9 @@
 #include "wayland/Server.hpp"
 #include "wayland/LayerManager.hpp"
 #include "core/Seat.hpp"
-
-extern "C" {
-#include <wlr/types/wlr_output.h>
-#include <stdlib.h>
-#include <time.h>
-}
+#include "wayland/WaylandTypes.hpp"
+#include <cstdlib>
+#include <ctime>
 
 namespace Leviathan {
 namespace Wayland {

@@ -35,12 +35,19 @@ Edit `data/versions.toml` to manage versions:
 ```toml
 [versions]
   [[versions.entries]]
-    name = "latest"
-    title = "Latest (Development)"
+    name = "v0.0.2"
+    title = "v0.0.2 (Latest)"
     path = "/docs"
     default = true
-    badge = "Dev"
-    badge_color = "#ff6b6b"
+    badge = "Latest"
+    badge_color = "#51cf66"
+  
+  [[versions.entries]]
+    name = "v0.0.1"
+    title = "v0.0.1"
+    path = "/v0.0.1"
+    badge = "Previous"
+    badge_color = "#868e96"
 ```
 
 ### Fields
@@ -59,8 +66,8 @@ Edit `data/versions.toml` to manage versions:
 Show content only for specific versions:
 
 ```markdown
-{{</* version-feature since="v0.2.0" */>}}
-This feature is only available in v0.2.0 and later.
+{{</* version-feature since="v0.0.2" */>}}
+This feature is only available in v0.0.2 and later.
 {{</* /version-feature */>}}
 ```
 
@@ -69,8 +76,8 @@ This feature is only available in v0.2.0 and later.
 Display version-related warnings:
 
 ```markdown
-{{</* version-warning type="new" version="v0.2.0" */>}}
-The wallpaper system was introduced in v0.2.0.
+{{</* version-warning type="new" version="v0.0.2" */>}}
+The window decorations system was introduced in v0.0.2.
 {{</* /version-warning */>}}
 ```
 
@@ -88,9 +95,8 @@ Create separate content directories for each version:
 
 ```
 content/
-├── docs/              # Latest/development
-├── v0.2.0/           # Stable release
-└── v0.1.0/           # Previous version
+├── docs/              # Latest (v0.0.2)
+├── v0.0.1/           # Previous version
 ```
 
 Update `versions.toml` paths accordingly.

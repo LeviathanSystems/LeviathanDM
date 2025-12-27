@@ -2,44 +2,41 @@
 # This file defines available documentation versions and their metadata
 
 [versions]
-  # Current development version
+  # Current stable version
   [[versions.entries]]
-    name = "latest"
-    title = "Latest (Development)"
+    name = "v0.0.2"
+    title = "v0.0.2 (Latest)"
     path = "/docs"
     default = true
-    badge = "Dev"
-    badge_color = "#ff6b6b"
-    
-  # Stable releases
-  [[versions.entries]]
-    name = "v0.2.0"
-    title = "v0.2.0 (Stable)"
-    path = "/v0.2.0"
-    badge = "Stable"
+    badge = "Latest"
     badge_color = "#51cf66"
     
+  # Previous version
   [[versions.entries]]
-    name = "v0.1.0"
-    title = "v0.1.0"
-    path = "/v0.1.0"
-    badge = "Legacy"
+    name = "v0.0.1"
+    title = "v0.0.1"
+    path = "/v0.0.1"
+    badge = "Previous"
     badge_color = "#868e96"
 
 [features]
   # Feature availability by version
+  [features.window-decorations]
+    since = "v0.0.2"
+    description = "Advanced window styling with borders, opacity, and shadows"
+  
   [features.wallpapers]
-    since = "v0.1.0"
+    since = "v0.0.1"
     description = "Wallpaper system with rotation support"
     
   [features.notifications]
-    since = "v0.1.0"
+    since = "v0.0.1"
     description = "Built-in notification daemon"
     
   [features.status-bar]
-    since = "v0.1.0"
+    since = "v0.0.1"
     description = "Customizable status bar"
     
   [features.plugins]
-    since = "v0.1.0"
+    since = "v0.0.1"
     description = "Widget plugin system"
