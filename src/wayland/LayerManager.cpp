@@ -17,6 +17,8 @@
 // #include <gdk/gdk.h>  // Removed GDK dependency
 #include <algorithm>
 #include <cstring>
+#include <cstdlib>  // For malloc/free
+#include <cstdint>  // For uint32_t
 
 namespace Leviathan {
 namespace Wayland {

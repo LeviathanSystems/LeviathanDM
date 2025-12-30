@@ -8,6 +8,8 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 // #include <gdk/gdk.h>  // Removed GDK dependency
 #include <algorithm>
+#include <cstdlib>  // For malloc/free
+#include <cstdint>  // For uint32_t
 
 namespace Leviathan {
 namespace Wayland {
