@@ -106,7 +106,7 @@ if(USE_VENDORED_DEPS)
     endif()
     
     # Add libdisplay-info to pkg-config path
-    set(ENV{PKG_CONFIG_PATH} "${DISPLAY_INFO_INSTALL_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${DISPLAY_INFO_INSTALL_DIR}/lib/x86_64-linux-gnu/pkgconfig:${DISPLAY_INFO_INSTALL_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
     
     # Build vendored wlroots (also uses meson)
     set(WLROOTS_BUILD_DIR "${CMAKE_BINARY_DIR}/wlroots-build")
@@ -116,7 +116,7 @@ if(USE_VENDORED_DEPS)
         message(STATUS "Building wlroots...")
         
         # Set PKG_CONFIG_PATH environment for wlroots build
-        set(WLROOTS_PKG_CONFIG "${DISPLAY_INFO_INSTALL_DIR}/lib/pkgconfig")
+        set(WLROOTS_PKG_CONFIG "${DISPLAY_INFO_INSTALL_DIR}/lib/x86_64-linux-gnu/pkgconfig:${DISPLAY_INFO_INSTALL_DIR}/lib/pkgconfig")
         if(DEFINED ENV{PKG_CONFIG_PATH})
             set(WLROOTS_PKG_CONFIG "${WLROOTS_PKG_CONFIG}:$ENV{PKG_CONFIG_PATH}")
         endif()
