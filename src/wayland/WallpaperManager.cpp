@@ -6,7 +6,7 @@
 
 #include <cairo/cairo.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
-#include <gdk/gdk.h>
+// #include <gdk/gdk.h>  // Removed GDK dependency
 #include <algorithm>
 
 namespace Leviathan {
@@ -170,9 +170,48 @@ ShmBuffer* WallpaperManager::LoadWallpaperImage(const std::string& path, int tar
     cairo_translate(cr, offset_x, offset_y);
     cairo_scale(cr, scale, scale);
     
-    // Convert GdkPixbuf to Cairo surface and draw
-    gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+    // Convert GdkPixbuf to Cairo surface manually (replaces gdk_cairo_set_source_pixbuf)
+    int width = gdk_pixbuf_get_width(pixbuf);
+    int height = gdk_pixbuf_get_height(pixbuf);
+    int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
+    int has_alpha = gdk_pixbuf_get_has_alpha(pixbuf);
+    int pixbuf_stride = gdk_pixbuf_get_rowstride(pixbuf);
+    guchar* pixels = gdk_pixbuf_get_pixels(pixbuf);
+    
+    // Create a new buffer with the correct format for Cairo
+    unsigned char* cairo_data = (unsigned char*)malloc(stride * height);
+    
+    // Convert GdkPixbuf RGB/RGBA to Cairo ARGB32
+    for (int y = 0; y < height; y++) {
+        guchar* src = pixels + y * pixbuf_stride;
+        uint32_t* dst = (uint32_t*)(cairo_data + y * stride);
+        
+        for (int x = 0; x < width; x++) {
+            if (has_alpha) {
+                // RGBA -> ARGB32 (premultiply alpha)
+                guchar r = src[0];
+                guchar g = src[1];
+                guchar b = src[2];
+                guchar a = src[3];
+                dst[x] = (a << 24) | (r << 16) | (g << 8) | b;
+                src += 4;
+            } else {
+                // RGB -> ARGB32 (opaque)
+                guchar r = src[0];
+                guchar g = src[1];
+                guchar b = src[2];
+                dst[x] = 0xFF000000 | (r << 16) | (g << 8) | b;
+                src += 3;
+            }
+        }
+    }
+    
+    cairo_surface_t* img_surface = cairo_image_surface_create_for_data(
+        cairo_data, CAIRO_FORMAT_ARGB32, width, height, stride);
+    cairo_set_source_surface(cr, img_surface, 0, 0);
     cairo_paint(cr);
+    cairo_surface_destroy(img_surface);
+    free(cairo_data);
     
     // Cleanup
     cairo_destroy(cr);

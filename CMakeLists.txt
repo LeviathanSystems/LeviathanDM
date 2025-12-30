@@ -185,7 +185,7 @@ pkg_check_modules(LIBINPUT REQUIRED libinput)
 pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
 pkg_check_modules(CAIRO REQUIRED cairo)
 pkg_check_modules(GDK_PIXBUF REQUIRED gdk-pixbuf-2.0)
-pkg_check_modules(GDK3 REQUIRED gdk-3.0)
+# pkg_check_modules(GDK3 REQUIRED gdk-3.0)  # Not needed - using gdk-pixbuf only
 pkg_check_modules(LIBDRM REQUIRED libdrm)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
@@ -202,7 +202,7 @@ include_directories(
     ${DISPLAY_INFO_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${GDK_PIXBUF_INCLUDE_DIRS}
-    ${GDK3_INCLUDE_DIRS}
+    # ${GDK3_INCLUDE_DIRS}  # Not needed
     ${LIBDRM_INCLUDE_DIRS}
     ${GIO_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
@@ -296,7 +296,7 @@ target_link_libraries(leviathan-ui
     ${GLIB_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${GDK_PIXBUF_LIBRARIES}
-    ${GDK3_LIBRARIES}
+    # ${GDK3_LIBRARIES}  # Not needed
 )
 
 # Export all symbols
@@ -332,7 +332,7 @@ target_link_libraries(leviathan
     ${YAMLCPP_LIBRARIES}
     ${CAIRO_LIBRARIES}
     ${GDK_PIXBUF_LIBRARIES}
-    ${GDK3_LIBRARIES}
+    # ${GDK3_LIBRARIES}  # Not needed
     ${LIBDRM_LIBRARIES}
     ${GIO_LIBRARIES}
     ${GLIB_LIBRARIES}
