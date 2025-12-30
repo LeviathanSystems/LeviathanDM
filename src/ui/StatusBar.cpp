@@ -2,6 +2,8 @@
 #include "ui/ShmBuffer.hpp"
 #include "wayland/LayerManager.hpp"
 #include "ui/WidgetPluginManager.hpp"
+#include "ui/IPopoverProvider.hpp"
+#include "ui/reusable-widgets/Popover.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
 #include <ctime>
@@ -531,13 +533,16 @@ void StatusBar::RenderPopoverToTopLayer() {
     auto find_popover = [&](const std::shared_ptr<UI::Widget>& widget, auto& self) -> void {
         if (visible_popover) return;  // Already found one
         
-        if (widget->HasPopover()) {
-            auto popover = widget->GetPopover();
-            if (popover && popover->IsVisible()) {
-                visible_popover = popover;
-                // Get popover position (already in screen coordinates)
-                popover->GetPosition(popover_x, popover_y);
-                return;
+        // Check if widget implements IPopoverProvider
+        if (auto popover_provider = std::dynamic_pointer_cast<UI::IPopoverProvider>(widget)) {
+            if (popover_provider->HasPopover()) {
+                auto popover = popover_provider->GetPopover();
+                if (popover && popover->IsVisible()) {
+                    visible_popover = popover;
+                    // Get popover position (already in screen coordinates)
+                    popover->GetPosition(popover_x, popover_y);
+                    return;
+                }
             }
         }
         
@@ -838,17 +843,19 @@ bool StatusBar::HandleClick(int x, int y) {
     bool needs_render = false;
     auto handle_click_recursive = [&](const std::shared_ptr<UI::Widget>& widget, auto& self) -> bool {
         // First check if any widget has a visible popover
-        if (widget->HasPopover()) {
-            auto popover = widget->GetPopover();
-            if (popover && popover->IsVisible()) {
-                if (popover->HandleClick(x, y)) {
+        if (auto popover_provider = std::dynamic_pointer_cast<UI::IPopoverProvider>(widget)) {
+            if (popover_provider->HasPopover()) {
+                auto popover = popover_provider->GetPopover();
+                if (popover && popover->IsVisible()) {
+                    if (popover->HandleClick(x, y)) {
+                        needs_render = true;
+                        return true;
+                    }
+                    // Click outside popover - hide it
+                    popover->Hide();
                     needs_render = true;
-                    return true;
+                    return true;  // Consume the click
                 }
-                // Click outside popover - hide it
-                popover->Hide();
-                needs_render = true;
-                return true;  // Consume the click
             }
         }
         
@@ -891,13 +898,15 @@ bool StatusBar::HandleClick(int x, int y) {
     // Helper lambda to recursively handle hover
     auto handle_hover_recursive = [&](const std::shared_ptr<UI::Widget>& widget, auto& self) -> bool {
         // First check if any widget has a visible popover
-        if (widget->HasPopover()) {
-            auto popover = widget->GetPopover();
-            if (popover && popover->IsVisible()) {
-                if (popover->HandleHover(x, y)) {
-                    Render();  // Re-render to show hover effects
-                    RenderPopoverToTopLayer();  // Update popover layer
-                    return true;
+        if (auto popover_provider = std::dynamic_pointer_cast<UI::IPopoverProvider>(widget)) {
+            if (popover_provider->HasPopover()) {
+                auto popover = popover_provider->GetPopover();
+                if (popover && popover->IsVisible()) {
+                    if (popover->HandleHover(x, y)) {
+                        Render();  // Re-render to show hover effects
+                        RenderPopoverToTopLayer();  // Update popover layer
+                        return true;
+                    }
                 }
             }
         }

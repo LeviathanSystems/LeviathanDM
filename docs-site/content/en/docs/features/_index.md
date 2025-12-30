@@ -22,5 +22,9 @@ Native Desktop Notifications spec implementation with no external dependencies r
 ### [Status Bar](status-bar)
 Highly customizable status bar with widget plugin system for displaying system information.
 
+{{< hint info >}}
+**New in v0.0.3**: Widget-based popovers! Build complex popup layouts using composable widgets (VBox, HBox, Label). See the [Widget System Guide]({{< relref "/docs/development/widget-system" >}}).
+{{< /hint >}}
+
 ### [Tiling Layouts](layouts)
 Multiple tiling algorithms including Master-Stack, Monocle, and Grid layouts with dynamic adjustments.

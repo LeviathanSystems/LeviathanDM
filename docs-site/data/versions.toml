@@ -4,14 +4,21 @@
 [versions]
   # Current stable version
   [[versions.entries]]
-    name = "v0.0.2"
-    title = "v0.0.2 (Latest)"
+    name = "v0.0.3"
+    title = "v0.0.3 (Latest)"
     path = "/docs"
     default = true
     badge = "Latest"
     badge_color = "#51cf66"
     
-  # Previous version
+  # Previous versions
+  [[versions.entries]]
+    name = "v0.0.2"
+    title = "v0.0.2"
+    path = "/v0.0.2"
+    badge = "Previous"
+    badge_color = "#868e96"
+    
   [[versions.entries]]
     name = "v0.0.1"
     title = "v0.0.1"
@@ -21,6 +28,14 @@
 
 [features]
   # Feature availability by version
+  [features.widget-based-popovers]
+    since = "v0.0.3"
+    description = "Composable widget system for building popovers with VBox, HBox, and Label"
+    
+  [features.ipopover-provider]
+    since = "v0.0.3"
+    description = "Interface-based pattern for widgets with popover functionality"
+    
   [features.window-decorations]
     since = "v0.0.2"
     description = "Advanced window styling with borders, opacity, and shadows"

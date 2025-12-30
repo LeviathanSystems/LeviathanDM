@@ -14,6 +14,9 @@
 namespace Leviathan {
 namespace UI {
 
+// Forward declaration
+class Widget;
+
 /**
  * @brief Single item in a popover menu/list
  */
@@ -55,7 +58,8 @@ public:
           hover_color_{0.25, 0.25, 0.25, 1.0},
           font_size_(12),
           detail_font_size_(10),
-          hovered_item_(-1) {}
+          hovered_item_(-1),
+          content_widget_(nullptr) {}
     
     virtual ~Popover() = default;
     
@@ -92,34 +96,18 @@ public:
     void ClearItems() { items_.clear(); hovered_item_ = -1; }
     const std::vector<PopoverItem>& GetItems() const { return items_; }
     
+    // Widget-based content (new approach)
+    void SetContent(std::shared_ptr<Widget> content) { content_widget_ = content; }
+    std::shared_ptr<Widget> GetContent() const { return content_widget_; }
+    void ClearContent() { content_widget_ = nullptr; }
+    
     /**
      * @brief Calculate popover size based on content
      * 
      * Automatically sizes the popover to fit all items with padding.
      * Can be overridden for custom content sizing.
      */
-    virtual void CalculateSize() {
-        if (items_.empty()) {
-            width_ = 200;
-            height_ = 50;
-            return;
-        }
-        
-        // Calculate width based on longest text
-        int max_width = 200;  // Minimum width
-        // TODO: Measure actual text width with cairo
-        width_ = max_width;
-        
-        // Calculate height based on number of items
-        int content_height = 0;
-        for (const auto& item : items_) {
-            content_height += item_height_;
-            if (item.separator_after) {
-                content_height += 1;  // Separator line
-            }
-        }
-        height_ = content_height + (padding_ * 2);
-    }
+    virtual void CalculateSize();
     
     /**
      * @brief Render the popover
@@ -127,92 +115,7 @@ public:
      * Default implementation draws a rounded rectangle with a list of items.
      * Override for custom rendering.
      */
-    virtual void Render(cairo_t* cr) {
-        if (!visible_) return;
-        
-        cairo_save(cr);
-        
-        // Draw background with rounded corners
-        DrawRoundedRect(cr, x_, y_, width_, height_, 8);
-        cairo_set_source_rgba(cr, background_color_[0], background_color_[1],
-                            background_color_[2], background_color_[3]);
-        cairo_fill(cr);
-        
-        // Draw border
-        DrawRoundedRect(cr, x_, y_, width_, height_, 8);
-        cairo_set_source_rgba(cr, 0.3, 0.3, 0.3, 1.0);
-        cairo_set_line_width(cr, 1.0);
-        cairo_stroke(cr);
-        
-        // Render items
-        int current_y = y_ + padding_;
-        for (size_t i = 0; i < items_.size(); i++) {
-            const auto& item = items_[i];
-            
-            // Draw hover background
-            if (hovered_item_ == static_cast<int>(i) && item.enabled) {
-                cairo_rectangle(cr, x_ + 2, current_y, width_ - 4, item_height_);
-                cairo_set_source_rgba(cr, hover_color_[0], hover_color_[1],
-                                    hover_color_[2], hover_color_[3]);
-                cairo_fill(cr);
-            }
-            
-            // Draw icon (if present)
-            int text_x = x_ + padding_;
-            if (!item.icon.empty()) {
-                cairo_select_font_face(cr, "monospace", 
-                                     CAIRO_FONT_SLANT_NORMAL,
-                                     CAIRO_FONT_WEIGHT_NORMAL);
-                cairo_set_font_size(cr, font_size_);
-                cairo_set_source_rgba(cr, text_color_[0], text_color_[1],
-                                    text_color_[2], text_color_[3]);
-                cairo_move_to(cr, text_x, current_y + item_height_ / 2 + 5);
-                cairo_show_text(cr, item.icon.c_str());
-                text_x += 24;  // Space for icon
-            }
-            
-            // Draw main text
-            cairo_select_font_face(cr, "sans-serif", 
-                                 CAIRO_FONT_SLANT_NORMAL,
-                                 item.enabled ? CAIRO_FONT_WEIGHT_NORMAL : CAIRO_FONT_WEIGHT_NORMAL);
-            cairo_set_font_size(cr, font_size_);
-            
-            double alpha = item.enabled ? text_color_[3] : 0.5;
-            cairo_set_source_rgba(cr, text_color_[0], text_color_[1],
-                                text_color_[2], alpha);
-            cairo_move_to(cr, text_x, current_y + item_height_ / 2 + 5);
-            cairo_show_text(cr, item.text.c_str());
-            
-            // Draw detail text (if present)
-            if (!item.detail.empty()) {
-                cairo_set_font_size(cr, detail_font_size_);
-                cairo_set_source_rgba(cr, detail_color_[0], detail_color_[1],
-                                    detail_color_[2], detail_color_[3]);
-                
-                // Right-aligned detail text
-                cairo_text_extents_t extents;
-                cairo_text_extents(cr, item.detail.c_str(), &extents);
-                cairo_move_to(cr, x_ + width_ - padding_ - extents.width,
-                            current_y + item_height_ / 2 + 4);
-                cairo_show_text(cr, item.detail.c_str());
-            }
-            
-            current_y += item_height_;
-            
-            // Draw separator if needed
-            if (item.separator_after) {
-                cairo_move_to(cr, x_ + padding_, current_y);
-                cairo_line_to(cr, x_ + width_ - padding_, current_y);
-                cairo_set_source_rgba(cr, separator_color_[0], separator_color_[1],
-                                    separator_color_[2], separator_color_[3]);
-                cairo_set_line_width(cr, 1.0);
-                cairo_stroke(cr);
-                current_y += 1;
-            }
-        }
-        
-        cairo_restore(cr);
-    }
+    virtual void Render(cairo_t* cr);
     
     /**
      * @brief Handle mouse click event
@@ -319,6 +222,9 @@ protected:
     
     // Content
     std::vector<PopoverItem> items_;
+    
+    // Widget-based content (new approach)
+    std::shared_ptr<Widget> content_widget_;
 };
 
 } // namespace UI

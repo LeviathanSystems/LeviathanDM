@@ -54,6 +54,7 @@ Unlike other window managers:
 
 ### Development
 - [Architecture]({{< relref "/docs/development/architecture" >}})
+- [Widget System & Popovers]({{< relref "/docs/development/widget-system" >}}) 🆕
 - [Plugin System]({{< relref "/docs/development/plugins" >}})
 - [Contributing]({{< relref "/docs/development/contributing" >}})
 

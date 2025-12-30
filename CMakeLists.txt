@@ -234,6 +234,7 @@ set(SOURCES
     src/ui/StatusBar.cpp
     src/ui/ShmBuffer.cpp
     src/ui/Widget.cpp
+    src/ui/Popover.cpp
     src/ui/reusable-widgets/Label.cpp
     src/ui/reusable-widgets/Button.cpp
     src/ui/WidgetPluginManager.cpp

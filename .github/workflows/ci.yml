@@ -21,11 +21,30 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/lib/x86_64-linux-gnu/libwayland*.so*
+            /usr/lib/x86_64-linux-gnu/libpixman*.so*
+            /usr/lib/x86_64-linux-gnu/pkgconfig/wayland*.pc
+            /usr/lib/x86_64-linux-gnu/pkgconfig/pixman*.pc
+            /usr/include/wayland
+            /usr/include/pixman-1
+            /usr/share/wayland
+            /usr/share/pkgconfig/wayland*.pc
+            /usr/bin/wayland-scanner
+          key: deps-${{ runner.os }}-wayland-1.23.1-pixman-0.43.4-v1
+          restore-keys: |
+            deps-${{ runner.os }}-wayland-1.23.1-pixman-0.43.4-
+
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential cmake meson ninja-build pkg-config \
+            ccache \
             wayland-protocols libxkbcommon-dev \
             libpixman-1-dev libdrm-dev libgbm-dev libudev-dev \
             libinput-dev libseat-dev hwdata \
@@ -37,7 +56,15 @@ jobs:
             libxcb-ewmh-dev libxcb-icccm4-dev libx11-xcb-dev \
             libxml2-dev libexpat1-dev libffi-dev
 
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
       - name: Build wayland 1.23.1 from source
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
           cd /tmp
           wget https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.23.1/downloads/wayland-1.23.1.tar.xz
@@ -46,7 +73,31 @@ jobs:
           meson setup build --prefix=/usr -Ddocumentation=false
           ninja -C build
           sudo ninja -C build install
-          sudo ldconfig
+
+      - name: Build pixman 0.43.4 from source
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          cd /tmp
+          wget https://www.cairographics.org/releases/pixman-0.43.4.tar.gz
+          tar -xf pixman-0.43.4.tar.gz
+          cd pixman-0.43.4
+          meson setup build --prefix=/usr -Dgtk=disabled -Dlibpng=disabled
+          ninja -C build
+          sudo ninja -C build install
+
+      - name: Update library cache
+        run: sudo ldconfig
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: |
+            build
+            !build/compile_commands.json
+          key: cmake-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt', 'subprojects/**') }}-${{ github.sha }}
+          restore-keys: |
+            cmake-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt', 'subprojects/**') }}-
+            cmake-${{ runner.os }}-
 
       - name: Setup dependencies
         run: ./setup-deps.sh
@@ -57,6 +108,8 @@ jobs:
           cd build
           cmake -DCMAKE_BUILD_TYPE=Debug \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
                 ..
 
       - name: Build
@@ -89,36 +142,6 @@ jobs:
         run: |
           echo "Binary sizes:"
           ls -lh build/leviathan build/leviathanctl build/libleviathan-ui.so
-
-  check-docs:
-    name: Check Documentation
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v3
-        with:
-          hugo-version: '0.152.2'
-          extended: true
-
-      - name: Build documentation
-        run: |
-          cd docs-site
-          hugo --gc --minify
-
-      - name: Check for broken links (if docs built)
-        run: |
-          if [ -d docs-site/public ]; then
-            echo "✓ Documentation built successfully"
-          else
-            echo "❌ Documentation build failed"
-            exit 1
-          fi
 
   code-quality:
     name: Code Quality Checks

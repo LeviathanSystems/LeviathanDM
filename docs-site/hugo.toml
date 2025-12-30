@@ -33,7 +33,7 @@ enableEmoji = true
   
   # Version information
   version_menu = "Versions"
-  version = "0.0.2"
+  version = "0.0.3"
   url_latest_version = "https://leviathansystems.github.io/LeviathanDM/docs/"
   
   [params.ui]

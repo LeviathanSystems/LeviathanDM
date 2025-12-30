@@ -37,6 +37,9 @@ void Label::Render(cairo_t* cr) {
     
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     
+    LOG_DEBUG_FMT("Label::Render - text='{}' at ({}, {}) size={}x{}", 
+        text_, x_, y_, width_, height_);
+    
     // Save cairo state
     cairo_save(cr);
     

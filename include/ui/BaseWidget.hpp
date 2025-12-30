@@ -4,7 +4,6 @@
 #include <functional>
 #include <memory>
 #include <cairo.h>
-#include "Popover.hpp"
 #include "../Logger.hpp"
 
 namespace Leviathan {
@@ -98,52 +97,15 @@ public:
         // The dirty check timer will trigger the render instead.
     }
     
-    // Popover support
-    void SetPopover(std::shared_ptr<Popover> popover) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-        popover_ = popover;
-    }
-    
-    std::shared_ptr<Popover> GetPopover() const {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-        return popover_;
-    }
-    
-    bool HasPopover() const {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-        return popover_ != nullptr;
-    }
-    
     // Mouse event handlers (virtual so widgets can override)
     // Return true if event was handled
     virtual bool HandleClick(int click_x, int click_y) {
         // Default: check if click is inside widget bounds
-        LOG_DEBUG("Widget::HandleClick - trying to acquire lock");
         std::lock_guard<std::recursive_mutex> lock(mutex_);
-        LOG_DEBUG("Widget::HandleClick - lock acquired, checking bounds");
         if (click_x >= x_ && click_x <= x_ + width_ &&
             click_y >= y_ && click_y <= y_ + height_) {
-            // Toggle popover if widget has one
-            if (popover_) {
-                LOG_DEBUG("Widget has popover, checking visibility");
-                if (popover_->IsVisible()) {
-                    LOG_DEBUG("Popover is visible, hiding it");
-                    popover_->Hide();
-                } else {
-                    LOG_DEBUG("Popover is hidden, showing it");
-                    // Position popover below widget
-                    popover_->SetPosition(x_, y_ + height_ + 2);
-                    popover_->CalculateSize();
-                    popover_->Show();
-                    LOG_DEBUG("Popover shown");
-                }
-                LOG_DEBUG("Calling RequestRender()");
-                RequestRender();
-                LOG_DEBUG("RequestRender() completed");
-                return true;
-            }
+            return true;
         }
-        LOG_DEBUG("Widget::HandleClick returning false");
         return false;
     }
     
@@ -161,7 +123,6 @@ protected:
     bool dirty_;
     Container* parent_ = nullptr;
     std::function<void()> render_callback_;  // Callback to trigger re-render
-    std::shared_ptr<Popover> popover_;  // Optional popover for this widget
 };
 
 } // namespace UI

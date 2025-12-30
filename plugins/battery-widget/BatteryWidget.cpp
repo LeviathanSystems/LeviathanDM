@@ -1,6 +1,9 @@
 #include "../../include/ui/PeriodicWidget.hpp"
 #include "../../include/ui/DBusHelper.hpp"
-#include "../../include/ui/Popover.hpp"
+#include "../../include/ui/IPopoverProvider.hpp"
+#include "../../include/ui/reusable-widgets/Popover.hpp"
+#include "../../include/ui/Widget.hpp"
+#include "../../include/ui/reusable-widgets/Label.hpp"
 #include "../../include/Logger.hpp"
 #include "version.h"
 #include <gio/gio.h>
@@ -150,7 +153,7 @@ struct BatteryDevice {
  * - low_battery_threshold: Percentage to warn at (default: 20)
  * - critical_battery_threshold: Percentage for critical warning (default: 10)
  */
-class BatteryWidget : public PeriodicWidget, public DBusHelper {
+class BatteryWidget : public PeriodicWidget, public DBusHelper, public UI::IPopoverProvider {
 public:
     BatteryWidget() 
         : show_percentage_(true),
@@ -163,7 +166,6 @@ public:
         
         // Create popover for showing all devices
         popover_ = std::make_shared<Popover>();
-        SetPopover(popover_);
     }
     
     PluginMetadata GetMetadata() const override {
@@ -174,6 +176,15 @@ public:
             .description = "Battery status with UPower integration - shows main battery and connected devices",
             .api_version = WIDGET_API_VERSION
         };
+    }
+    
+    // IPopoverProvider implementation
+    std::shared_ptr<UI::Popover> GetPopover() const override {
+        return popover_;
+    }
+    
+    bool HasPopover() const override {
+        return popover_ != nullptr;
     }
 
 protected:
@@ -287,22 +298,27 @@ protected:
         cairo_restore(cr);
     }
     
-    // Override click handler to update popover when opened
+    // Override click handler to manage popover
     bool HandleClick(int click_x, int click_y) override {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
-        LOG_DEBUG("BatteryWidget::HandleClick acquired lock");
         if (click_x >= x_ && click_x <= x_ + width_ &&
             click_y >= y_ && click_y <= y_ + height_) {
             
-            LOG_DEBUG("Click is within widget bounds, updating popover");
-            // Update popover content
-            UpdatePopover();
-            LOG_DEBUG("UpdatePopover() completed, calling base class HandleClick");
+            // Toggle popover
+            if (popover_->IsVisible()) {
+                popover_->Hide();
+            } else {
+                // Update popover content
+                UpdatePopover();
+                
+                // Position popover below widget
+                popover_->SetPosition(x_, y_ + height_ + 2);
+                popover_->CalculateSize();
+                popover_->Show();
+            }
             
-            // Let base class handle toggle (mutex is recursive so this is safe)
-            bool result = PeriodicWidget::HandleClick(click_x, click_y);
-            LOG_DEBUG_FMT("Base class HandleClick returned: {}", result);
-            return result;
+            RequestRender();
+            return true;
         }
         return false;
     }
@@ -456,15 +472,44 @@ private:
     void UpdatePopover() {
         if (!popover_) return;
         
-        popover_->ClearItems();
+        LOG_DEBUG("UpdatePopover: Clearing old content");
+        // Clear old content first
+        popover_->ClearContent();
         
-        // Add main battery
-        PopoverItem main_item;
-        main_item.icon = "󰁹";
-        main_item.text = "Main Battery";
-        main_item.detail = std::to_string(static_cast<int>(main_battery_percentage_)) + "%";
-        main_item.separator_after = devices_.size() > 1;  // Only show separator if there are other devices
-        popover_->AddItem(main_item);
+        LOG_DEBUG_FMT("UpdatePopover: Creating new content with {} devices", devices_.size());
+        // Create a VBox to hold all device rows
+        auto container = std::make_shared<UI::VBox>();
+        container->SetSpacing(4);
+        
+        // Add main battery row
+        auto main_row = std::make_shared<UI::HBox>();
+        main_row->SetSpacing(8);
+        
+        auto main_icon = std::make_shared<UI::Label>("󰁹");
+        main_icon->SetFontSize(14);
+        
+        auto main_text = std::make_shared<UI::Label>("Main Battery");
+        main_text->SetFontSize(12);
+        
+        auto main_percentage = std::make_shared<UI::Label>(
+            std::to_string(static_cast<int>(main_battery_percentage_)) + "%"
+        );
+        main_percentage->SetFontSize(12);
+        main_percentage->SetTextColor(0.7, 0.7, 0.7, 1.0);
+        
+        main_row->AddChild(main_icon);
+        main_row->AddChild(main_text);
+        main_row->AddChild(main_percentage);
+        
+        container->AddChild(main_row);
+        
+        // Add a separator if there are other devices
+        if (devices_.size() > 1) {
+            auto separator = std::make_shared<UI::Label>("────────────────");
+            separator->SetFontSize(8);
+            separator->SetTextColor(0.4, 0.4, 0.4, 1.0);
+            container->AddChild(separator);
+        }
         
         // Add all other devices (skip the first battery which is the main one)
         bool first_battery = true;
@@ -475,30 +520,52 @@ private:
                 continue;
             }
             
-            PopoverItem item;
-            item.icon = device.GetIcon();
+            auto device_row = std::make_shared<UI::HBox>();
+            device_row->SetSpacing(8);
             
+            auto device_icon = std::make_shared<UI::Label>(device.GetIcon());
+            device_icon->SetFontSize(14);
+            
+            std::string device_name;
             if (!device.model.empty()) {
-                item.text = device.model;
+                device_name = device.model;
             } else if (!device.vendor.empty()) {
-                item.text = device.vendor + " " + device.GetTypeString();
+                device_name = device.vendor + " " + device.GetTypeString();
             } else {
-                item.text = device.GetTypeString();
+                device_name = device.GetTypeString();
             }
             
-            item.detail = std::to_string(static_cast<int>(device.percentage)) + "%";
+            auto device_text = std::make_shared<UI::Label>(device_name);
+            device_text->SetFontSize(12);
             
-            popover_->AddItem(item);
+            auto device_percentage = std::make_shared<UI::Label>(
+                std::to_string(static_cast<int>(device.percentage)) + "%"
+            );
+            device_percentage->SetFontSize(12);
+            device_percentage->SetTextColor(0.7, 0.7, 0.7, 1.0);
+            
+            device_row->AddChild(device_icon);
+            device_row->AddChild(device_text);
+            device_row->AddChild(device_percentage);
+            
+            container->AddChild(device_row);
         }
         
+        // If no other devices, show a message
         if (devices_.empty()) {
-            PopoverItem empty_item;
-            empty_item.text = "No other devices";
-            empty_item.enabled = false;
-            popover_->AddItem(empty_item);
+            auto empty_label = std::make_shared<UI::Label>("No other devices");
+            empty_label->SetFontSize(12);
+            empty_label->SetTextColor(0.5, 0.5, 0.5, 1.0);
+            container->AddChild(empty_label);
         }
         
+        // Set the container as the popover content
+        popover_->SetContent(container);
+        LOG_DEBUG("UpdatePopover: Content set, calculating size");
         popover_->CalculateSize();
+        int pw, ph;
+        popover_->GetSize(pw, ph);
+        LOG_DEBUG_FMT("UpdatePopover: Popover size calculated: {}x{}", pw, ph);
     }
 
     // Configuration
