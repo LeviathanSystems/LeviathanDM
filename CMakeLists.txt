@@ -112,7 +112,8 @@ if(USE_VENDORED_DEPS)
     set(WLROOTS_BUILD_DIR "${CMAKE_BINARY_DIR}/wlroots-build")
     set(WLROOTS_INSTALL_DIR "${CMAKE_BINARY_DIR}/wlroots-install")
     
-    if(NOT EXISTS "${WLROOTS_INSTALL_DIR}/lib/libwlroots-0.19.so")
+    # Check both possible library install locations
+    if(NOT EXISTS "${WLROOTS_INSTALL_DIR}/lib/libwlroots-0.19.so" AND NOT EXISTS "${WLROOTS_INSTALL_DIR}/lib/x86_64-linux-gnu/libwlroots-0.19.so")
         message(STATUS "Building wlroots...")
         
         # Set PKG_CONFIG_PATH environment for wlroots build
@@ -156,11 +157,21 @@ if(USE_VENDORED_DEPS)
         ${WLROOTS_INSTALL_DIR}/include/wlroots-0.19
         ${WLROOTS_INSTALL_DIR}/include
     )
-    set(WLROOTS_LIBRARIES ${WLROOTS_INSTALL_DIR}/lib/libwlroots-0.19.so)
+    
+    # Check both possible library install locations (lib/ for local builds, lib/x86_64-linux-gnu/ for CI/Ubuntu)
+    if(EXISTS "${WLROOTS_INSTALL_DIR}/lib/x86_64-linux-gnu/libwlroots-0.19.so")
+        set(WLROOTS_LIBRARIES ${WLROOTS_INSTALL_DIR}/lib/x86_64-linux-gnu/libwlroots-0.19.so)
+    else()
+        set(WLROOTS_LIBRARIES ${WLROOTS_INSTALL_DIR}/lib/libwlroots-0.19.so)
+    endif()
     
     # Set libdisplay-info variables
     set(DISPLAY_INFO_INCLUDE_DIRS ${DISPLAY_INFO_INSTALL_DIR}/include)
-    set(DISPLAY_INFO_LIBRARIES ${DISPLAY_INFO_INSTALL_DIR}/lib/libdisplay-info.so)
+    if(EXISTS "${DISPLAY_INFO_INSTALL_DIR}/lib/x86_64-linux-gnu/libdisplay-info.so")
+        set(DISPLAY_INFO_LIBRARIES ${DISPLAY_INFO_INSTALL_DIR}/lib/x86_64-linux-gnu/libdisplay-info.so)
+    else()
+        set(DISPLAY_INFO_LIBRARIES ${DISPLAY_INFO_INSTALL_DIR}/lib/libdisplay-info.so)
+    endif()
     
     # Update PKG_CONFIG_PATH for finding vendored wayland-protocols
     set(ENV{PKG_CONFIG_PATH} "${WLROOTS_INSTALL_DIR}/share/pkgconfig:${DISPLAY_INFO_INSTALL_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
