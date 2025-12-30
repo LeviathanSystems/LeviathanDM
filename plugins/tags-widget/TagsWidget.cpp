@@ -1,6 +1,5 @@
 #include "TagsWidget.hpp"
 #include "ui/reusable-widgets/Button.hpp"
-#include <spdlog/spdlog.h>
 #include <cmath>
 #include <sstream>
 #include <iomanip>
@@ -145,11 +144,7 @@ void TagsWidget::OnCompositorEvent(const UI::Plugin::Event& event) {
 void TagsWidget::FetchTagsFromCompositor() {
     auto* compositor = UI::GetCompositorState();
     if (!compositor) {
-        // Log that compositor is not available
-        auto logger = spdlog::get("leviathan");
-        if (logger) {
-            logger->warn("TagsWidget: GetCompositorState() returned nullptr");
-        }
+        // Compositor is not available
         return;
     }
     
@@ -161,11 +156,6 @@ void TagsWidget::FetchTagsFromCompositor() {
     // Get all tags from compositor
     auto tags = compositor->GetTags();
     auto* active_tag = compositor->GetActiveTag();
-    
-    auto logger = spdlog::get("leviathan");
-    if (logger) {
-        logger->debug("TagsWidget: FetchTagsFromCompositor found {} tags", tags.size());
-    }
     
     int tag_id = 1;
     for (auto* tag : tags) {
@@ -199,11 +189,6 @@ void TagsWidget::FetchTagsFromCompositor() {
 
 void TagsWidget::RebuildTagButtons() {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    
-    auto logger = spdlog::get("leviathan");
-    if (logger) {
-        logger->debug("TagsWidget: RebuildTagButtons with {} tags", tags_.size());
-    }
     
     // Clear existing buttons
     tag_buttons_.clear();
@@ -263,11 +248,6 @@ void TagsWidget::RebuildTagButtons() {
 }
 
 void TagsWidget::OnTagClicked(int tag_id) {
-    auto logger = spdlog::get("leviathan");
-    if (logger) {
-        logger->info("TagsWidget: Switching to tag {}", tag_id);
-    }
-    
     // Tag IDs start at 1, but SwitchToTag expects 0-based index
     UI::Plugin::SwitchToTag(tag_id - 1);
 }
