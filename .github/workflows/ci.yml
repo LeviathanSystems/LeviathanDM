@@ -57,7 +57,7 @@ jobs:
             libxcb-render-util0-dev \
             libxcb-ewmh-dev libxcb-icccm4-dev libx11-xcb-dev \
             libxml2-dev libexpat1-dev libffi-dev \
-            libyaml-cpp-dev
+            libyaml-cpp-dev libgdk-pixbuf-2.0-dev libgtk-3-dev
           # Remove old wayland-protocols so wlroots uses vendored version
           sudo apt-get remove -y wayland-protocols || true
 

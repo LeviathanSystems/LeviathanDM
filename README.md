@@ -26,7 +26,7 @@ A lightweight, customizable tiling Wayland compositor built with wlroots and C++
 ```bash
 sudo apt install build-essential cmake meson ninja-build \
   wayland-protocols libwayland-dev libxkbcommon-dev libpixman-1-dev \
-  libyaml-cpp-dev libcairo2-dev \
+  libyaml-cpp-dev libcairo2-dev libgdk-pixbuf-2.0-dev libgtk-3-dev \
   libxcb-dri3-dev libxcb-present-dev libxcb-sync-dev \
   libxcb-composite0-dev libxcb-render-util0-dev libxcb-xinput-dev
 ```
