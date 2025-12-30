@@ -45,7 +45,7 @@ jobs:
           sudo apt-get install -y \
             build-essential cmake meson ninja-build pkg-config \
             ccache \
-            wayland-protocols libxkbcommon-dev \
+            libxkbcommon-dev \
             libpixman-1-dev libdrm-dev libgbm-dev libudev-dev \
             libinput-dev libseat-dev hwdata \
             libcairo2-dev libpango1.0-dev libglib2.0-dev \
@@ -55,6 +55,8 @@ jobs:
             libxcb-xfixes0-dev libxcb-xinput-dev libxcb-image0-dev \
             libxcb-ewmh-dev libxcb-icccm4-dev libx11-xcb-dev \
             libxml2-dev libexpat1-dev libffi-dev
+          # Remove old wayland-protocols so wlroots uses vendored version
+          sudo apt-get remove -y wayland-protocols || true
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
