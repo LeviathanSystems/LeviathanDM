@@ -16,6 +16,7 @@
 namespace Leviathan {
 namespace UI {
     class NotificationDaemon;
+    class MenuBarManager;
 }
 }
 
@@ -40,6 +41,7 @@ public:
     ~Server();
     
     void Run();
+    void Shutdown();  // Graceful shutdown sequence
     
     // View operations
     void FocusView(View* view);
@@ -64,6 +66,7 @@ public:
     KeyBindings* GetKeyBindings() { return keybindings_.get(); }
     View* GetFocusedView() const { return focused_view_; }
     UI::NotificationDaemon* GetNotificationDaemon() { return notification_daemon_.get(); }
+    UI::MenuBarManager* GetMenuBarManager();  // Returns singleton instance
     
     // Find Output struct by wlr_output
     Output* FindOutput(struct wlr_output* wlr_output);
@@ -75,6 +78,10 @@ public:
     // Check if click is on a status bar and handle it
     // Returns true if click was handled by a status bar
     bool CheckStatusBarClick(int x, int y);
+    
+    // Check if scroll is on a modal and handle it
+    // Returns true if scroll was handled by a modal
+    bool CheckModalScroll(int x, int y, double delta_x, double delta_y);
     
     // CompositorState interface implementation
     std::vector<Core::Screen*> GetScreens() const override;
@@ -186,9 +193,11 @@ private:
     
     // IPC server
     std::unique_ptr<IPC::Server> ipc_server_;
+    bool should_shutdown_;  // Flag set by IPC shutdown command
     
     // Notification daemon
     std::unique_ptr<UI::NotificationDaemon> notification_daemon_;
+    
     
     // Colors (RGBA format for wlroots)
     float border_focused_[4];

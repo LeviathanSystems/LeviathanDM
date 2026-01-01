@@ -22,6 +22,8 @@ enum class CommandType {
     GET_VERSION,        // Get compositor version
     GET_PLUGIN_STATS,   // Get plugin memory statistics
     PING,              // Simple ping/pong for testing
+    SHUTDOWN,          // Gracefully shutdown the compositor (requires UID match)
+    EXECUTE_ACTION,    // Execute an action by name
     UNKNOWN
 };
 
@@ -88,15 +90,20 @@ public:
     using CommandProcessor = std::function<Response(const std::string&)>;
     void SetCommandProcessor(CommandProcessor processor) { command_processor_ = processor; }
     
+    // Get UID of currently processing client (for security checks)
+    int GetCurrentClientUid() const { return current_client_uid_; }
+    
 private:
     int socket_fd;
     std::string socket_path;
     std::vector<int> client_fds;
     CommandProcessor command_processor_;
+    int current_client_uid_;  // UID of client being processed
     
     void AcceptClient();
     void HandleClient(int client_fd);
     Response ProcessCommand(const std::string& command_str);
+    bool GetPeerUid(int client_fd, uid_t& uid);
 };
 
 // IPC Client - used by leviathanctl

@@ -1,6 +1,7 @@
 #include "wayland/Input.hpp"
 #include "wayland/Server.hpp"
 #include "config/ConfigParser.hpp"
+#include "ui/MenuBarManager.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
 #include <cstdlib>
@@ -53,23 +54,68 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
     bool handled = false;
     
     if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-        for (int i = 0; i < nsyms; i++) {
-            xkb_keysym_t sym = syms[i];
-            
-            // Skip modifier keys themselves - we only care about regular keys with modifiers
-            if (sym == XKB_KEY_Shift_L || sym == XKB_KEY_Shift_R ||
-                sym == XKB_KEY_Control_L || sym == XKB_KEY_Control_R ||
-                sym == XKB_KEY_Alt_L || sym == XKB_KEY_Alt_R ||
-                sym == XKB_KEY_Super_L || sym == XKB_KEY_Super_R ||
-                sym == XKB_KEY_Meta_L || sym == XKB_KEY_Meta_R) {
-                continue; // Don't process modifier keys themselves
+        // Check if menubar is visible and handle menubar input first
+        auto* menubar_mgr = server->GetMenuBarManager();
+        if (menubar_mgr && menubar_mgr->IsAnyMenuBarVisible()) {
+            for (int i = 0; i < nsyms; i++) {
+                xkb_keysym_t sym = syms[i];
+                
+                // Handle special menubar keys
+                if (sym == XKB_KEY_Escape) {
+                    menubar_mgr->HandleEscape();
+                    handled = true;
+                    break;
+                } else if (sym == XKB_KEY_Return || sym == XKB_KEY_KP_Enter) {
+                    menubar_mgr->HandleEnter();
+                    handled = true;
+                    break;
+                } else if (sym == XKB_KEY_BackSpace) {
+                    menubar_mgr->HandleBackspace();
+                    handled = true;
+                    break;
+                } else if (sym == XKB_KEY_Up) {
+                    menubar_mgr->HandleArrowUp();
+                    handled = true;
+                    break;
+                } else if (sym == XKB_KEY_Down) {
+                    menubar_mgr->HandleArrowDown();
+                    handled = true;
+                    break;
+                } else {
+                    // Try to get printable character for text input
+                    char text[32];
+                    int len = xkb_state_key_get_utf8(keyboard->wlr_keyboard->xkb_state, 
+                                                     keycode, text, sizeof(text));
+                    if (len > 0 && len < 32) {
+                        text[len] = '\0';
+                        menubar_mgr->HandleTextInput(std::string(text));
+                        handled = true;
+                        break;
+                    }
+                }
             }
-            
-            // Try to handle the key with the KeyBindings system
-            if (server->GetKeyBindings() && 
-                server->GetKeyBindings()->HandleKeyPress(modifiers, sym)) {
-                handled = true;
-                break;
+        }
+        
+        // If not handled by menubar, try keybindings
+        if (!handled) {
+            for (int i = 0; i < nsyms; i++) {
+                xkb_keysym_t sym = syms[i];
+                
+                // Skip modifier keys themselves - we only care about regular keys with modifiers
+                if (sym == XKB_KEY_Shift_L || sym == XKB_KEY_Shift_R ||
+                    sym == XKB_KEY_Control_L || sym == XKB_KEY_Control_R ||
+                    sym == XKB_KEY_Alt_L || sym == XKB_KEY_Alt_R ||
+                    sym == XKB_KEY_Super_L || sym == XKB_KEY_Super_R ||
+                    sym == XKB_KEY_Meta_L || sym == XKB_KEY_Meta_R) {
+                    continue; // Don't process modifier keys themselves
+                }
+                
+                // Try to handle the key with the KeyBindings system
+                if (server->GetKeyBindings() && 
+                    server->GetKeyBindings()->HandleKeyPress(modifiers, sym)) {
+                    handled = true;
+                    break;
+                }
             }
         }
     }
@@ -294,7 +340,33 @@ void InputManager::HandleCursorButton(struct wl_listener* listener, void* data) 
 }
 
 void InputManager::HandleCursorAxis(struct wl_listener* listener, void* data) {
-    // Future: handle scroll
+    Server* server = wl_container_of(listener, server, cursor_axis);
+    struct wlr_pointer_axis_event* event = 
+        static_cast<struct wlr_pointer_axis_event*>(data);
+    
+    int cursor_x = static_cast<int>(server->cursor->x);
+    int cursor_y = static_cast<int>(server->cursor->y);
+    
+    double delta_x = 0;
+    double delta_y = 0;
+    
+    if (event->orientation == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+        delta_y = event->delta;
+    } else if (event->orientation == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
+        delta_x = event->delta;
+    }
+    
+    // Check if scroll is on a modal first
+    if (server->CheckModalScroll(cursor_x, cursor_y, delta_x, delta_y)) {
+        // Modal handled the scroll, we're done
+        return;
+    }
+    
+    // If modal didn't handle it, notify the seat for normal scrolling
+    wlr_seat_pointer_notify_axis(server->seat, event->time_msec, 
+                                  event->orientation, event->delta,
+                                  event->delta_discrete, event->source,
+                                  event->relative_direction);
 }
 
 void InputManager::HandleCursorFrame(struct wl_listener* listener, void* data) {

@@ -1,8 +1,20 @@
 # LeviathanDM - Wayland Compositor
 
-[![CI Build](https://github.com/LeviathanSystems/LeviathanDM/actions/workflows/ci.yml/badge.svg)](https://github.com/LeviathanSystems/LeviathanDM/actions/workflows/ci.yml)
-[![Documentation](https://github.com/LeviathanSystems/LeviathanDM/actions/workflows/hugo.yml/badge.svg)](https://leviathansystems.github.io/LeviathanDM/)
-[![Release](https://img.shields.io/github/v/release/LeviathanSystems/LeviathanDM)](https://github.com/LeviathanSystems/LeviathanDM/releases)
+<p align="center">
+  <img src="./Assets/logo.png" alt="LeviathanDM Logo" width="200"/>
+</p>
+
+<p align="center">
+  <a href="https://github.com/LeviathanSystems/LeviathanDM/actions/workflows/ci.yml">
+    <img src="https://github.com/LeviathanSystems/LeviathanDM/actions/workflows/ci.yml/badge.svg" alt="CI Build"/>
+  </a>
+  <a href="https://github.com/LeviathanSystems/LeviathanDM/actions/workflows/docs.yml">
+    <img src="https://github.com/LeviathanSystems/LeviathanDM/actions/workflows/docs.yml/badge.svg" alt="Documentation"/>
+  </a>
+  <a href="https://github.com/LeviathanSystems/LeviathanDM/releases">
+    <img src="https://img.shields.io/github/v/release/LeviathanSystems/LeviathanDM" alt="Release"/>
+  </a>
+</p>
 
 A lightweight, customizable tiling Wayland compositor built with wlroots and C++.
 

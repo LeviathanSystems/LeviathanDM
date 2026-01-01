@@ -1,6 +1,6 @@
 #include "ui/reusable-widgets/Popover.hpp"
 #include "ui/BaseWidget.hpp"
-#include "ui/Widget.hpp"  // For Container class
+#include "ui/reusable-widgets/Container.hpp"
 #include "Logger.hpp"
 
 namespace Leviathan {
@@ -79,21 +79,20 @@ void Popover::Render(cairo_t* cr) {
     
     // Render widget-based content if available
     if (content_widget_) {
-        // IMPORTANT: Content widget must be positioned relative to popover's current position
-        // The popover's position (x_, y_) may be temporarily changed by StatusBar for rendering
-        int content_x = x_ + padding_;
-        int content_y = y_ + padding_;
-        LOG_DEBUG_FMT("Popover::Render - Rendering content widget at ({}, {})", content_x, content_y);
+        // Position content widget at padding offset from popover origin
+        // Since StatusBar renders us to our own surface at (0,0), we establish
+        // a coordinate system where children render relative to popover position
+        content_widget_->SetPosition(padding_, padding_);
         
-        // Update content widget position AND propagate to all children
-        content_widget_->SetPosition(content_x, content_y);
-        
-        // For containers, we need to recursively recalculate ALL nested container positions
-        // This ensures the entire widget tree (VBox → HBox → Labels) is positioned correctly
-        LOG_DEBUG_FMT("Popover::Render - Recursively recalculating widget tree for popover at ({}, {})", x_, y_);
+        // Recalculate the entire container tree with relative positions
+        LOG_DEBUG_FMT("Popover::Render - Recalculating widget tree at ({}, {})", x_, y_);
         RecalculateContainerTree(content_widget_.get());
         
+        // Translate to popover's position, then render content
+        // This ensures content renders in the correct place whether popover is at (0,0) or screen coords
+        cairo_translate(cr, x_, y_);
         content_widget_->Render(cr);
+        
         cairo_restore(cr);
         return;
     }

@@ -6,7 +6,9 @@
 #include <cairo.h>
 #include "wayland/WaylandTypes.hpp"
 #include "config/ConfigParser.hpp"
-#include "ui/Widget.hpp"
+#include "ui/reusable-widgets/Container.hpp"
+#include "ui/reusable-widgets/HBox.hpp"
+#include "ui/reusable-widgets/VBox.hpp"
 #include "ui/ShmBuffer.hpp"
 
 namespace Leviathan {
@@ -52,12 +54,14 @@ public:
         x = pos_x_; y = pos_y_;
         width = bar_width_; height = bar_height_;
     }
+    
+    // Get root container for popover search
+    std::shared_ptr<UI::Container> GetRootContainer() const { return root_container_; }
 
 private:
     void CreateSceneNodes();
     void CreateWidgets();
     void RenderToBuffer();
-    void RenderPopoverToTopLayer();  // Render popover to separate Top layer buffer
     void UploadToTexture();
     void SetupDirtyCheckTimer();
     
@@ -71,24 +75,17 @@ private:
     
     struct wlr_scene_rect* scene_rect_;      // Background rectangle
     struct wlr_scene_buffer* scene_buffer_;  // For rendered widgets
-    struct wlr_scene_buffer* popover_scene_buffer_;  // Separate buffer for popovers (in Top layer)
     struct wlr_texture* texture_;            // GPU texture
     struct wlr_renderer* renderer_;          // Renderer for texture upload
     ShmBuffer* shm_buffer_;                  // Custom SHM buffer implementation
-    ShmBuffer* popover_shm_buffer_;          // Separate buffer for popover rendering
     bool buffer_attached_;                   // Track if buffer is attached to scene
-    bool popover_buffer_attached_;           // Track if popover buffer is attached
-    bool is_rendering_popover_;              // Guard against recursive popover rendering
     
     int pos_x_, pos_y_;  // Position on screen
     
     // Cairo rendering
     cairo_surface_t* cairo_surface_;
     cairo_t* cairo_;
-    cairo_surface_t* popover_cairo_surface_;  // Separate surface for popover
-    cairo_t* popover_cairo_;
     uint32_t* buffer_data_;
-    uint32_t* popover_buffer_data_;
     
     // Dimensions
     uint32_t output_width_;

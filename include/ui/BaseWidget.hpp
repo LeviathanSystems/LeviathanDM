@@ -82,6 +82,12 @@ public:
     void SetParent(Container* parent) { parent_ = parent; }
     Container* GetParent() const { return parent_; }
     
+    // Get absolute screen coordinates (accumulates parent offsets)
+    // Implementations are at the end of this file after Container is fully defined
+    int GetAbsoluteX() const;
+    int GetAbsoluteY() const;
+    void GetAbsolutePosition(int& abs_x, int& abs_y) const;
+    
     // Render callback - widgets call this when they update themselves
     // This allows widgets to trigger a re-render of the entire status bar
     void SetRenderCallback(std::function<void()> callback) {
@@ -112,6 +118,13 @@ public:
     virtual bool HandleHover(int hover_x, int hover_y) {
         // Default: do nothing
         // Widgets can override for custom hover behavior
+        return false;
+    }
+    
+    // Scroll handling - returns true if scroll was handled
+    virtual bool HandleScroll(int x, int y, double delta_x, double delta_y) {
+        // Default: do nothing
+        // Widgets can override for custom scroll behavior
         return false;
     }
 

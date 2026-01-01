@@ -4,8 +4,11 @@
 #include "wayland/Input.hpp"
 #include "wayland/LayerSurface.hpp"
 #include "ui/StatusBar.hpp"
+#include "ui/ModalManager.hpp"
+#include "ui/KeybindingHelpModal.hpp"
 #include "ui/WidgetPluginManager.hpp"
 #include "ui/NotificationDaemon.hpp"
+#include "ui/MenuBarManager.hpp"
 #include "config/ConfigParser.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
@@ -95,7 +98,8 @@ Server::Server()
     , cursor(nullptr)
     , cursor_mgr(nullptr)
     , seat(nullptr)
-    , focused_view_(nullptr) {
+    , focused_view_(nullptr)
+    , should_shutdown_(false) {
     
     wl_list_init(&outputs);
     wl_list_init(&keyboards);
@@ -112,25 +116,37 @@ Server::Server()
     border_unfocused_[1] = 0.26f; // G
     border_unfocused_[2] = 0.32f; // B
     border_unfocused_[3] = 1.0f;  // A
+    
+    // Register modal types
+    UI::ModalManager::RegisterModalType("keybindingshelp", []() -> std::unique_ptr<UI::Modal> {
+        return std::make_unique<UI::KeybindingHelpModal>();
+    });
 }
 
 Server::~Server() {
     LOG_INFO("Server destructor - cleaning up resources");
     
+    // Shutdown MenuBar manager
+    LOG_INFO("Shutting down MenuBar manager...");
+    UI::MenuBarManager::Instance().Shutdown();
+    
     // Shutdown notification daemon
     if (notification_daemon_) {
+        LOG_INFO("Shutting down notification daemon...");
         notification_daemon_->Shutdown();
         notification_daemon_.reset();
     }
     
     // Clean up remaining views (in case they weren't destroyed by Wayland)
     // Note: Normally Wayland destroy callbacks handle this, but we clean up for safety
+    LOG_INFO_FMT("Cleaning up {} remaining views...", views.size());
     for (auto* view : views) {
         delete view;
     }
     views.clear();
     
     // Clean up remaining clients
+    LOG_INFO_FMT("Cleaning up {} remaining clients...", clients_.size());
     for (auto* client : clients_) {
         delete client;
     }
@@ -139,9 +155,12 @@ Server::~Server() {
     // core_seat_ is a unique_ptr, it will automatically clean up (and delete tags)
     // Outputs are cleaned up by wlroots destroy callbacks
     
+    LOG_INFO("Destroying Wayland display...");
     if (wl_display) {
         wl_display_destroy(wl_display);
     }
+    
+    LOG_INFO("Server cleanup complete");
 }
 
 Server* Server::Create() {
@@ -280,6 +299,7 @@ bool Server::Initialize() {
     
     layout_engine_ = std::make_unique<TilingLayout>();
     keybindings_ = std::make_unique<KeyBindings>(this);
+    KeyBindings::SetInstance(keybindings_.get());
     
     // Create core seat
     core_seat_ = std::make_unique<Core::Seat>();
@@ -307,6 +327,10 @@ bool Server::Initialize() {
         LOG_WARN("Failed to initialize notification daemon");
         notification_daemon_.reset();
     }
+    
+    // Initialize MenuBar Manager
+    UI::MenuBarManager::Instance().Initialize(wl_event_loop);
+    LOG_INFO("MenuBarManager initialized");
     
     std::cout << "Compositor initialized successfully\n";
     return true;
@@ -348,6 +372,13 @@ void Server::Run() {
     
     // Run event loop with IPC handling
     while (wl_display_get_destroy_listener(wl_display, nullptr) == nullptr) {
+        // Check for IPC-initiated shutdown
+        if (should_shutdown_) {
+            LOG_INFO("IPC shutdown requested - initiating graceful shutdown");
+            Shutdown();
+            break;
+        }
+        
         // Handle IPC events
         if (ipc_server_) {
             ipc_server_->HandleEvents();
@@ -362,6 +393,58 @@ void Server::Run() {
         wl_display_flush_clients(wl_display);
         wl_event_loop_dispatch(wl_event_loop, 1);  // 1ms timeout
     }
+}
+
+void Server::Shutdown() {
+    LOG_INFO("========================================");
+    LOG_INFO("Starting graceful compositor shutdown...");
+    LOG_INFO("========================================");
+    
+    // Step 1: Hide all MenuBars
+    LOG_INFO("Step 1: Hiding menu bars...");
+    UI::MenuBarManager::Instance().Shutdown();
+    
+    // Step 2: Close all client windows gracefully
+    LOG_INFO_FMT("Step 2: Closing {} client windows...", clients_.size());
+    for (auto* client : clients_) {
+        if (client && client->GetView()) {
+            LOG_INFO_FMT("  - Closing client: {}", client->GetAppId());
+            CloseView(client->GetView());
+        }
+    }
+    
+    // Step 3: Shutdown notification daemon
+    if (notification_daemon_) {
+        LOG_INFO("Step 3: Shutting down notification daemon...");
+        notification_daemon_->Shutdown();
+    }
+    
+    // Step 4: Shutdown IPC server
+    if (ipc_server_) {
+        LOG_INFO("Step 4: Shutting down IPC server...");
+        ipc_server_.reset();
+    }
+    
+    // Step 5: Clean up status bars via LayerManagers
+    LOG_INFO("Step 5: Cleaning up status bars...");
+    Output* output;
+    wl_list_for_each(output, &outputs, link) {
+        if (output->layer_manager) {
+            output->layer_manager->ClearAllStatusBars();
+            LOG_INFO_FMT("  - Cleared status bars on output '{}'", output->wlr_output->name);
+        }
+    }
+    
+    // Step 6: Stop the Wayland display event loop
+    LOG_INFO("Step 6: Stopping Wayland display...");
+    wl_display_terminate(wl_display);
+    
+    LOG_INFO("========================================");
+    LOG_INFO("Graceful shutdown sequence complete");
+    LOG_INFO("========================================");
+    
+    // Exit the process cleanly
+    exit(0);
 }
 
 void Server::OnNewOutput(struct wlr_output* wlr_output) {
@@ -425,6 +508,9 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     // Create per-output LayerManager
     output->layer_manager = new LayerManager(scene, wlr_output, wl_event_loop);
     LOG_INFO_FMT("Created LayerManager for output '{}'", wlr_output->name);
+    
+    // Set server pointer so LayerManager can access global state (like keybindings)
+    output->layer_manager->SetServer(this);
     
     // Initialize tags for this output/screen
     auto& config = Config();
@@ -641,6 +727,14 @@ void Server::ApplyMonitorGroupConfiguration() {
         output->layer_manager->CreateStatusBars(
             mon_config.status_bars,
             config.status_bars,
+            output->wlr_output->width,
+            output->wlr_output->height
+        );
+        
+        // Register menubar for this output
+        UI::MenuBarManager::Instance().RegisterMenuBar(
+            output->wlr_output,
+            output->layer_manager,
             output->wlr_output->width,
             output->wlr_output->height
         );
@@ -1150,6 +1244,63 @@ IPC::Response Server::ProcessIPCCommand(const std::string& command_json) {
                 break;
             }
             
+            case IPC::CommandType::EXECUTE_ACTION: {
+                if (!j.contains("args") || !j["args"].contains("action")) {
+                    response.error = "Missing 'action' argument";
+                    break;
+                }
+                
+                std::string action_name = j["args"]["action"];
+                LOG_INFO_FMT("IPC: Executing action '{}'", action_name);
+                
+                // Execute the action using the ActionRegistry from keybindings
+                if (keybindings_ && keybindings_->GetActionRegistry()) {
+                    if (keybindings_->GetActionRegistry()->HasAction(action_name)) {
+                        keybindings_->GetActionRegistry()->ExecuteAction(action_name);
+                        response.success = true;
+                        response.data["action"] = action_name;
+                        response.data["status"] = "executed";
+                    } else {
+                        response.error = "Action '" + action_name + "' not found";
+                        LOG_WARN_FMT("IPC: Unknown action '{}'", action_name);
+                    }
+                } else {
+                    response.error = "ActionRegistry not initialized";
+                    LOG_ERROR("IPC: ActionRegistry is null");
+                }
+                break;
+            }
+            
+            case IPC::CommandType::SHUTDOWN: {
+                // Security check: Only allow shutdown from same UID as compositor
+                uid_t compositor_uid = getuid();
+                int client_uid = ipc_server_->GetCurrentClientUid();
+                
+                if (client_uid < 0) {
+                    response.error = "Failed to verify client credentials";
+                    LOG_WARN("IPC shutdown attempt with invalid client UID");
+                    break;
+                }
+                
+                if (static_cast<uid_t>(client_uid) != compositor_uid) {
+                    response.error = "Permission denied: shutdown requires matching UID";
+                    LOG_WARN_FMT("IPC shutdown denied: client UID {} != compositor UID {}", 
+                                client_uid, compositor_uid);
+                    break;
+                }
+                
+                // Authorization successful
+                LOG_INFO_FMT("IPC shutdown authorized for UID {}", client_uid);
+                response.success = true;
+                response.data["message"] = "Initiating graceful shutdown";
+                
+                // Note: We'll send the response before shutting down
+                // The shutdown will be triggered after this response is sent
+                // by setting a flag that the event loop will check
+                should_shutdown_ = true;
+                break;
+            }
+            
             default:
                 response.error = "Command not implemented: " + cmd;
                 break;
@@ -1230,6 +1381,20 @@ bool Server::CheckStatusBarClick(int x, int y) {
         }
     }
     return false;  // Click not on any status bar
+}
+
+bool Server::CheckModalScroll(int x, int y, double delta_x, double delta_y) {
+    Output* output = nullptr;
+    wl_list_for_each(output, &outputs, link) {
+        if (output->layer_manager) {
+            if (output->layer_manager->HasVisibleModal()) {
+                if (output->layer_manager->HandleModalScroll(x, y, delta_x, delta_y)) {
+                    return true;  // Scroll handled by a modal
+                }
+            }
+        }
+    }
+    return false;  // Scroll not on any modal
 }
 
 Core::Screen* Server::GetFocusedScreen() const {
@@ -1339,6 +1504,10 @@ Core::Client* Server::GetFocusedClient() const {
         return nullptr;
     }
     return core_seat_->GetFocusedClient();
+}
+
+UI::MenuBarManager* Server::GetMenuBarManager() {
+    return &UI::MenuBarManager::Instance();
 }
 
 LayerManager* Server::GetLayerManagerForScreen(Core::Screen* screen) const {

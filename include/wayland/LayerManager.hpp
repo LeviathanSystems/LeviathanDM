@@ -6,7 +6,9 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <unordered_map>
 #include "config/ConfigParser.hpp"
+#include "wayland/WaylandTypes.hpp"  // Include full wlroots types
 
 // Forward declarations
 struct wlr_scene;
@@ -15,6 +17,8 @@ struct wlr_scene_node;
 struct wlr_output;
 struct wl_event_loop;
 struct wl_event_source;
+typedef struct _cairo cairo_t;
+typedef struct _cairo_surface cairo_surface_t;
 
 namespace Leviathan {
 
@@ -30,6 +34,13 @@ struct StatusBarsConfig;
 class StatusBar;
 class ShmBuffer;
 enum class LayoutType;
+
+namespace UI {
+    class ModalManager;
+    class Modal;  // Base class
+    class Popover;  // Popover widget
+    class IPopoverProvider;  // Interface for widgets that have popovers
+}
 
 namespace Wayland {
 
@@ -77,6 +88,9 @@ public:
     LayerManager(struct wlr_scene* scene, struct wlr_output* output, struct wl_event_loop* event_loop);
     ~LayerManager();
     
+    // Set the server pointer for accessing global state (like keybindings)
+    void SetServer(Server* server) { server_ = server; }
+    
     // Set monitor configuration (includes wallpaper config)
     void SetMonitorConfig(const MonitorConfig& config);
     
@@ -109,6 +123,7 @@ public:
     // Status bar management
     void AddStatusBar(Leviathan::StatusBar* bar);
     void RemoveStatusBar(Leviathan::StatusBar* bar);
+    void ClearAllStatusBars();  // Remove and delete all status bars
     const std::vector<Leviathan::StatusBar*>& GetStatusBars() const { return status_bars_; }
     
     // Create status bars from configuration
@@ -117,6 +132,16 @@ public:
                          const StatusBarsConfig& all_bars_config,
                          uint32_t output_width,
                          uint32_t output_height);
+    
+    // Toggle modal by name (create and open if doesn't exist, close if open, open if closed)
+    void ToggleModal(const std::string& modal_name);
+    
+    // Modal event handling
+    bool HandleModalScroll(int x, int y, double delta_x, double delta_y);
+    bool HasVisibleModal() const;
+    
+    // Render any visible popovers to the Top layer
+    void RenderPopovers();
     
     // Tag management (per-screen workspaces)
     void InitializeTags(const std::vector<TagConfig>& tag_configs);
@@ -146,6 +171,28 @@ private:
     struct wlr_output* output_;  // The output this manager belongs to
     struct wl_event_loop* event_loop_;  // For timers and events
     std::vector<Leviathan::StatusBar*> status_bars_;  // Status bars on this output
+    
+    // Active modals (owned by LayerManager)
+    std::unordered_map<std::string, std::unique_ptr<UI::Modal>> active_modals_;
+    
+    // Modal rendering resources
+    wlr_scene_buffer* modal_scene_buffer_ = nullptr;
+    class ShmBuffer* modal_shm_buffer_ = nullptr;
+    
+    // Popover rendering resources (similar to modal)
+    wlr_scene_buffer* popover_scene_buffer_ = nullptr;
+    class ShmBuffer* popover_shm_buffer_ = nullptr;
+    cairo_surface_t* popover_cairo_surface_ = nullptr;
+    cairo_t* popover_cairo_ = nullptr;
+    uint32_t* popover_buffer_data_ = nullptr;
+    bool popover_buffer_attached_ = false;
+    bool is_rendering_popover_ = false;
+    
+    // Helper to render modals to top layer
+    void RenderModals();
+    
+    // Server pointer for accessing global state
+    Server* server_ = nullptr;
     
     // Per-screen tags (workspaces)
     std::vector<std::unique_ptr<Core::Tag>> tags_;

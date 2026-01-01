@@ -238,21 +238,31 @@ set(SOURCES
     # Config
     src/config/ConfigParser.cpp
     # Utilities
+    src/Actions.cpp
     src/KeyBindings.cpp
     # Layout
     src/layout/TilingLayout.cpp
     # UI
     src/ui/StatusBar.cpp
     src/ui/ShmBuffer.cpp
-    src/ui/Widget.cpp
     src/ui/Popover.cpp
+    src/ui/reusable-widgets/Container.cpp
+    src/ui/reusable-widgets/HBox.cpp
+    src/ui/reusable-widgets/VBox.cpp
+    src/ui/reusable-widgets/ScrollView.cpp
     src/ui/reusable-widgets/Label.cpp
     src/ui/reusable-widgets/Button.cpp
+    src/ui/reusable-widgets/BaseModal.cpp
+    src/ui/KeybindingHelpModal.cpp
+    src/ui/ModalManager.cpp
     src/ui/WidgetPluginManager.cpp
     src/ui/CompositorState.cpp
     src/ui/PluginAPI.cpp
     src/ui/DBusHelper.cpp
     src/ui/NotificationDaemon.cpp
+    src/ui/MenuBar.cpp
+    src/ui/MenuBarManager.cpp
+    src/ui/MenuItemProviders.cpp
     # IPC
     src/ipc/IPC.cpp
     src/wayland/WallpaperManager.cpp
@@ -281,6 +291,9 @@ set(HEADERS
     include/layout/TilingLayout.hpp
     # UI
     include/ui/StatusBar.hpp
+    include/ui/MenuBar.hpp
+    include/ui/MenuBarManager.hpp
+    include/ui/MenuItemProviders.hpp
     # IPC
     include/ipc/IPC.hpp
     include/wayland/WallpaperManager.hpp
@@ -289,6 +302,7 @@ set(HEADERS
 
 # Create a shared library for UI components that plugins can link against
 add_library(leviathan-ui SHARED
+    src/ui/BaseWidget.cpp
     src/ui/DBusHelper.cpp
     src/ui/CompositorState.cpp
     src/ui/PluginAPI.cpp

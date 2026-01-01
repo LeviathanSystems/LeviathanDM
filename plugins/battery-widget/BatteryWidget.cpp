@@ -2,7 +2,9 @@
 #include "../../include/ui/DBusHelper.hpp"
 #include "../../include/ui/IPopoverProvider.hpp"
 #include "../../include/ui/reusable-widgets/Popover.hpp"
-#include "../../include/ui/Widget.hpp"
+#include "../../include/ui/reusable-widgets/Container.hpp"
+#include "../../include/ui/reusable-widgets/VBox.hpp"
+#include "../../include/ui/reusable-widgets/HBox.hpp"
 #include "../../include/ui/reusable-widgets/Label.hpp"
 #include "../../include/Logger.hpp"
 #include "version.h"
@@ -301,25 +303,41 @@ protected:
     // Override click handler to manage popover
     bool HandleClick(int click_x, int click_y) override {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
+        LOG_DEBUG_FMT("BatteryWidget::HandleClick at ({}, {}) - widget bounds: x={} y={} w={} h={}", 
+                     click_x, click_y, x_, y_, width_, height_);
+        
         if (click_x >= x_ && click_x <= x_ + width_ &&
             click_y >= y_ && click_y <= y_ + height_) {
             
+            LOG_DEBUG_FMT("Click is INSIDE battery widget bounds. Popover currently visible: {}", 
+                         popover_->IsVisible());
+            
             // Toggle popover
             if (popover_->IsVisible()) {
+                LOG_DEBUG("Hiding popover");
                 popover_->Hide();
             } else {
+                LOG_DEBUG("Showing popover");
                 // Update popover content
                 UpdatePopover();
                 
-                // Position popover below widget
-                popover_->SetPosition(x_, y_ + height_ + 2);
+                // Position popover below widget using ABSOLUTE screen coordinates
+                // Since we now use relative positioning with coordinate transformation,
+                // we need to calculate the absolute position by walking up the parent chain
+                int abs_x = GetAbsoluteX();
+                int abs_y = GetAbsoluteY();
+                
+                popover_->SetPosition(abs_x, abs_y + height_ + 2);
                 popover_->CalculateSize();
                 popover_->Show();
+                LOG_DEBUG_FMT("Popover shown at absolute ({}, {}), IsVisible={}", 
+                             abs_x, abs_y + height_ + 2, popover_->IsVisible());
             }
             
             RequestRender();
             return true;
         }
+        LOG_DEBUG("Click is OUTSIDE battery widget bounds");
         return false;
     }
 

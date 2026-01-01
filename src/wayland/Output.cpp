@@ -59,6 +59,7 @@ void OutputManager::HandleFrame(struct wl_listener* listener, void* data) {
 
 void OutputManager::HandleDestroy(struct wl_listener* listener, void* data) {
     Output* output = wl_container_of(listener, output, destroy);
+    
     wl_list_remove(&output->frame.link);
     wl_list_remove(&output->destroy.link);
     delete output;

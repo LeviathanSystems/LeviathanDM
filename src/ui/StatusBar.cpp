@@ -4,6 +4,7 @@
 #include "ui/WidgetPluginManager.hpp"
 #include "ui/IPopoverProvider.hpp"
 #include "ui/reusable-widgets/Popover.hpp"
+#include "ui/reusable-widgets/Label.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
 #include <ctime>
@@ -23,22 +24,15 @@ StatusBar::StatusBar(const StatusBarConfig& config,
       dirty_check_timer_(nullptr),
       scene_rect_(nullptr),
       scene_buffer_(nullptr),
-      popover_scene_buffer_(nullptr),
       texture_(nullptr),
       renderer_(nullptr),
       shm_buffer_(nullptr),
-      popover_shm_buffer_(nullptr),
       pos_x_(0),
       pos_y_(0),
       cairo_surface_(nullptr),
       cairo_(nullptr),
-      popover_cairo_surface_(nullptr),
-      popover_cairo_(nullptr),
       buffer_data_(nullptr),
-      popover_buffer_data_(nullptr),
       buffer_attached_(false),
-      popover_buffer_attached_(false),
-      is_rendering_popover_(false),
       output_width_(output_width),
       output_height_(output_height),
       bar_width_(0),
@@ -90,13 +84,6 @@ StatusBar::~StatusBar() {
         cairo_surface_destroy(cairo_surface_);
     }
     
-    if (popover_cairo_) {
-        cairo_destroy(popover_cairo_);
-    }
-    if (popover_cairo_surface_) {
-        cairo_surface_destroy(popover_cairo_surface_);
-    }
-    
     // Clean up SHM buffer (this will also clean up the wlr_buffer)
     if (shm_buffer_) {
         wlr_buffer_drop(shm_buffer_->GetWlrBuffer());
@@ -104,16 +91,11 @@ StatusBar::~StatusBar() {
         shm_buffer_ = nullptr;
     }
     
-    // Clean up popover SHM buffer
-    if (popover_shm_buffer_) {
-        wlr_buffer_drop(popover_shm_buffer_->GetWlrBuffer());
-        popover_shm_buffer_ = nullptr;
-    }
-    
     if (texture_) {
         wlr_texture_destroy(texture_);
     }
     // Scene nodes are cleaned up automatically by wlroots
+    // Popover rendering is now handled by LayerManager
     LOG_DEBUG_FMT("Destroyed status bar '{}'", config_.name);
 }
 
@@ -166,14 +148,9 @@ void StatusBar::CreateSceneNodes() {
     wlr_scene_node_set_position(&scene_buffer_->node, pos_x_, pos_y_);
     wlr_scene_node_raise_to_top(&scene_buffer_->node);
     
-    // Create scene buffer node for popover rendering in TOP layer
-    popover_scene_buffer_ = wlr_scene_buffer_create(top_layer, nullptr);
-    wlr_scene_node_set_position(&popover_scene_buffer_->node, 0, 0);  // Will be positioned dynamically
-    wlr_scene_node_set_enabled(&popover_scene_buffer_->node, false);  // Start disabled
-    wlr_scene_node_raise_to_top(&popover_scene_buffer_->node);
+    // Popover rendering is now handled globally by LayerManager
     
     LOG_DEBUG_FMT("Status bar '{}' scene nodes created at ({}, {})", config_.name, pos_x_, pos_y_);
-    LOG_DEBUG("Popover scene node created in Top layer");
 }
 
 void StatusBar::CreateWidgets() {
@@ -517,208 +494,6 @@ void StatusBar::UploadToTexture() {
     //LOG_DEBUG_FMT("Buffer set on scene (locks={})", wlr_buf->n_locks);
 }
 
-void StatusBar::RenderPopoverToTopLayer() {
-    // Guard against recursive calls
-    if (is_rendering_popover_) {
-        LOG_WARN("Preventing recursive popover rendering");
-        return;
-    }
-    is_rendering_popover_ = true;
-    
-    // Find any visible popover in the widget tree
-    std::shared_ptr<UI::Popover> visible_popover = nullptr;
-    int popover_x = 0, popover_y = 0;
-    
-    // Recursive function to find visible popover
-    auto find_popover = [&](const std::shared_ptr<UI::Widget>& widget, auto& self) -> void {
-        if (visible_popover) return;  // Already found one
-        
-        // Check if widget implements IPopoverProvider
-        if (auto popover_provider = std::dynamic_pointer_cast<UI::IPopoverProvider>(widget)) {
-            if (popover_provider->HasPopover()) {
-                auto popover = popover_provider->GetPopover();
-                if (popover && popover->IsVisible()) {
-                    visible_popover = popover;
-                    // Get popover position (already in screen coordinates)
-                    popover->GetPosition(popover_x, popover_y);
-                    return;
-                }
-            }
-        }
-        
-        // Recursively check children if this is a container
-        if (auto container = std::dynamic_pointer_cast<UI::Container>(widget)) {
-            for (const auto& child : container->GetChildren()) {
-                self(child, self);
-            }
-        }
-    };
-    
-    if (root_container_) {
-        find_popover(root_container_, find_popover);
-    }
-    
-    // If no visible popover, hide the Top layer buffer
-    if (!visible_popover) {
-        if (popover_scene_buffer_) {
-            wlr_scene_node_set_enabled(&popover_scene_buffer_->node, false);
-            // Don't log - this happens frequently in normal operation
-        }
-        is_rendering_popover_ = false;
-        return;
-    }
-    
-    LOG_DEBUG("Found visible popover, rendering it");
-    
-    // Get popover dimensions
-    int popover_width = 0, popover_height = 0;
-    visible_popover->GetSize(popover_width, popover_height);
-    
-    // Validate dimensions
-    if (popover_width <= 0 || popover_height <= 0) {
-        LOG_ERROR_FMT("Invalid popover dimensions: {}x{}", popover_width, popover_height);
-        if (popover_scene_buffer_) {
-            wlr_scene_node_set_enabled(&popover_scene_buffer_->node, false);
-        }
-        is_rendering_popover_ = false;
-        return;
-    }
-    
-    // Adjust popover position to keep it on screen (anchor point logic)
-    // Check right edge - if popover extends beyond screen, shift it left
-    if (popover_x + popover_width > static_cast<int>(output_width_)) {
-        popover_x = output_width_ - popover_width;
-        LOG_DEBUG_FMT("Adjusted popover left to prevent overflow: x={}", popover_x);
-    }
-    
-    // Check bottom edge - if popover extends beyond screen, shift it up
-    if (popover_y + popover_height > static_cast<int>(output_height_)) {
-        popover_y = output_height_ - popover_height;
-        LOG_DEBUG_FMT("Adjusted popover up to prevent overflow: y={}", popover_y);
-    }
-    
-    // Check left edge - clamp to 0
-    if (popover_x < 0) {
-        popover_x = 0;
-        LOG_DEBUG("Clamped popover to left edge");
-    }
-    
-    // Check top edge - clamp to 0
-    if (popover_y < 0) {
-        popover_y = 0;
-        LOG_DEBUG("Clamped popover to top edge");
-    }
-    
-    LOG_DEBUG_FMT("Rendering popover at ({}, {}) size {}x{}", 
-              popover_x, popover_y, popover_width, popover_height);
-    
-    // Create or recreate SHM buffer if size changed
-    bool need_new_buffer = false;
-    if (!popover_shm_buffer_) {
-        need_new_buffer = true;
-    } else {
-        // Check if size changed - only recreate if dimensions actually changed
-        int current_width = cairo_image_surface_get_width(popover_cairo_surface_);
-        int current_height = cairo_image_surface_get_height(popover_cairo_surface_);
-        if (current_width != popover_width || current_height != popover_height) {
-            LOG_DEBUG_FMT("Popover size changed from {}x{} to {}x{}, recreating buffer",
-                     current_width, current_height, popover_width, popover_height);
-            need_new_buffer = true;
-        }
-    }
-    
-    if (need_new_buffer) {
-        // Cleanup old resources
-        if (popover_cairo_) {
-            cairo_destroy(popover_cairo_);
-            popover_cairo_ = nullptr;
-        }
-        if (popover_cairo_surface_) {
-            cairo_surface_destroy(popover_cairo_surface_);
-            popover_cairo_surface_ = nullptr;
-        }
-        if (popover_shm_buffer_) {
-            wlr_buffer_drop(popover_shm_buffer_->GetWlrBuffer());
-            // ShmBuffer will be deleted by wlr_buffer_drop calling BufferDestroy
-            popover_shm_buffer_ = nullptr;
-            popover_buffer_data_ = nullptr;
-        }
-        
-        // Create new buffer with popover size
-        popover_shm_buffer_ = ShmBuffer::Create(popover_width, popover_height);
-        if (!popover_shm_buffer_) {
-            LOG_ERROR("Failed to create SHM buffer for popover");
-            is_rendering_popover_ = false;
-            return;
-        }
-        
-        popover_buffer_data_ = static_cast<uint32_t*>(popover_shm_buffer_->GetData());
-        
-        // Create Cairo surface for the popover
-        popover_cairo_surface_ = cairo_image_surface_create_for_data(
-            reinterpret_cast<unsigned char*>(popover_buffer_data_),
-            CAIRO_FORMAT_ARGB32,
-            popover_width,
-            popover_height,
-            popover_shm_buffer_->GetStride()
-        );
-        
-        popover_cairo_ = cairo_create(popover_cairo_surface_);
-        
-        LOG_INFO_FMT("Created popover Cairo surface {}x{}", popover_width, popover_height);
-        popover_buffer_attached_ = false;
-    }
-    
-    // Clear the popover surface (fully transparent)
-    cairo_save(popover_cairo_);
-    cairo_set_operator(popover_cairo_, CAIRO_OPERATOR_CLEAR);
-    cairo_paint(popover_cairo_);
-    cairo_restore(popover_cairo_);
-    
-    // Render the popover at (0, 0) on its own surface
-    // The popover Render() method expects screen coordinates, so we need to
-    // temporarily adjust its position
-    int saved_x, saved_y;
-    visible_popover->GetPosition(saved_x, saved_y);
-    visible_popover->SetPosition(0, 0);
-    visible_popover->Render(popover_cairo_);
-    visible_popover->SetPosition(saved_x, saved_y);  // Restore original position
-    
-    cairo_surface_flush(popover_cairo_surface_);
-    
-    // Upload to scene buffer
-    if (!popover_shm_buffer_ || !popover_scene_buffer_) {
-        LOG_WARN("Cannot upload popover - missing buffer or scene node");
-        is_rendering_popover_ = false;
-        return;
-    }
-    
-    // Get the wlr_buffer
-    wlr_buffer* wlr_buf = popover_shm_buffer_->GetWlrBuffer();
-    
-    // Attach buffer on first render
-    if (!popover_buffer_attached_) {
-        LOG_INFO("Attaching popover SHM buffer to Top layer scene");
-        popover_buffer_attached_ = true;
-    }
-    
-    // Set the buffer content
-    wlr_scene_buffer_set_buffer(popover_scene_buffer_, wlr_buf);
-    
-    // Position the scene node at the popover's screen coordinates
-    wlr_scene_node_set_position(&popover_scene_buffer_->node, popover_x, popover_y);
-    
-    // Raise to top to ensure it appears above windows
-    wlr_scene_node_raise_to_top(&popover_scene_buffer_->node);
-    
-    // Make sure the node is visible
-    wlr_scene_node_set_enabled(&popover_scene_buffer_->node, true);
-    
-    LOG_DEBUG_FMT("Popover rendered and uploaded to Top layer at ({}, {})", popover_x, popover_y);
-    
-    is_rendering_popover_ = false;
-}
-
 void StatusBar::Render() {
     //LOG_DEBUG_FMT("StatusBar::Render() called for '{}'", config_.name);
     RenderToBuffer();
@@ -882,7 +657,10 @@ bool StatusBar::HandleClick(int x, int y) {
         if (needs_render) {
             LOG_DEBUG("Widget handled click, triggering render");
             Render();
-            RenderPopoverToTopLayer();  // Update popover layer after click
+            // Let LayerManager handle popover rendering globally
+            if (layer_manager_) {
+                layer_manager_->RenderPopovers();
+            }
         }
         return handled;
     }
@@ -904,7 +682,10 @@ bool StatusBar::HandleClick(int x, int y) {
                 if (popover && popover->IsVisible()) {
                     if (popover->HandleHover(x, y)) {
                         Render();  // Re-render to show hover effects
-                        RenderPopoverToTopLayer();  // Update popover layer
+                        // Let LayerManager handle popover rendering globally
+                        if (layer_manager_) {
+                            layer_manager_->RenderPopovers();
+                        }
                         return true;
                     }
                 }

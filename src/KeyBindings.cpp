@@ -1,16 +1,51 @@
 #include "KeyBindings.hpp"
 #include "wayland/Server.hpp"
+#include "ui/MenuBarManager.hpp"
 #include "Logger.hpp"
-
-#include <iostream>
-#include <cstdlib>
 
 namespace Leviathan {
 
 using Wayland::Server;
 
+// Static instance
+KeyBindings* KeyBindings::instance_ = nullptr;
+
 KeyBindings::KeyBindings(Server* server)
-    : server_(server) {
+    : server_(server)
+    , action_registry_(std::make_unique<ActionRegistry>(server)) {
+    
+    // Register custom spawn actions with specific commands
+    action_registry_->RegisterAction({
+        .name = "open-terminal",
+        .description = "Open a new terminal window",
+        .type = ActionType::SPAWN,
+        .params = {{"command", "alacritty"}}
+    });
+    
+    action_registry_->RegisterAction({
+        .name = "open-browser",
+        .description = "Open web browser",
+        .type = ActionType::SPAWN,
+        .params = {{"command", "firefox"}}
+    });
+    
+    // Register tag switch actions
+    for (int i = 0; i < 9; ++i) {
+        action_registry_->RegisterAction({
+            .name = "switch-to-tag-" + std::to_string(i + 1),
+            .description = "Switch to tag " + std::to_string(i + 1),
+            .type = ActionType::SWITCH_TO_TAG,
+            .params = {{"tag_index", std::to_string(i)}}
+        });
+        
+        action_registry_->RegisterAction({
+            .name = "move-to-tag-" + std::to_string(i + 1),
+            .description = "Move focused window to tag " + std::to_string(i + 1),
+            .type = ActionType::MOVE_TO_TAG,
+            .params = {{"tag_index", std::to_string(i)}}
+        });
+    }
+    
     SetupDefaultBindings();
 }
 
@@ -19,114 +54,40 @@ void KeyBindings::SetupDefaultBindings() {
     uint32_t mod = MOD_SUPER;
     
     // Window management
-    bindings_.push_back({mod, XKB_KEY_Return, [this]() {
-        // Launch terminal
-        system("alacritty &");
-    }});
-    
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_C, [this]() {
-        server_->CloseView(nullptr);
-    }});
-    
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_Q, [this]() {
-        exit(0);
-    }});
+    AddBinding(mod, XKB_KEY_Return, "open-terminal");
+    AddBinding(mod | MOD_SHIFT, XKB_KEY_C, "close-window");
+    AddBinding(mod | MOD_SHIFT, XKB_KEY_Q, "shutdown");
     
     // Focus navigation
-    bindings_.push_back({mod, XKB_KEY_j, [this]() {
-        server_->FocusNext();
-    }});
-    
-    bindings_.push_back({mod, XKB_KEY_k, [this]() {
-        server_->FocusPrev();
-    }});
+    AddBinding(mod, XKB_KEY_j, "focus-next");
+    AddBinding(mod, XKB_KEY_k, "focus-prev");
     
     // Window swapping
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_J, [this]() {
-        server_->SwapWithNext();
-    }});
+    AddBinding(mod | MOD_SHIFT, XKB_KEY_J, "swap-next");
+    AddBinding(mod | MOD_SHIFT, XKB_KEY_K, "swap-prev");
     
-    bindings_.push_back({mod | MOD_SHIFT, XKB_KEY_K, [this]() {
-        server_->SwapWithPrev();
-    }});
+    // Floating and fullscreen
+    AddBinding(mod, XKB_KEY_f, "toggle-floating");
+    AddBinding(mod | MOD_SHIFT, XKB_KEY_F, "toggle-fullscreen");
     
-    // Layout control
-    bindings_.push_back({mod, XKB_KEY_h, [this]() {
-        auto* screen = server_->GetFocusedScreen();
-        if (!screen) return;
-        auto* mgr = server_->GetLayerManagerForScreen(screen);
-        if (mgr) mgr->DecreaseMasterRatio();
-    }});
-    
-    bindings_.push_back({mod, XKB_KEY_l, [this]() {
-        auto* screen = server_->GetFocusedScreen();
-        if (!screen) return;
-        auto* mgr = server_->GetLayerManagerForScreen(screen);
-        if (mgr) mgr->IncreaseMasterRatio();
-    }});
-    
-    bindings_.push_back({mod, XKB_KEY_i, [this]() {
-        auto* screen = server_->GetFocusedScreen();
-        if (!screen) return;
-        auto* mgr = server_->GetLayerManagerForScreen(screen);
-        if (mgr) mgr->IncreaseMasterCount();
-    }});
-    
-    bindings_.push_back({mod, XKB_KEY_d, [this]() {
-        auto* screen = server_->GetFocusedScreen();
-        if (!screen) return;
-        auto* mgr = server_->GetLayerManagerForScreen(screen);
-        if (mgr) mgr->DecreaseMasterCount();
-    }});
-    
-    // Layout switching
-    bindings_.push_back({mod, XKB_KEY_t, [this]() {
-        auto* screen = server_->GetFocusedScreen();
-        if (!screen) return;
-        auto* mgr = server_->GetLayerManagerForScreen(screen);
-        if (mgr) mgr->SetLayout(LayoutType::MASTER_STACK);
-    }});
-    
-    bindings_.push_back({mod, XKB_KEY_m, [this]() {
-        auto* screen = server_->GetFocusedScreen();
-        if (!screen) return;
-        auto* mgr = server_->GetLayerManagerForScreen(screen);
-        if (mgr) mgr->SetLayout(LayoutType::MONOCLE);
-    }});
-    
-    bindings_.push_back({mod, XKB_KEY_g, [this]() {
-        auto* screen = server_->GetFocusedScreen();
-        if (!screen) return;
-        auto* mgr = server_->GetLayerManagerForScreen(screen);
-        if (mgr) mgr->SetLayout(LayoutType::GRID);
-    }});
-    
-    // Workspace switching (1-9)
+    // Tag switching (1-9)
     for (int i = 1; i <= 9; ++i) {
         xkb_keysym_t key = XKB_KEY_1 + (i - 1);
-        bindings_.push_back({mod, key, [this, i]() {
-            server_->SwitchToTag(i - 1);
-        }});
-        
-        // Move window to tag
-        bindings_.push_back({mod | MOD_SHIFT, key, [this, i]() {
-            auto* screen = server_->GetFocusedScreen();
-            if (!screen) return;
-            auto* mgr = server_->GetLayerManagerForScreen(screen);
-            auto* client = server_->GetFocusedClient();
-            if (mgr && client) mgr->MoveClientToTag(client, i - 1);
-        }});
+        AddBinding(mod, key, "switch-to-tag-" + std::to_string(i));
+        AddBinding(mod | MOD_SHIFT, key, "move-to-tag-" + std::to_string(i));
     }
     
-    // Application launcher
-    bindings_.push_back({mod, XKB_KEY_p, [this]() {
-        system("rofi -show run &");
-    }});
+    // Application launcher / menubar
+    AddBinding(mod, XKB_KEY_p, "toggle-menubar");
     
-    // Help window
-    bindings_.push_back({mod, XKB_KEY_F1, [this]() {
-        system("leviathan-help &");
-    }});
+    // Help
+    AddBinding(mod, XKB_KEY_F1, "show-help");
+    
+    LOG_INFO_FMT("Loaded {} key bindings", bindings_.size());
+}
+
+void KeyBindings::AddBinding(uint32_t modifiers, xkb_keysym_t keysym, const std::string& action_name) {
+    bindings_.push_back({modifiers, keysym, action_name});
 }
 
 bool KeyBindings::HandleKeyPress(uint32_t modifiers, xkb_keysym_t keysym) {
@@ -143,25 +104,16 @@ bool KeyBindings::HandleKeyPress(uint32_t modifiers, xkb_keysym_t keysym) {
             char key_name[64];
             xkb_keysym_get_name(keysym, key_name, sizeof(key_name));
             
-            LOG_INFO_FMT("Keybinding triggered: {}{}", mod_str, key_name);
+            LOG_DEBUG_FMT("Keybinding triggered: {}{} -> {}", mod_str, key_name, binding.action_name);
             
-            binding.action();
-            return true;
+            // Execute the action
+            if (action_registry_->ExecuteAction(binding.action_name)) {
+                return true;
+            } else {
+                LOG_ERROR_FMT("Failed to execute action: {}", binding.action_name);
+                return false;
+            }
         }
-    }
-    
-    // Log unmatched key presses with modifiers (for debugging)
-    if (modifiers != MOD_NONE) {
-        std::string mod_str;
-        if (modifiers & MOD_SUPER) mod_str += "Super+";
-        if (modifiers & MOD_SHIFT) mod_str += "Shift+";
-        if (modifiers & MOD_CTRL)  mod_str += "Ctrl+";
-        if (modifiers & MOD_ALT)   mod_str += "Alt+";
-        
-        char key_name[64];
-        xkb_keysym_get_name(keysym, key_name, sizeof(key_name));
-        
-        LOG_DEBUG_FMT("No keybinding for: {}{}", mod_str, key_name);
     }
     
     return false;

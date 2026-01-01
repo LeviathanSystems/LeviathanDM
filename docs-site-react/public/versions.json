@@ -1,0 +1,79 @@
+{
+  "versions": [
+    {
+      "name": "v0.0.4",
+      "title": "v0.0.4 (Latest)",
+      "path": "/docs",
+      "default": true,
+      "badge": "Latest",
+      "badgeColor": "#51cf66"
+    },
+    {
+      "name": "v0.0.3",
+      "title": "v0.0.3",
+      "path": "/v0.0.3",
+      "badge": "Previous",
+      "badgeColor": "#868e96"
+    },
+    {
+      "name": "v0.0.2",
+      "title": "v0.0.2",
+      "path": "/v0.0.2",
+      "badge": "Previous",
+      "badgeColor": "#868e96"
+    },
+    {
+      "name": "v0.0.1",
+      "title": "v0.0.1",
+      "path": "/v0.0.1",
+      "badge": "Previous",
+      "badgeColor": "#868e96"
+    }
+  ],
+  "features": {
+    "hierarchical-coordinates": {
+      "since": "v0.0.4",
+      "description": "Proper hierarchical coordinate system with cairo_translate for rendering"
+    },
+    "widget-absolute-positioning": {
+      "since": "v0.0.4",
+      "description": "GetAbsoluteX/Y methods for calculating screen coordinates in nested widgets"
+    },
+    "scroll-support": {
+      "since": "v0.0.4",
+      "description": "ScrollView widget and HandleScroll event system for scrollable modal content"
+    },
+    "layermanager-popovers": {
+      "since": "v0.0.4",
+      "description": "Centralized popover rendering in LayerManager for consistency with modals"
+    },
+    "widget-based-popovers": {
+      "since": "v0.0.3",
+      "description": "Composable widget system for building popovers with VBox, HBox, and Label"
+    },
+    "ipopover-provider": {
+      "since": "v0.0.3",
+      "description": "Interface-based pattern for widgets with popover functionality"
+    },
+    "window-decorations": {
+      "since": "v0.0.2",
+      "description": "Advanced window styling with borders, opacity, and shadows"
+    },
+    "wallpapers": {
+      "since": "v0.0.2",
+      "description": "Wallpaper system with rotation support"
+    },
+    "notifications": {
+      "since": "v0.0.2",
+      "description": "Built-in notification daemon"
+    },
+    "status-bar": {
+      "since": "v0.0.1",
+      "description": "Customizable status bar"
+    },
+    "plugins": {
+      "since": "v0.0.1",
+      "description": "Widget plugin system"
+    }
+  }
+}

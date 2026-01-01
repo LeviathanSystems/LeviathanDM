@@ -24,6 +24,8 @@ std::string CommandTypeToString(CommandType type) {
         case CommandType::GET_VERSION: return "get_version";
         case CommandType::GET_PLUGIN_STATS: return "get_plugin_stats";
         case CommandType::PING: return "ping";
+        case CommandType::SHUTDOWN: return "shutdown";
+        case CommandType::EXECUTE_ACTION: return "execute_action";
         default: return "unknown";
     }
 }
@@ -38,6 +40,8 @@ CommandType StringToCommandType(const std::string& str) {
     if (str == "get_version") return CommandType::GET_VERSION;
     if (str == "get_plugin_stats") return CommandType::GET_PLUGIN_STATS;
     if (str == "ping") return CommandType::PING;
+    if (str == "shutdown") return CommandType::SHUTDOWN;
+    if (str == "execute_action") return CommandType::EXECUTE_ACTION;
     return CommandType::UNKNOWN;
 }
 
@@ -134,7 +138,7 @@ std::string SerializeResponse(const Response& response) {
 }
 
 // IPC Server implementation
-Server::Server() : socket_fd(-1) {
+Server::Server() : socket_fd(-1), current_client_uid_(-1) {
     const char* runtime_dir = getenv("XDG_RUNTIME_DIR");
     if (runtime_dir) {
         socket_path = std::string(runtime_dir) + "/leviathan-ipc.sock";
@@ -221,11 +225,23 @@ void Server::HandleClient(int client_fd) {
     buffer[n] = '\0';
     std::string command(buffer);
     
+    // Get peer UID for security checks
+    uid_t peer_uid;
+    if (GetPeerUid(client_fd, peer_uid)) {
+        current_client_uid_ = static_cast<int>(peer_uid);
+    } else {
+        current_client_uid_ = -1;
+        LOG_WARN("Failed to get peer UID for IPC client");
+    }
+    
     // Process command and send response
     Response response = ProcessCommand(command);
     std::string response_str = SerializeResponse(response);
     
     write(client_fd, response_str.c_str(), response_str.length());
+    
+    // Clear client UID
+    current_client_uid_ = -1;
     
     // Close connection after response
     close(client_fd);
@@ -242,6 +258,18 @@ void Server::HandleEvents() {
     for (int client_fd : client_fds) {
         HandleClient(client_fd);
     }
+}
+
+bool Server::GetPeerUid(int client_fd, uid_t& uid) {
+    struct ucred cred;
+    socklen_t len = sizeof(cred);
+    
+    if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == -1) {
+        return false;
+    }
+    
+    uid = cred.uid;
+    return true;
 }
 
 Response Server::ProcessCommand(const std::string& command_str) {

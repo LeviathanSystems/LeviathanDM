@@ -1,6 +1,7 @@
 #include "wayland/LayerManager.hpp"
 #include "wayland/WaylandTypes.hpp"
 #include "wayland/View.hpp"
+#include "wayland/Server.hpp"
 #include "core/Tag.hpp"
 #include "core/Client.hpp"
 #include "core/Events.hpp"
@@ -8,6 +9,12 @@
 #include "config/ConfigParser.hpp"
 #include "ui/StatusBar.hpp"
 #include "ui/ShmBuffer.hpp"
+#include "ui/ModalManager.hpp"
+#include "ui/reusable-widgets/BaseModal.hpp"
+#include "ui/reusable-widgets/Popover.hpp"
+#include "ui/reusable-widgets/Container.hpp"
+#include "ui/BaseWidget.hpp"
+#include "ui/IPopoverProvider.hpp"
 #include "Logger.hpp"
 #include "Types.hpp"  // For LayoutType
 
@@ -19,6 +26,8 @@
 #include <cstring>
 #include <cstdlib>  // For malloc/free
 #include <cstdint>  // For uint32_t
+#include <functional>
+#include <unordered_map>
 
 namespace Leviathan {
 namespace Wayland {
@@ -56,6 +65,17 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, s
 LayerManager::~LayerManager() {
     // Clean up wallpaper
     ClearWallpaper();
+    
+    // Clean up popover rendering resources
+    if (popover_cairo_) {
+        cairo_destroy(popover_cairo_);
+    }
+    if (popover_cairo_surface_) {
+        cairo_surface_destroy(popover_cairo_surface_);
+    }
+    if (popover_shm_buffer_) {
+        wlr_buffer_drop(popover_shm_buffer_->GetWlrBuffer());
+    }
     
     // Clean up layout engine
     delete layout_engine_;
@@ -186,6 +206,14 @@ void LayerManager::RemoveStatusBar(Leviathan::StatusBar* bar) {
     }
 }
 
+void LayerManager::ClearAllStatusBars() {
+    for (auto* bar : status_bars_) {
+        delete bar;
+    }
+    status_bars_.clear();
+    LOG_DEBUG_FMT("Cleared all status bars for output '{}'", output_->name);
+}
+
 void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
                                    const StatusBarsConfig& all_bars_config,
                                    uint32_t output_width,
@@ -275,6 +303,65 @@ void LayerManager::InitializeTags(const std::vector<TagConfig>& tag_configs) {
     LOG_INFO_FMT("Initialized {} tags for output '{}'", tags_.size(), output_->name);
 }
 
+void LayerManager::ToggleModal(const std::string& modal_name) {
+    // Check if modal is currently active
+    auto it = active_modals_.find(modal_name);
+    
+    if (it != active_modals_.end()) {
+        // Modal exists, check if visible
+        if (it->second->IsVisible()) {
+            // Hide it
+            it->second->Hide();
+            LOG_INFO_FMT("Closed modal: '{}'", modal_name);
+            RenderModals();  // Re-render to hide modal
+        } else {
+            // Show it
+            it->second->Show();
+            LOG_INFO_FMT("Opened modal: '{}'", modal_name);
+            RenderModals();  // Render the modal
+        }
+    } else {
+        // Modal doesn't exist, create it from registry
+        auto modal = UI::ModalManager::GetModal(modal_name);
+        if (!modal) {
+            LOG_ERROR_FMT("Failed to create modal: '{}'", modal_name);
+            return;
+        }
+        
+        // Set screen size
+        modal->SetScreenSize(output_->width, output_->height);
+        
+        // Show and store the modal
+        modal->Show();
+        active_modals_[modal_name] = std::move(modal);
+        LOG_INFO_FMT("Created and opened modal: '{}'", modal_name);
+        RenderModals();  // Render the modal
+    }
+}
+
+bool LayerManager::HasVisibleModal() const {
+    for (const auto& [name, modal] : active_modals_) {
+        if (modal && modal->IsVisible()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LayerManager::HandleModalScroll(int x, int y, double delta_x, double delta_y) {
+    for (const auto& [name, modal] : active_modals_) {
+        if (modal && modal->IsVisible()) {
+            if (modal->HandleScroll(x, y, delta_x, delta_y)) {
+                // Modal handled the scroll, trigger re-render
+                RenderModals();
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Tag management
 void LayerManager::SwitchToTag(int index) {
     if (index < 0 || index >= static_cast<int>(tags_.size())) {
         LOG_WARN_FMT("Invalid tag index {} for output '{}' (has {} tags)", 
@@ -711,6 +798,303 @@ int LayerManager::WallpaperRotationCallback(void* data) {
     LayerManager* manager = static_cast<LayerManager*>(data);
     manager->NextWallpaper();
     return 0;  // Timer will be re-armed in SetWallpaper if needed
+}
+
+void LayerManager::RenderModals() {
+    // Find the topmost visible modal
+    UI::Modal* visible_modal = nullptr;
+    for (auto& [name, modal] : active_modals_) {
+        if (modal && modal->IsVisible()) {
+            visible_modal = modal.get();
+            // Could support multiple modals by continuing, but for now just use the first
+            break;
+        }
+    }
+    
+    // If no visible modal, hide the scene buffer
+    if (!visible_modal) {
+        if (modal_scene_buffer_) {
+            wlr_scene_node_set_enabled(&modal_scene_buffer_->node, false);
+        }
+        LOG_DEBUG("No visible modal, hiding modal scene buffer");
+        return;
+    }
+    
+    LOG_DEBUG("Rendering visible modal to top layer");
+    
+    // Modal always renders full screen
+    int modal_width = output_->width;
+    int modal_height = output_->height;
+    
+    // Create SHM buffer if it doesn't exist
+    // Note: We recreate on every render for simplicity
+    // Could optimize by caching and only recreating on size change
+    if (modal_shm_buffer_) {
+        // Drop the old buffer (reference counted)
+        wlr_buffer_drop(modal_shm_buffer_->GetWlrBuffer());
+        modal_shm_buffer_ = nullptr;
+    }
+    
+    LOG_DEBUG_FMT("Creating modal buffer: {}x{}", modal_width, modal_height);
+    modal_shm_buffer_ = ShmBuffer::Create(modal_width, modal_height);
+    if (!modal_shm_buffer_) {
+        LOG_ERROR("Failed to create SHM buffer for modal");
+        return;
+    }
+    
+    // Create Cairo surface for rendering
+    cairo_surface_t* surface = cairo_image_surface_create_for_data(
+        reinterpret_cast<unsigned char*>(modal_shm_buffer_->GetData()),
+        CAIRO_FORMAT_ARGB32,
+        modal_width, modal_height,
+        modal_shm_buffer_->GetStride()
+    );
+    
+    if (!surface) {
+        LOG_ERROR("Failed to create Cairo surface for modal");
+        return;
+    }
+    
+    cairo_t* cr = cairo_create(surface);
+    if (!cr) {
+        LOG_ERROR("Failed to create Cairo context for modal");
+        cairo_surface_destroy(surface);
+        return;
+    }
+    
+    // Clear buffer (transparent)
+    cairo_save(cr);
+    cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(cr);
+    cairo_restore(cr);
+    
+    // Render the modal
+    visible_modal->Render(cr);
+    
+    // Flush Cairo
+    cairo_surface_flush(surface);
+    
+    // Cleanup Cairo resources
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    
+    // Create or update scene buffer in Top layer
+    auto* top_layer = GetTopLayer();
+    if (!modal_scene_buffer_ && top_layer) {
+        modal_scene_buffer_ = wlr_scene_buffer_create(
+            top_layer,
+            modal_shm_buffer_->GetWlrBuffer()
+        );
+        
+        if (!modal_scene_buffer_) {
+            LOG_ERROR("Failed to create scene buffer for modal");
+            return;
+        }
+        
+        // Position at (0, 0) since modal covers full screen
+        wlr_scene_node_set_position(&modal_scene_buffer_->node, 0, 0);
+        LOG_DEBUG("Created modal scene buffer in Top layer");
+    } else if (modal_scene_buffer_) {
+        // Update existing buffer
+        wlr_scene_buffer_set_buffer(modal_scene_buffer_, modal_shm_buffer_->GetWlrBuffer());
+        LOG_DEBUG("Updated modal scene buffer");
+    }
+    
+    // Ensure the scene buffer is visible
+    if (modal_scene_buffer_) {
+        wlr_scene_node_set_enabled(&modal_scene_buffer_->node, true);
+        LOG_INFO("Modal rendered and displayed on Top layer");
+    }
+}
+
+void LayerManager::RenderPopovers() {
+    // Guard against recursive calls
+    if (is_rendering_popover_) {
+        LOG_WARN("Preventing recursive popover rendering");
+        return;
+    }
+    is_rendering_popover_ = true;
+    
+    // Find any visible popover in all status bars
+    std::shared_ptr<UI::Popover> visible_popover = nullptr;
+    int popover_x = 0, popover_y = 0;
+    
+    // Recursive function to find visible popover in widget tree
+    auto find_popover = [&](const std::shared_ptr<UI::Widget>& widget, auto& self) -> void {
+        if (visible_popover) return;  // Already found one
+        
+        // Check if widget implements IPopoverProvider
+        if (auto popover_provider = std::dynamic_pointer_cast<UI::IPopoverProvider>(widget)) {
+            if (popover_provider->HasPopover()) {
+                auto popover = popover_provider->GetPopover();
+                if (popover && popover->IsVisible()) {
+                    visible_popover = popover;
+                    // Get popover position (already in screen coordinates)
+                    popover->GetPosition(popover_x, popover_y);
+                    LOG_DEBUG_FMT("Found visible popover at ({}, {})", popover_x, popover_y);
+                    return;
+                }
+            }
+        }
+        
+        // Recursively check children if this is a container
+        if (auto container = std::dynamic_pointer_cast<UI::Container>(widget)) {
+            for (const auto& child : container->GetChildren()) {
+                self(child, self);
+            }
+        }
+    };
+    
+    // Search through all status bars for visible popovers
+    for (auto* status_bar : status_bars_) {
+        if (status_bar && status_bar->GetRootContainer()) {
+            find_popover(status_bar->GetRootContainer(), find_popover);
+            if (visible_popover) break;  // Found one, stop searching
+        }
+    }
+    
+    // If no visible popover, hide the Top layer buffer
+    if (!visible_popover) {
+        if (popover_scene_buffer_) {
+            wlr_scene_node_set_enabled(&popover_scene_buffer_->node, false);
+        }
+        is_rendering_popover_ = false;
+        return;
+    }
+    
+    LOG_DEBUG("Found visible popover, rendering it");
+    
+    // Get popover dimensions
+    int popover_width = 0, popover_height = 0;
+    visible_popover->GetSize(popover_width, popover_height);
+    
+    // Validate dimensions
+    if (popover_width <= 0 || popover_height <= 0) {
+        LOG_ERROR_FMT("Invalid popover dimensions: {}x{}", popover_width, popover_height);
+        if (popover_scene_buffer_) {
+            wlr_scene_node_set_enabled(&popover_scene_buffer_->node, false);
+        }
+        is_rendering_popover_ = false;
+        return;
+    }
+    
+    // Adjust popover position to keep it on screen
+    int output_width = output_->width;
+    int output_height = output_->height;
+    
+    if (popover_x + popover_width > output_width) {
+        popover_x = output_width - popover_width;
+    }
+    if (popover_y + popover_height > output_height) {
+        popover_y = output_height - popover_height;
+    }
+    if (popover_x < 0) popover_x = 0;
+    if (popover_y < 0) popover_y = 0;
+    
+    LOG_DEBUG_FMT("Rendering popover at ({}, {}) size {}x{}", 
+              popover_x, popover_y, popover_width, popover_height);
+    
+    // Create or recreate SHM buffer if size changed
+    bool need_new_buffer = false;
+    if (!popover_shm_buffer_) {
+        need_new_buffer = true;
+    } else {
+        int current_width = cairo_image_surface_get_width(popover_cairo_surface_);
+        int current_height = cairo_image_surface_get_height(popover_cairo_surface_);
+        if (current_width != popover_width || current_height != popover_height) {
+            need_new_buffer = true;
+        }
+    }
+    
+    if (need_new_buffer) {
+        // Cleanup old resources
+        if (popover_cairo_) {
+            cairo_destroy(popover_cairo_);
+            popover_cairo_ = nullptr;
+        }
+        if (popover_cairo_surface_) {
+            cairo_surface_destroy(popover_cairo_surface_);
+            popover_cairo_surface_ = nullptr;
+        }
+        if (popover_shm_buffer_) {
+            wlr_buffer_drop(popover_shm_buffer_->GetWlrBuffer());
+            popover_shm_buffer_ = nullptr;
+            popover_buffer_data_ = nullptr;
+        }
+        
+        // Create new buffer
+        popover_shm_buffer_ = ShmBuffer::Create(popover_width, popover_height);
+        if (!popover_shm_buffer_) {
+            LOG_ERROR("Failed to create SHM buffer for popover");
+            is_rendering_popover_ = false;
+            return;
+        }
+        
+        popover_buffer_data_ = static_cast<uint32_t*>(popover_shm_buffer_->GetData());
+        
+        // Create Cairo surface
+        popover_cairo_surface_ = cairo_image_surface_create_for_data(
+            reinterpret_cast<unsigned char*>(popover_buffer_data_),
+            CAIRO_FORMAT_ARGB32,
+            popover_width,
+            popover_height,
+            popover_shm_buffer_->GetStride()
+        );
+        
+        popover_cairo_ = cairo_create(popover_cairo_surface_);
+        popover_buffer_attached_ = false;
+    }
+    
+    // Clear the popover surface (fully transparent)
+    cairo_save(popover_cairo_);
+    cairo_set_operator(popover_cairo_, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(popover_cairo_);
+    cairo_restore(popover_cairo_);
+    
+    // Render the popover at (0, 0) on its own surface
+    // Save and restore position since popover renders to its own surface
+    int saved_x, saved_y;
+    visible_popover->GetPosition(saved_x, saved_y);
+    visible_popover->SetPosition(0, 0);
+    visible_popover->Render(popover_cairo_);
+    visible_popover->SetPosition(saved_x, saved_y);
+    
+    cairo_surface_flush(popover_cairo_surface_);
+    
+    // Upload to scene buffer
+    if (!popover_shm_buffer_ || !popover_cairo_) {
+        LOG_WARN("Cannot upload popover - missing buffer or cairo");
+        is_rendering_popover_ = false;
+        return;
+    }
+    
+    wlr_buffer* wlr_buf = popover_shm_buffer_->GetWlrBuffer();
+    
+    // Create or update scene buffer in Top layer
+    auto* top_layer = GetTopLayer();
+    if (!popover_scene_buffer_ && top_layer) {
+        popover_scene_buffer_ = wlr_scene_buffer_create(top_layer, wlr_buf);
+        if (!popover_scene_buffer_) {
+            LOG_ERROR("Failed to create popover scene buffer");
+            is_rendering_popover_ = false;
+            return;
+        }
+        wlr_scene_node_set_position(&popover_scene_buffer_->node, popover_x, popover_y);
+        popover_buffer_attached_ = true;
+        LOG_INFO("Created popover scene buffer in Top layer");
+    } else if (popover_scene_buffer_) {
+        wlr_scene_buffer_set_buffer(popover_scene_buffer_, wlr_buf);
+        wlr_scene_node_set_position(&popover_scene_buffer_->node, popover_x, popover_y);
+    }
+    
+    // Raise to top and enable
+    if (popover_scene_buffer_) {
+        wlr_scene_node_raise_to_top(&popover_scene_buffer_->node);
+        wlr_scene_node_set_enabled(&popover_scene_buffer_->node, true);
+        LOG_DEBUG_FMT("Popover rendered and uploaded to Top layer at ({}, {})", popover_x, popover_y);
+    }
+    
+    is_rendering_popover_ = false;
 }
 
 } // namespace Wayland

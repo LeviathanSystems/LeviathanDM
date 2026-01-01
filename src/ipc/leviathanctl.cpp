@@ -18,10 +18,14 @@ void print_usage(const char* prog) {
     std::cout << "  set-active-tag <name>   - Switch to specified tag\n";
     std::cout << "  get-layout              - Get current layout mode\n";
     std::cout << "  get-plugin-stats        - Show memory usage per plugin\n";
+    std::cout << "  action <name>           - Execute an action by name\n";
+    std::cout << "  shutdown                - Gracefully shutdown the compositor\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << prog << " ping\n";
     std::cout << "  " << prog << " get-clients\n";
     std::cout << "  " << prog << " set-active-tag 2\n";
+    std::cout << "  " << prog << " action show-help\n";
+    std::cout << "  " << prog << " shutdown\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -70,6 +74,26 @@ int main(int argc, char* argv[]) {
         cmd_type = CommandType::GET_LAYOUT;
     } else if (command == "get-plugin-stats") {
         cmd_type = CommandType::GET_PLUGIN_STATS;
+    } else if (command == "action") {
+        if (argc < 3) {
+            std::cerr << "Error: action requires an action name\n";
+            return 1;
+        }
+        cmd_type = CommandType::EXECUTE_ACTION;
+        args["action"] = argv[2];
+    } else if (command == "shutdown") {
+        cmd_type = CommandType::SHUTDOWN;
+        
+        // Confirm shutdown action
+        std::cout << "This will gracefully shutdown the LeviathanDM compositor.\n";
+        std::cout << "Are you sure? [y/N] ";
+        std::string confirmation;
+        std::getline(std::cin, confirmation);
+        
+        if (confirmation != "y" && confirmation != "Y" && confirmation != "yes") {
+            std::cout << "Shutdown cancelled.\n";
+            return 0;
+        }
     } else {
         std::cerr << "Error: Unknown command '" << command << "'\n";
         print_usage(argv[0]);
@@ -85,6 +109,13 @@ int main(int argc, char* argv[]) {
     if (!response->success) {
         std::cerr << "Error: " << response->error << "\n";
         return 1;
+    }
+    
+    // Handle shutdown command specially
+    if (command == "shutdown") {
+        std::cout << "✓ Shutdown initiated successfully\n";
+        std::cout << "The compositor is shutting down gracefully...\n";
+        return 0;
     }
     
     // Pretty-print specific command outputs
