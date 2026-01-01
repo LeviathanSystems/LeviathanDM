@@ -46,12 +46,14 @@ function App() {
 
   const allRoutes = getAllRoutes();
 
+  const basename = import.meta.env.BASE_URL || '/';
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <VersionProvider>
         <TOCProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={basename}>
             <Routes>
               <Route path="/" element={<Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
                 <Route index element={<Navigate to="/docs/getting-started/building" replace />} />
