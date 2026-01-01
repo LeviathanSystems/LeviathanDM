@@ -1,16 +1,12 @@
 /*
  * WaylandTypes.hpp
  * 
- * Wayland and wlroots type definitions #include <wlr/types/wlr_pointer.h>
-#include <wlr/util/box.h>
-#include <wlr/util/log.h>
-#include <libinput.h>
-#include <xkbcommon/xkbcommon.h>
-}
+ * Wayland and wlroots type definitions }
 
-// Restore static and namespace keywords for C++ code
+// Restore static keyword for C++ code
 #undef static
-#undef namespace compatibility
+
+#endif // WAYLAND_TYPES_HPPcompatibility
  * This header handles the C99 syntax incompatibility between wlroots and C++
  */
 

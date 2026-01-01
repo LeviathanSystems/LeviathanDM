@@ -1,5 +1,6 @@
 #include "wayland/LayerSurface.hpp"
 #include "wayland/Server.hpp"
+#include "wayland/Output.hpp"
 #include "wayland/LayerManager.hpp"
 #include "Logger.hpp"
 

@@ -10,6 +10,7 @@
 #include "core/Client.hpp"
 #include "wayland/LayerManager.hpp"
 #include "wayland/WaylandTypes.hpp"
+#include "wayland/XwaylandCompat.hpp"
 #include "ui/CompositorState.hpp"
 
 // Forward declarations
@@ -123,6 +124,10 @@ public:
     struct wl_listener cursor_axis;
     struct wl_listener cursor_frame;
     
+    // Xwayland listeners
+    struct wl_listener xwayland_ready;
+    struct wl_listener new_xwayland_surface;
+    
     // Callbacks (must be public for C callbacks)
     void OnNewOutput(struct wlr_output* output);
     void OnNewXdgSurface(struct wlr_xdg_surface* xdg_surface);
@@ -130,6 +135,8 @@ public:
     void OnNewXdgDecoration(struct wlr_xdg_toplevel_decoration_v1* decoration);
     void OnNewInput(struct wlr_input_device* device);
     void OnSessionActive(bool active);
+    void OnXwaylandReady();
+    void OnNewXwaylandSurface(struct ::wlr_xwayland_surface* xwayland_surface);  // Use global namespace for C types
     
     // Auto-launch application
     void LaunchDefaultTerminal();
@@ -171,6 +178,9 @@ private:
     struct wlr_xdg_shell* xdg_shell;
     struct wlr_xdg_decoration_manager_v1* xdg_decoration_mgr;
     std::vector<View*> views;
+    
+    // Xwayland
+    struct ::wlr_xwayland* xwayland;  // Use global namespace for C types
     
     // Layer shell
     struct wlr_layer_shell_v1* layer_shell;

@@ -8,14 +8,11 @@
 #include <cstdint>
 #include <cstddef>
 
-// Wayland/wlroots types (with C++ compatibility handling)
-#include "wayland/WaylandTypes.hpp"
-
 namespace Leviathan {
 
 // Forward declarations
-class StatusBar;  // For Output
-struct WindowDecorationConfig;  // For View decoration
+class StatusBar;
+struct WindowDecorationConfig;
 
 namespace Core {
     class Seat;
@@ -24,8 +21,8 @@ namespace Core {
 }
 
 namespace Wayland {
-    struct View;
-    struct Output;
+    struct View;  // Defined in wayland/View.hpp
+    struct Output;  // Defined in wayland/Output.hpp
     class Server;
     class LayerManager;
 }
@@ -47,82 +44,6 @@ enum Modifier {
     MOD_SUPER = (1 << 6)
 };
 
-namespace Wayland {
-
-// Forward declaration for Server
-class Server;
-
-// View (window) information structure
-struct View {
-    struct wlr_xdg_toplevel* xdg_toplevel;
-    struct wlr_xdg_toplevel_decoration_v1* decoration;  // XDG decoration object
-    struct wlr_surface* surface;
-    struct wlr_scene_tree* scene_tree;
-    Server* server;  // Reference to server for callbacks
-    
-    // Border rectangles (top, right, bottom, left)
-    struct wlr_scene_rect* border_top;
-    struct wlr_scene_rect* border_right;
-    struct wlr_scene_rect* border_bottom;
-    struct wlr_scene_rect* border_left;
-    
-    // Shadow rectangles (for drop shadow effect)
-    struct wlr_scene_rect* shadow_top;
-    struct wlr_scene_rect* shadow_right;
-    struct wlr_scene_rect* shadow_bottom;
-    struct wlr_scene_rect* shadow_left;
-    
-    int x, y;
-    int width, height;
-    bool is_floating;
-    bool is_fullscreen;
-    bool mapped;
-    float opacity;  // Current window opacity (0.0 - 1.0)
-    int border_radius;  // Border radius in pixels
-    
-    struct wl_listener commit;
-    struct wl_listener map;
-    struct wl_listener unmap;
-    struct wl_listener destroy;
-    struct wl_listener request_move;
-    struct wl_listener request_resize;
-    struct wl_listener request_maximize;
-    struct wl_listener request_fullscreen;
-    struct wl_listener decoration_request_mode;  // Decoration mode request
-    
-    View(struct wlr_xdg_toplevel* toplevel, Server* server);
-    ~View();
-    
-    // Border management
-    void CreateBorders(int border_width, const float color[4]);
-    void UpdateBorderColor(const float color[4]);
-    void UpdateBorderSize(int border_width);
-    void DestroyBorders();
-    
-    // Styling
-    void SetOpacity(float opacity);
-    void SetBorderRadius(int radius);
-    void CreateShadows(int shadow_size, const float color[4], float opacity);
-    void DestroyShadows();
-    void ApplyDecorationConfig(const WindowDecorationConfig& config, bool is_focused);
-};
-
-// Output (monitor) information structure  
-struct Output {
-    struct wlr_output* wlr_output;
-    struct wlr_scene_output* scene_output;  // Store scene output for wlr_scene_output_commit
-    struct wl_listener frame;
-    struct wl_listener destroy;
-    struct wl_list link;
-    Leviathan::Core::Screen* core_screen;  // Core screen object with EDID info
-    Leviathan::Wayland::Server* server;  // Reference to compositor server
-    Leviathan::Wayland::LayerManager* layer_manager;  // Per-output layer management
-    
-    Output(struct wlr_output* output, Leviathan::Wayland::Server* srv);
-    ~Output();
-};
-
-} // namespace Wayland
 } // namespace Leviathan
 
 #endif // TYPES_HPP

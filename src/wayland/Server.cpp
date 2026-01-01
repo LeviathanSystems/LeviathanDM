@@ -80,6 +80,16 @@ static void handle_cursor_frame(struct wl_listener* listener, void* data) {
     InputManager::HandleCursorFrame(listener, data);
 }
 
+static void handle_xwayland_ready(struct wl_listener* listener, void* data) {
+    Server* server = wl_container_of(listener, server, xwayland_ready);
+    server->OnXwaylandReady();
+}
+
+static void handle_new_xwayland_surface(struct wl_listener* listener, void* data) {
+    Server* server = wl_container_of(listener, server, new_xwayland_surface);
+    server->OnNewXwaylandSurface(static_cast<struct ::wlr_xwayland_surface*>(data));
+}
+
 Server::Server()
     : wl_display(nullptr)
     , wl_event_loop(nullptr)
@@ -96,6 +106,7 @@ Server::Server()
     , scene_layout(nullptr)
     , output_layout(nullptr)
     , xdg_shell(nullptr)
+    , xwayland(nullptr)
     , cursor(nullptr)
     , cursor_mgr(nullptr)
     , seat(nullptr)
@@ -155,6 +166,33 @@ Server::~Server() {
     
     // core_seat_ is a unique_ptr, it will automatically clean up (and delete tags)
     // Outputs are cleaned up by wlroots destroy callbacks
+    
+    // CRITICAL: Remove all event listeners before destroying display
+    // This prevents wlroots assertion failures: wl_list_empty(&backend->events.new_input.listener_list)
+    LOG_INFO("Removing event listeners...");
+    wl_list_remove(&new_output.link);
+    wl_list_remove(&new_xdg_toplevel.link);
+    wl_list_remove(&new_xdg_decoration.link);
+    wl_list_remove(&new_layer_surface.link);
+    wl_list_remove(&new_input.link);
+    wl_list_remove(&cursor_motion.link);
+    wl_list_remove(&cursor_motion_absolute.link);
+    wl_list_remove(&cursor_button.link);
+    wl_list_remove(&cursor_axis.link);
+    wl_list_remove(&cursor_frame.link);
+    wl_list_remove(&request_cursor.link);
+    wl_list_remove(&request_set_selection.link);
+    
+    // Remove session listener if present
+    if (session) {
+        wl_list_remove(&session_active.link);
+    }
+    
+    // Remove Xwayland listeners if present
+    if (xwayland) {
+        wl_list_remove(&xwayland_ready.link);
+        wl_list_remove(&new_xwayland_surface.link);
+    }
     
     LOG_INFO("Destroying Wayland display...");
     if (wl_display) {
@@ -255,6 +293,20 @@ bool Server::Initialize() {
     // Listen for new toplevels (this fires when client actually creates a toplevel window)
     new_xdg_toplevel.notify = handle_new_xdg_toplevel;
     wl_signal_add(&xdg_shell->events.new_toplevel, &new_xdg_toplevel);
+    
+    // Create Xwayland server for X11 compatibility
+    xwayland = wlr_xwayland_create(wl_display, compositor, true);
+    if (xwayland) {
+        xwayland_ready.notify = handle_xwayland_ready;
+        wl_signal_add(xwayland_get_ready_signal(xwayland), &xwayland_ready);
+        
+        new_xwayland_surface.notify = handle_new_xwayland_surface;
+        wl_signal_add(xwayland_get_new_surface_signal(xwayland), &new_xwayland_surface);
+        
+        LOG_INFO("Xwayland support enabled");
+    } else {
+        LOG_WARN("Failed to create Xwayland server - X11 apps will not work");
+    }
     
     // Create cursor for input tracking
     cursor = wlr_cursor_create();
@@ -914,6 +966,89 @@ void Server::OnSessionActive(bool active) {
         LOG_INFO("Session became inactive - VT switched away");
         // When VT switches away, wlroots automatically pauses output
     }
+}
+
+void Server::OnXwaylandReady() {
+    LOG_INFO("Xwayland server is ready");
+    
+    // Set the X11 display environment variable for child processes
+    if (xwayland) {
+        const char* display_name = xwayland_get_display_name(xwayland);
+        setenv("DISPLAY", display_name, true);
+        LOG_INFO_FMT("X11 DISPLAY set to {}", display_name);
+        
+        // Set cursor for Xwayland
+        struct wlr_xcursor* xcursor = wlr_xcursor_manager_get_xcursor(cursor_mgr, "default", 1);
+        if (xcursor && xcursor->image_count > 0) {
+            struct wlr_xcursor_image* image = xcursor->images[0];
+            wlr_xwayland_set_cursor(xwayland,
+                                    image->buffer,
+                                    image->width * 4,
+                                    image->width,
+                                    image->height,
+                                    image->hotspot_x,
+                                    image->hotspot_y);
+        }
+    }
+}
+
+void Server::OnNewXwaylandSurface(struct ::wlr_xwayland_surface* xwayland_surface) {
+    const char* title = XWAYLAND_TITLE(xwayland_surface);
+    LOG_INFO_FMT("New Xwayland surface: title='{}'", 
+                 title ? title : "(null)");
+    
+    // Ignore override-redirect windows (popup menus, tooltips, etc.)
+    if (XWAYLAND_OVERRIDE_REDIRECT(xwayland_surface)) {
+        LOG_DEBUG("Ignoring override-redirect window");
+        return;
+    }
+    
+    // Create view for X11 window
+    View* view = new View(xwayland_surface, this);
+    views.push_back(view);
+    
+    // Find first output's WorkingArea layer
+    struct wlr_scene_tree* parent_layer = &scene->tree;  // Fallback to root
+    if (!wl_list_empty(&outputs)) {
+        Output* first_output = wl_container_of(outputs.next, first_output, link);
+        if (first_output && first_output->layer_manager) {
+            parent_layer = first_output->layer_manager->GetLayer(Layer::WorkingArea);
+            LOG_DEBUG("Adding X11 window to WorkingArea layer");
+        }
+    }
+    
+    // Add to scene graph
+    struct wlr_surface* surface = XWAYLAND_SURFACE(xwayland_surface);
+    view->scene_tree = wlr_scene_subsurface_tree_create(parent_layer, surface);
+    if (view->scene_tree) {
+        view->scene_tree->node.data = view;
+        LOG_DEBUG("Created scene tree for X11 window");
+    }
+    
+    // Create client wrapper
+    auto* client = new Core::Client(view);
+    clients_.push_back(client);
+    
+    // Add to core seat
+    core_seat_->AddClient(client);
+    
+    // Add to the focused screen's active tag
+    auto* focused_screen = core_seat_->GetFocusedScreen();
+    if (focused_screen) {
+        Output* iter;
+        wl_list_for_each(iter, &outputs, link) {
+            if (iter->core_screen == focused_screen && iter->layer_manager) {
+                auto* tag = iter->layer_manager->GetCurrentTag();
+                if (tag) {
+                    tag->AddClient(client);
+                    LOG_DEBUG("Added X11 client to current tag");
+                }
+                break;
+            }
+        }
+    }
+    
+    LOG_INFO("X11 window created and added to tag");
 }
 
 void Server::FocusView(View* view) {

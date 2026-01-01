@@ -1,3 +1,4 @@
+#include "wayland/XwaylandCompat.hpp"  // Must be first to define wlr_xwayland_surface
 #include "wayland/View.hpp"
 #include "Logger.hpp"
 #include "wayland/Server.hpp"
@@ -21,10 +22,12 @@ static void view_handle_request_fullscreen(struct wl_listener* listener, void* d
 
 View::View(struct wlr_xdg_toplevel* toplevel, Server* srv)
     : xdg_toplevel(toplevel)
+    , xwayland_surface(nullptr)
     , decoration(nullptr)
     , surface(toplevel->base->surface)
     , scene_tree(nullptr)
     , server(srv)
+    , is_xwayland(false)
     , border_top(nullptr)
     , border_right(nullptr)
     , border_bottom(nullptr)
@@ -66,6 +69,60 @@ View::View(struct wlr_xdg_toplevel* toplevel, Server* srv)
     
     request_fullscreen.notify = view_handle_request_fullscreen;
     wl_signal_add(&xdg_toplevel->events.request_fullscreen, &request_fullscreen);
+}
+
+// Xwayland constructor
+View::View(struct ::wlr_xwayland_surface* xwayland_surf, Server* srv)
+    : xdg_toplevel(nullptr)
+    , xwayland_surface(xwayland_surf)
+    , decoration(nullptr)
+    , surface(xwayland_surface_get_surface(xwayland_surf))
+    , scene_tree(nullptr)
+    , server(srv)
+    , is_xwayland(true)
+    , border_top(nullptr)
+    , border_right(nullptr)
+    , border_bottom(nullptr)
+    , border_left(nullptr)
+    , shadow_top(nullptr)
+    , shadow_right(nullptr)
+    , shadow_bottom(nullptr)
+    , shadow_left(nullptr)
+    , x(xwayland_surface_get_x(xwayland_surf)), y(xwayland_surface_get_y(xwayland_surf))
+    , width(xwayland_surface_get_width(xwayland_surf)), height(xwayland_surface_get_height(xwayland_surf))
+    , is_floating(false)
+    , is_fullscreen(false)
+    , mapped(false)
+    , opacity(1.0f)
+    , border_radius(0) {
+    
+    // Setup commit listener
+    commit.notify = view_handle_commit;
+    wl_signal_add(xwayland_surface_get_events_commit(xwayland_surf), &commit);
+    
+    // Setup listeners
+    map.notify = view_handle_map;
+    wl_signal_add(xwayland_surface_get_events_map(xwayland_surf), &map);
+    
+    unmap.notify = view_handle_unmap;
+    wl_signal_add(xwayland_surface_get_events_unmap(xwayland_surf), &unmap);
+    
+    destroy.notify = view_handle_destroy;
+    wl_signal_add(xwayland_surface_get_events_destroy(xwayland_surf), &destroy);
+    
+    request_move.notify = view_handle_request_move;
+    wl_signal_add(xwayland_surface_get_events_request_move(xwayland_surf), &request_move);
+    
+    request_resize.notify = view_handle_request_resize;
+    wl_signal_add(xwayland_surface_get_events_request_resize(xwayland_surf), &request_resize);
+    
+    request_maximize.notify = view_handle_request_maximize;
+    wl_signal_add(xwayland_surface_get_events_request_maximize(xwayland_surf), &request_maximize);
+    
+    request_fullscreen.notify = view_handle_request_fullscreen;
+    wl_signal_add(xwayland_surface_get_events_request_fullscreen(xwayland_surf), &request_fullscreen);
+    
+    LOG_DEBUG("Created Xwayland view");
 }
 
 View::~View() {

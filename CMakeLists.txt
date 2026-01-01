@@ -126,7 +126,7 @@ if(USE_VENDORED_DEPS)
             COMMAND ${CMAKE_COMMAND} -E env "PKG_CONFIG_PATH=${WLROOTS_PKG_CONFIG}"
                 meson setup ${WLROOTS_BUILD_DIR} ${CMAKE_SOURCE_DIR}/subprojects/wlroots
                 --prefix=${WLROOTS_INSTALL_DIR}
-                -Dxwayland=disabled
+                -Dxwayland=enabled
                 -Dexamples=false
                 -Dbackends=drm,libinput,x11
             RESULT_VARIABLE MESON_RESULT
@@ -229,6 +229,7 @@ set(SOURCES
     src/wayland/Input.cpp
     src/wayland/LayerManager.cpp
     src/wayland/LayerSurface.cpp
+    src/wayland/xwayland_compat.c
     # Core layer
     src/core/Seat.cpp
     src/core/Screen.cpp
