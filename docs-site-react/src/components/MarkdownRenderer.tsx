@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress, Alert, Paper } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,77 +13,69 @@ interface MarkdownRendererProps {
   path: string;
 }
 
-// Helper function to compare versions
-function compareVersions(v1: string, v2: string): number {
-  const parts1 = v1.replace('v', '').split('.').map(Number);
-  const parts2 = v2.replace('v', '').split('.').map(Number);
-  
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0;
-    const p2 = parts2[i] || 0;
-    if (p1 !== p2) return p1 - p2;
-  }
-  return 0;
-}
-
-// Get all versions up to and including the current one, sorted from newest to oldest
-function getVersionCascade(currentVersion: string, allVersions: string[]): string[] {
-  return allVersions
-    .filter(v => compareVersions(v, currentVersion) <= 0)
-    .sort((a, b) => compareVersions(b, a)); // Newest first
-}
-
-// Try to fetch a file, cascading through versions from newest to oldest
-async function fetchMarkdownWithCascade(path: string, currentVersion: string, versions: string[]): Promise<string> {
+// Fetch content using the optimized manifest for efficient lookup
+async function fetchMarkdownWithManifest(path: string, currentVersion: string): Promise<string> {
   const baseUrl = import.meta.env.BASE_URL || '/';
-  const versionCascade = getVersionCascade(currentVersion, versions);
   
   console.log(`Fetching ${path} for version ${currentVersion}`);
-  console.log('Version cascade:', versionCascade);
   
-  // Try each version in order (newest to oldest)
-  for (const version of versionCascade) {
-    const versionPath = `${baseUrl}content/${version}${path}.md`;
-    console.log(`Trying: ${versionPath}`);
-    
-    try {
-      const response = await fetch(versionPath);
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        const text = await response.text();
-        
-        // Check if it's actually markdown/text, not HTML
-        if (contentType?.includes('text/plain') || contentType?.includes('text/markdown') || 
-            (!text.includes('<!DOCTYPE html>') && !text.includes('<html'))) {
-          console.log(`✓ Found in ${version}`);
-          return text;
-        } else {
-          console.log(`✗ Got HTML instead of markdown from ${version}`);
-        }
-      }
-    } catch (err) {
-      // Continue to next version
-      console.log(`✗ Not found in ${version}:`, err);
-    }
-  }
-  
-  // If not found in any versioned folder, try the base content folder
-  const basePath = `${baseUrl}content${path}.md`;
-  console.log(`Trying base path: ${basePath}`);
   try {
-    const response = await fetch(basePath);
-    if (response.ok) {
-      const text = await response.text();
-      if (!text.includes('<!DOCTYPE html>') && !text.includes('<html')) {
-        console.log(`✓ Found in base content`);
-        return text;
-      }
+    // Load the manifest (optimized format: { v: [versions], f: { path: [indices] } })
+    const manifestResponse = await fetch(`${baseUrl}content-manifest.json`);
+    if (!manifestResponse.ok) {
+      throw new Error('Failed to load content manifest');
     }
+    
+    const manifest = await manifestResponse.json();
+    const versions = manifest.v; // Array of version names
+    const files = manifest.f; // Files map
+    
+    // Find current version index
+    const versionIndex = versions.indexOf(currentVersion);
+    if (versionIndex === -1) {
+      throw new Error(`Version ${currentVersion} not found in manifest`);
+    }
+    
+    // Look up the file in the manifest
+    const versionIndices = files[path];
+    
+    if (!versionIndices) {
+      throw new Error(`File ${path} not found in manifest`);
+    }
+    
+    // Get the source version index for this target version
+    const sourceVersionIndex = versionIndices[versionIndex];
+    
+    if (sourceVersionIndex === -1) {
+      throw new Error(`File ${path} not available in version ${currentVersion}`);
+    }
+    
+    // Get the actual source version name
+    const sourceVersion = versions[sourceVersionIndex];
+    
+    // Fetch from the specific version indicated by the manifest
+    const filePath = `${baseUrl}content/${sourceVersion}${path}.md`;
+    console.log(`✓ Manifest says: fetch from ${sourceVersion} at ${filePath}`);
+    
+    const response = await fetch(filePath);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const text = await response.text();
+    
+    // Verify it's markdown, not HTML
+    if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+      throw new Error('Received HTML instead of markdown');
+    }
+    
+    console.log(`✓ Successfully loaded from ${sourceVersion}`);
+    return text;
+    
   } catch (err) {
-    console.log(`✗ Not found in base path:`, err);
+    console.error(`✗ Failed to load ${path}:`, err);
+    throw err;
   }
-  
-  throw new Error(`File not found: ${path}`);
 }
 
 export default function MarkdownRenderer({ path }: MarkdownRendererProps) {
@@ -90,15 +83,14 @@ export default function MarkdownRenderer({ path }: MarkdownRendererProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const { setTOCItems } = useTOC();
-  const { currentVersion, versions } = useVersion();
+  const { currentVersion } = useVersion();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
     setError('');
     
-    const versionNames = versions.map(v => v.name);
-    
-    fetchMarkdownWithCascade(path, currentVersion, versionNames)
+    fetchMarkdownWithManifest(path, currentVersion)
       .then(text => {
         setContent(text);
         
@@ -117,11 +109,17 @@ export default function MarkdownRenderer({ path }: MarkdownRendererProps) {
         setTOCItems(tocItems);
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err: Error) => {
+        console.error('Content not found, redirecting to default page:', err);
         setError(err.message);
         setLoading(false);
+        
+        // Redirect to the default "building" page if content not found
+        setTimeout(() => {
+          navigate('/docs/getting-started/building', { replace: true });
+        }, 100);
       });
-  }, [path, currentVersion, versions, setTOCItems]);
+  }, [path, currentVersion, setTOCItems, navigate]);
 
   if (loading) {
     return (
