@@ -106,7 +106,7 @@ export default function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
           {/* Logo */}
           <Box 
             component="img" 
-            src="/logo.png" 
+            src={`${import.meta.env.BASE_URL}logo.png`}
             alt="LeviathanDM Logo" 
             sx={{ 
               height: 40, 

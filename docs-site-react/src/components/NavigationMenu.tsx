@@ -89,7 +89,7 @@ export default function NavigationMenu({ onClose }: NavigationMenuProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box 
             component="img" 
-            src="/logo.png" 
+            src={`${import.meta.env.BASE_URL}logo.png`}
             alt="LeviathanDM Logo" 
             sx={{ height: 32, width: 32 }} 
           />
