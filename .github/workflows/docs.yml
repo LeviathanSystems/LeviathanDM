@@ -1,14 +1,6 @@
 name: Deploy Documentation
 
 on:
-  # Deploy on push to master branch
-  push:
-    branches:
-      - master
-    paths:
-      - 'docs-site-react/**'
-      - '.github/workflows/docs.yml'
-  
   # Also deploy on version tags
   push:
     tags:
