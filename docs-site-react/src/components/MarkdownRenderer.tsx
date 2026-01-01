@@ -8,27 +8,41 @@ import rehypeRaw from 'rehype-raw';
 import 'highlight.js/styles/github-dark.css';
 import { useTOC } from '../context/TOCContext';
 import { useVersion } from '../context/VersionContext';
+import { useManifest } from '../context/ManifestContext';
 
 interface MarkdownRendererProps {
   path: string;
 }
 
-// Fetch content using the optimized manifest for efficient lookup
-async function fetchMarkdownWithManifest(path: string, currentVersion: string): Promise<string> {
+// Fetch content using the manifest from context (no redundant fetching)
+async function fetchMarkdownWithManifest(
+  path: string, 
+  currentVersion: string,
+  manifest: any
+): Promise<string> {
   const baseUrl = import.meta.env.BASE_URL || '/';
   
   console.log(`Fetching ${path} for version ${currentVersion}`);
   
   try {
-    // Load the manifest (optimized format: { v: [versions], f: { path: [indices] } })
-    const manifestResponse = await fetch(`${baseUrl}content-manifest.json`);
-    if (!manifestResponse.ok) {
-      throw new Error('Failed to load content manifest');
-    }
-    
-    const manifest = await manifestResponse.json();
     const versions = manifest.v; // Array of version names
     const files = manifest.f; // Files map
+    const nav = manifest.nav; // Navigation metadata
+    
+    // Find the mdPath from navigation metadata (path -> mdPath mapping)
+    let mdPath = path;
+    if (nav) {
+      // Search nav for matching path
+      const pageInfo = Object.values(nav).find((page: any) => page.path === path);
+      if (pageInfo) {
+        mdPath = (pageInfo as any).mdPath;
+        console.log(`✓ Resolved ${path} to ${mdPath}`);
+      } else {
+        // Try adding /en prefix if not found
+        mdPath = `/en${path}`;
+        console.log(`⚠ No nav entry for ${path}, trying ${mdPath}`);
+      }
+    }
     
     // Find current version index
     const versionIndex = versions.indexOf(currentVersion);
@@ -37,24 +51,24 @@ async function fetchMarkdownWithManifest(path: string, currentVersion: string): 
     }
     
     // Look up the file in the manifest
-    const versionIndices = files[path];
+    const versionIndices = files[mdPath];
     
     if (!versionIndices) {
-      throw new Error(`File ${path} not found in manifest`);
+      throw new Error(`File ${mdPath} not found in manifest`);
     }
     
     // Get the source version index for this target version
     const sourceVersionIndex = versionIndices[versionIndex];
     
     if (sourceVersionIndex === -1) {
-      throw new Error(`File ${path} not available in version ${currentVersion}`);
+      throw new Error(`File ${mdPath} not available in version ${currentVersion}`);
     }
     
     // Get the actual source version name
     const sourceVersion = versions[sourceVersionIndex];
     
     // Fetch from the specific version indicated by the manifest
-    const filePath = `${baseUrl}content/${sourceVersion}${path}.md`;
+    const filePath = `${baseUrl}content/${sourceVersion}${mdPath}.md`;
     console.log(`✓ Manifest says: fetch from ${sourceVersion} at ${filePath}`);
     
     const response = await fetch(filePath);
@@ -84,13 +98,19 @@ export default function MarkdownRenderer({ path }: MarkdownRendererProps) {
   const [error, setError] = useState<string>('');
   const { setTOCItems } = useTOC();
   const { currentVersion } = useVersion();
+  const { manifest, loading: manifestLoading } = useManifest();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Wait for manifest to load
+    if (manifestLoading || !manifest) {
+      return;
+    }
+
     setLoading(true);
     setError('');
     
-    fetchMarkdownWithManifest(path, currentVersion)
+    fetchMarkdownWithManifest(path, currentVersion, manifest)
       .then(text => {
         setContent(text);
         
@@ -119,7 +139,7 @@ export default function MarkdownRenderer({ path }: MarkdownRendererProps) {
           navigate('/docs/getting-started/building', { replace: true });
         }, 100);
       });
-  }, [path, currentVersion, setTOCItems, navigate]);
+  }, [path, currentVersion, manifest, manifestLoading, setTOCItems, navigate]);
 
   if (loading) {
     return (

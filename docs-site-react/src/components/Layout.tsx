@@ -179,8 +179,9 @@ export default function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
         <Box sx={{ 
           px: { xs: 2, md: 4, lg: 6 }, 
           py: 3,
-          maxWidth: '900px',
-          mx: 'auto'
+          maxWidth: '1400px',
+          mx: 'auto',
+          width: '100%'
         }}>
           <Outlet />
         </Box>

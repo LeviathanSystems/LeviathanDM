@@ -12,6 +12,7 @@ const path = require('path');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const CONTENT_DIR = path.join(PUBLIC_DIR, 'content');
 const MANIFEST_PATH = path.join(PUBLIC_DIR, 'content-manifest.json');
+const NAVIGATION_PATH = path.join(__dirname, 'src', 'navigation.ts');
 
 // Read versions.json to get the version order
 const versionsFile = fs.readFileSync(path.join(PUBLIC_DIR, 'versions.json'), 'utf-8');
@@ -142,6 +143,77 @@ Object.keys(fileVersionMap).forEach(contentPath => {
 // Write optimized manifest
 fs.writeFileSync(MANIFEST_PATH, JSON.stringify(optimizedManifest));
 
+// ============================================================================
+// PART 2: Generate navigation metadata in the manifest
+// ============================================================================
+
+console.log('\n--- Generating navigation metadata ---\n');
+
+// Parse file paths to extract page metadata
+const pageMetadata = {};
+
+Object.keys(optimizedManifest.f).forEach(filePath => {
+  const versionIndices = optimizedManifest.f[filePath];
+  
+  // Find first version this file appears in
+  let firstVersionIndex = -1;
+  for (let i = versions.length - 1; i >= 0; i--) {
+    if (versionIndices[i] !== -1) {
+      firstVersionIndex = i;
+      break;
+    }
+  }
+  
+  if (firstVersionIndex === -1) return;
+  
+  const firstVersion = versions[firstVersionIndex];
+  
+  // Parse the path: /en/docs/section/subsection/page
+  const pathWithoutLang = filePath.replace(/^\/[a-z]{2}\//, '/');
+  const parts = pathWithoutLang.split('/').filter(p => p);
+  
+  // Skip non-docs paths
+  if (!parts[0] || parts[0] !== 'docs') return;
+  
+  // Extract metadata
+  const filename = parts[parts.length - 1];
+  const isIndex = filename === '_index';
+  const section = parts[1]; // getting-started, features, etc.
+  const subsection = parts.length > 2 && !isIndex ? parts[parts.length - 1] : null;
+  
+  // Generate title from filename
+  const title = isIndex 
+    ? titleCase(parts[parts.length - 2] || section)
+    : titleCase(filename);
+  
+  // Generate URL path (without /en/ prefix, without _index)
+  const urlPath = pathWithoutLang.replace(/\/_index$/, '');
+  
+  pageMetadata[filePath] = {
+    title,
+    path: urlPath,
+    mdPath: filePath,
+    section,
+    subsection,
+    isIndex,
+    since: firstVersion
+  };
+});
+
+// Helper function to convert kebab-case to Title Case
+function titleCase(str) {
+  return str
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Add navigation metadata to manifest
+optimizedManifest.nav = pageMetadata;
+
+// Rewrite manifest with navigation metadata
+fs.writeFileSync(MANIFEST_PATH, JSON.stringify(optimizedManifest));
+
 // Calculate size savings
 const fullManifest = {};
 versions.forEach(targetVersion => {
@@ -168,12 +240,13 @@ const savings = ((1 - optimizedSize / fullSize) * 100).toFixed(1);
 
 console.log(`\n✓ Optimized manifest generated for ${versions.length} versions`);
 console.log(`  Files: ${Object.keys(optimizedManifest.f).length}`);
+console.log(`  Pages with metadata: ${Object.keys(optimizedManifest.nav || {}).length}`);
 console.log(`  Full size: ${fullSize} bytes`);
 console.log(`  Optimized size: ${optimizedSize} bytes`);
 console.log(`  Savings: ${savings}% reduction`);
 console.log(`  Written to: ${MANIFEST_PATH}`);
 
-// Show format explanation
-console.log('\nFormat: { v: [versions], f: { path: [version_indices] } }');
-console.log('Example: f["/path"]: [0, 1, 1, 2] means:');
-console.log('  - v0.0.4 uses version[0], v0.0.3 uses version[1], etc.');
+console.log('\nManifest structure:');
+console.log('  - v: Array of version names');
+console.log('  - f: File mappings (path -> version indices)');
+console.log('  - nav: Page metadata for navigation generation');

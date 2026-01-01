@@ -13,8 +13,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CloseIcon from '@mui/icons-material/Close';
-import { getNavigationForVersion } from '../navigation';
+import { buildNavigationFromManifest, getNavigationForVersion } from '../navigation';
 import { useVersion } from '../context/VersionContext';
+import { useManifest } from '../context/ManifestContext';
 import type { NavItem } from '../navigation';
 
 interface NavigationMenuProps {
@@ -26,14 +27,31 @@ export default function NavigationMenu({ onClose }: NavigationMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentVersion } = useVersion();
+  const { manifest, loading: manifestLoading } = useManifest();
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [navigation, setNavigation] = useState<NavItem[]>([]);
+  const [allNavigation, setAllNavigation] = useState<NavItem[]>([]);
 
+  // Load navigation from manifest when available
   useEffect(() => {
-    // Update navigation based on current version
-    const filteredNav = getNavigationForVersion(currentVersion);
-    setNavigation(filteredNav);
-  }, [currentVersion]);
+    if (manifestLoading || !manifest) {
+      return;
+    }
+
+    const nav = buildNavigationFromManifest(manifest);
+    setAllNavigation(nav);
+    // Also set initial filtered navigation
+    const filtered = getNavigationForVersion(nav, currentVersion);
+    setNavigation(filtered);
+  }, [manifest, manifestLoading]);
+
+  // Update filtered navigation when version changes
+  useEffect(() => {
+    if (allNavigation.length > 0) {
+      const filtered = getNavigationForVersion(allNavigation, currentVersion);
+      setNavigation(filtered);
+    }
+  }, [currentVersion, allNavigation]);
 
   const toggleSection = (path: string) => {
     setExpandedSections(prev =>

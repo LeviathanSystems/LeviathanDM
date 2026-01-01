@@ -1,123 +1,133 @@
+// Navigation is dynamically generated from the content manifest at runtime
+// This ensures navigation always reflects available documentation
+
 export interface NavItem {
   title: string;
   path: string;
   mdPath: string;
-  since?: string; // Which version this was added
+  since?: string;
   children?: NavItem[];
 }
 
-export const navigation: NavItem[] = [
-  {
-    title: 'Getting Started',
-    path: '/docs/getting-started',
-    mdPath: '/en/docs/getting-started/_index',
-    since: 'v0.0.1',
-    children: [
-      {
-        title: 'Building',
-        path: '/docs/getting-started/building',
-        mdPath: '/en/docs/getting-started/building',
-        since: 'v0.0.1'
-      },
-      {
-        title: 'Configuration',
-        path: '/docs/getting-started/configuration',
-        mdPath: '/en/docs/getting-started/configuration',
-        since: 'v0.0.1'
-      },
-      {
-        title: 'Keybindings',
-        path: '/docs/getting-started/keybindings',
-        mdPath: '/en/docs/getting-started/keybindings',
-        since: 'v0.0.1'
+// Section ordering for consistent navigation
+const SECTION_ORDER = ['getting-started', 'features', 'development', 'tools', 'about'];
+
+// Title case helper
+function titleCase(str: string): string {
+  return str
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Build navigation structure from manifest metadata
+export function buildNavigationFromManifest(manifest: any): NavItem[] {
+  try {
+    const { nav, v: versions } = manifest;
+    
+    if (!nav) {
+      console.error('Manifest missing navigation metadata');
+      return [];
+    }
+    
+    // Group pages by section and subsection
+    const sections: Record<string, {
+      title: string;
+      path: string;
+      mdPath?: string;
+      since?: string;
+      pages: Array<{
+        title: string;
+        path: string;
+        mdPath: string;
+        since: string;
+        subsection?: string;
+      }>;
+    }> = {};
+    
+    Object.values(nav).forEach((page: any) => {
+      const { section, subsection, isIndex, title, path, mdPath, since } = page;
+      
+      // Initialize section if needed
+      if (!sections[section]) {
+        sections[section] = {
+          title: titleCase(section),
+          path: `/docs/${section}`,
+          pages: []
+        };
       }
-    ]
-  },
-  {
-    title: 'Features',
-    path: '/docs/features',
-    mdPath: '/en/docs/features/_index',
-    since: 'v0.0.1',
-    children: [
-      {
-        title: 'Wallpapers',
-        path: '/docs/features/wallpapers',
-        mdPath: '/en/docs/features/wallpapers',
-        since: 'v0.0.2'
-      },
-      {
-        title: 'Status Bar',
-        path: '/docs/features/status-bar',
-        mdPath: '/en/docs/features/status-bar',
-        since: 'v0.0.1'
-      },
-      {
-        title: 'Notifications',
-        path: '/docs/features/notifications',
-        mdPath: '/en/docs/features/notifications',
-        since: 'v0.0.2'
-      },
-      {
-        title: 'Layouts',
-        path: '/docs/features/layouts',
-        mdPath: '/en/docs/features/layouts',
-        since: 'v0.0.2'
+      
+      // Handle index files
+      if (isIndex) {
+        sections[section].mdPath = mdPath;
+        sections[section].since = since;
+      } else {
+        // Regular page
+        sections[section].pages.push({
+          title,
+          path,
+          mdPath,
+          since,
+          subsection
+        });
       }
-    ]
-  },
-  {
-    title: 'Development',
-    path: '/docs/development',
-    mdPath: '/en/docs/development/architecture',
-    since: 'v0.0.1',
-    children: [
-      {
-        title: 'Architecture',
-        path: '/docs/development/architecture',
-        mdPath: '/en/docs/development/architecture',
-        since: 'v0.0.1'
-      },
-      {
-        title: 'Widget System',
-        path: '/docs/development/widget-system',
-        mdPath: '/en/docs/development/widget-system',
-        since: 'v0.0.3'
-      },
-      {
-        title: 'Plugins',
-        path: '/docs/development/plugins',
-        mdPath: '/en/docs/development/plugins',
-        since: 'v0.0.1'
-      },
-      {
-        title: 'Contributing',
-        path: '/docs/development/contributing',
-        mdPath: '/en/docs/development/contributing',
-        since: 'v0.0.1'
+    });
+    
+    // Convert to NavItem array with ordering
+    const navigation: NavItem[] = [];
+    
+    SECTION_ORDER.forEach(sectionKey => {
+      const section = sections[sectionKey];
+      if (!section) return;
+      
+      // Sort pages by path
+      const children = section.pages
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map(page => ({
+          title: page.title,
+          path: page.path,
+          mdPath: page.mdPath,
+          since: page.since
+        }));
+      
+      navigation.push({
+        title: section.title,
+        path: section.path,
+        mdPath: section.mdPath || `${section.path}/_index`,
+        since: section.since || children[0]?.since || versions[versions.length - 1],
+        children: children.length > 0 ? children : undefined
+      });
+    });
+    
+    // Add any sections not in the predefined order
+    Object.keys(sections).forEach(sectionKey => {
+      if (!SECTION_ORDER.includes(sectionKey)) {
+        const section = sections[sectionKey];
+        const children = section.pages
+          .sort((a, b) => a.path.localeCompare(b.path))
+          .map(page => ({
+            title: page.title,
+            path: page.path,
+            mdPath: page.mdPath,
+            since: page.since
+          }));
+        
+        navigation.push({
+          title: section.title,
+          path: section.path,
+          mdPath: section.mdPath || `${section.path}/_index`,
+          since: section.since || children[0]?.since || versions[versions.length - 1],
+          children: children.length > 0 ? children : undefined
+        });
       }
-    ]
-  },
-  {
-    title: 'About',
-    path: '/docs/about',
-    mdPath: '/en/docs/about/releases',
-    since: 'v0.0.1',
-    children: [
-      {
-        title: 'Releases',
-        path: '/docs/about/releases',
-        mdPath: '/en/docs/about/releases',
-        since: 'v0.0.1'
-      },
-      {
-        title: 'Versioning',
-        path: '/docs/about/versioning',
-        mdPath: '/en/docs/about/versioning',
-        since: 'v0.0.1'
-      }
-    ]
+    });
+    
+    return navigation;
+  } catch (error) {
+    console.error('Error building navigation:', error);
+    return [];
   }
-];
+}
 
 // Compare versions (simple comparison for x.y.z format)
 function compareVersions(v1: string, v2: string): number {
@@ -133,27 +143,38 @@ function compareVersions(v1: string, v2: string): number {
 }
 
 // Filter navigation based on version
-export function getNavigationForVersion(version: string): NavItem[] {
+export function getNavigationForVersion(navigation: NavItem[], version: string): NavItem[] {
   function filterItems(items: NavItem[]): NavItem[] {
     return items
-      .filter(item => !item.since || compareVersions(version, item.since) >= 0)
-      .map(item => ({
-        ...item,
-        children: item.children ? filterItems(item.children) : undefined
-      }))
-      .filter(item => !item.children || item.children.length > 0);
+      .filter(item => {
+        const shouldInclude = !item.since || compareVersions(version, item.since) >= 0;
+        return shouldInclude;
+      })
+      .map(item => {
+        const filteredChildren = item.children ? filterItems(item.children) : undefined;
+        return {
+          ...item,
+          children: filteredChildren
+        };
+      })
+      .filter(item => {
+        // Keep items that either have no children or have at least one child after filtering
+        const hasNoChildren = !item.children;
+        const hasChildren = item.children && item.children.length > 0;
+        return hasNoChildren || hasChildren;
+      });
   }
   
   return filterItems(navigation);
 }
 
 // Flatten navigation to get all routes
-export function getAllRoutes(): NavItem[] {
-  const routes: NavItem[] = [];
+export function getAllRoutes(navigation: NavItem[]): string[] {
+  const routes: string[] = [];
   
   function addRoutes(items: NavItem[]) {
     items.forEach(item => {
-      routes.push(item);
+      routes.push(item.path);
       if (item.children) {
         addRoutes(item.children);
       }

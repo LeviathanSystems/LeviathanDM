@@ -1,19 +1,32 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { TOCProvider } from './context/TOCContext';
 import { VersionProvider } from './context/VersionContext';
+import { ManifestProvider, useManifest } from './context/ManifestContext';
 import Layout from './components/Layout';
 import MarkdownRenderer from './components/MarkdownRenderer';
-import { getAllRoutes } from './navigation';
+import { buildNavigationFromManifest, getAllRoutes } from './navigation';
 
-function App() {
-  console.log('App rendering...');
-  
+function AppContent() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
     return saved ? JSON.parse(saved) : true;
   });
+
+  const { manifest, loading: manifestLoading } = useManifest();
+  const [routes, setRoutes] = useState<string[]>([]);
+
+  // Load routes from manifest when available
+  useEffect(() => {
+    if (manifestLoading || !manifest) {
+      return;
+    }
+
+    const nav = buildNavigationFromManifest(manifest);
+    const allRoutes = getAllRoutes(nav);
+    setRoutes(allRoutes);
+  }, [manifest, manifestLoading]);
 
   const theme = useMemo(
     () =>
@@ -42,10 +55,6 @@ function App() {
     });
   };
 
-  console.log('Theme mode:', darkMode ? 'dark' : 'light');
-
-  const allRoutes = getAllRoutes();
-
   const basename = import.meta.env.BASE_URL || '/';
 
   return (
@@ -57,11 +66,11 @@ function App() {
             <Routes>
               <Route path="/" element={<Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
                 <Route index element={<Navigate to="/docs/getting-started/building" replace />} />
-                {allRoutes.map(route => (
+                {routes.map(route => (
                   <Route 
-                    key={route.path} 
-                    path={route.path} 
-                    element={<MarkdownRenderer path={route.mdPath} />} 
+                    key={route} 
+                    path={route} 
+                    element={<MarkdownRenderer path={route} />} 
                   />
                 ))}
               </Route>
@@ -70,6 +79,15 @@ function App() {
         </TOCProvider>
       </VersionProvider>
     </ThemeProvider>
+  );
+}
+
+// Wrapper component that provides ManifestContext
+function App() {
+  return (
+    <ManifestProvider>
+      <AppContent />
+    </ManifestProvider>
   );
 }
 

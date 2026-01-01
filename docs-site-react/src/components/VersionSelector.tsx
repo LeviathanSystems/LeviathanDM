@@ -1,8 +1,10 @@
 import { Box, Select, MenuItem, Chip, Typography, Alert } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useVersion } from '../context/VersionContext';
+import { useManifest } from '../context/ManifestContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { navigation } from '../navigation';
+import { useState, useEffect } from 'react';
+import { buildNavigationFromManifest, type NavItem } from '../navigation';
 
 interface VersionSelectorProps {
   onVersionChange?: (version: { name: string; title: string }) => void;
@@ -10,8 +12,20 @@ interface VersionSelectorProps {
 
 export default function VersionSelector({ onVersionChange }: VersionSelectorProps) {
   const { currentVersion, setCurrentVersion, versions } = useVersion();
+  const { manifest, loading: manifestLoading } = useManifest();
   const navigate = useNavigate();
   const location = useLocation();
+  const [navigation, setNavigation] = useState<NavItem[]>([]);
+
+  // Load navigation from manifest when available
+  useEffect(() => {
+    if (manifestLoading || !manifest) {
+      return;
+    }
+
+    const nav = buildNavigationFromManifest(manifest);
+    setNavigation(nav);
+  }, [manifest, manifestLoading]);
 
   const handleChange = (versionName: string) => {
     setCurrentVersion(versionName);
@@ -25,7 +39,7 @@ export default function VersionSelector({ onVersionChange }: VersionSelectorProp
     const currentPath = location.pathname;
     
     // Find the current page in navigation to check its "since" version
-    const findPageInNav = (items: any[]): any => {
+    const findPageInNav = (items: NavItem[]): NavItem | null => {
       for (const item of items) {
         if (item.path === currentPath) {
           return item;
