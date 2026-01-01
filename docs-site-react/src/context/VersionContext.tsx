@@ -23,8 +23,9 @@ export function VersionProvider({ children }: { children: ReactNode }) {
   const [versions, setVersions] = useState<Version[]>([]);
 
   useEffect(() => {
-    // Load versions from JSON
-    fetch('/versions.json')
+    // Load versions from JSON (use import.meta.env.BASE_URL for GitHub Pages)
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    fetch(`${baseUrl}versions.json`)
       .then(res => res.json())
       .then(data => {
         setVersions(data.versions);

@@ -34,6 +34,7 @@ function getVersionCascade(currentVersion: string, allVersions: string[]): strin
 
 // Try to fetch a file, cascading through versions from newest to oldest
 async function fetchMarkdownWithCascade(path: string, currentVersion: string, versions: string[]): Promise<string> {
+  const baseUrl = import.meta.env.BASE_URL || '/';
   const versionCascade = getVersionCascade(currentVersion, versions);
   
   console.log(`Fetching ${path} for version ${currentVersion}`);
@@ -41,7 +42,7 @@ async function fetchMarkdownWithCascade(path: string, currentVersion: string, ve
   
   // Try each version in order (newest to oldest)
   for (const version of versionCascade) {
-    const versionPath = `/content/${version}${path}.md`;
+    const versionPath = `${baseUrl}content/${version}${path}.md`;
     console.log(`Trying: ${versionPath}`);
     
     try {
@@ -66,7 +67,7 @@ async function fetchMarkdownWithCascade(path: string, currentVersion: string, ve
   }
   
   // If not found in any versioned folder, try the base content folder
-  const basePath = `/content${path}.md`;
+  const basePath = `${baseUrl}content${path}.md`;
   console.log(`Trying base path: ${basePath}`);
   try {
     const response = await fetch(basePath);

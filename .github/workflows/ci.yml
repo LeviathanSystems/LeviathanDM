@@ -5,10 +5,34 @@ on:
     branches:
       - master
       - develop
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'VERSION'
+      - 'version.h.in'
+      - 'CMakeLists.txt'
+      - 'Makefile'
+      - 'build.sh'
+      - 'setup-deps.sh'
+      - 'subprojects/**'
+      - 'logger/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches:
       - master
       - develop
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'VERSION'
+      - 'version.h.in'
+      - 'CMakeLists.txt'
+      - 'Makefile'
+      - 'build.sh'
+      - 'setup-deps.sh'
+      - 'subprojects/**'
+      - 'logger/**'
+      - '.github/workflows/ci.yml'
 
 jobs:
   build-and-test:
