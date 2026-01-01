@@ -68,6 +68,30 @@ MenuBar::MenuBar(const MenuBarConfig& config,
     bar_width_ = output_width_;
     bar_height_ = config_.height + (config_.item_height * config_.max_visible_items);
     
+    // Create IconLoader
+    icon_loader_ = std::make_unique<IconLoader>();
+    
+    // Create TextField for search
+    search_field_ = std::make_shared<TextField>("Type to search...", TextField::Variant::Standard);
+    search_field_->SetMinWidth(bar_width_ - 2 * config_.padding);
+    search_field_->SetFontSize(config_.font_size);
+    search_field_->SetFontFamily(config_.font_family);
+    search_field_->SetTextColor(config_.text_color.r, config_.text_color.g, 
+                               config_.text_color.b, config_.text_color.a);
+    search_field_->SetBackgroundColor(0.15, 0.15, 0.15, 1.0);
+    search_field_->SetPadding(5);
+    
+    // Set up callbacks
+    search_field_->SetOnTextChanged([this](const std::string& text) {
+        search_query_ = text;
+        UpdateFilteredItems();
+        Render();
+    });
+    
+    search_field_->SetOnSubmit([this](const std::string&) {
+        ExecuteSelectedItem();
+    });
+    
     // Create buffer
     shm_buffer_ = ShmBuffer::Create(bar_width_, bar_height_);
     if (!shm_buffer_) {
@@ -134,6 +158,8 @@ void MenuBar::Show() {
     
     is_visible_ = true;
     search_query_.clear();
+    search_field_->SetText("");  // Clear text field
+    search_field_->Focus();      // Focus the text field
     selected_index_ = 0;
     scroll_offset_ = 0;
     
@@ -154,6 +180,7 @@ void MenuBar::Hide() {
     if (!is_visible_) return;
     
     is_visible_ = false;
+    search_field_->Blur();  // Blur the text field
     
     // Disable scene nodes
     wlr_scene_node_set_enabled(&scene_rect_->node, false);
@@ -274,17 +301,19 @@ bool MenuBar::SimpleMatch(const std::string& text, const std::string& query) con
 }
 
 void MenuBar::HandleTextInput(const std::string& text) {
-    search_query_ += text;
-    UpdateFilteredItems();
-    Render();
+    if (!is_visible_) return;
+    
+    // Delegate text input to TextField
+    search_field_->HandleTextInput(text);
+    // Text change callback will automatically update search_query_ and render
 }
 
 void MenuBar::HandleBackspace() {
-    if (!search_query_.empty()) {
-        search_query_.pop_back();
-        UpdateFilteredItems();
-        Render();
-    }
+    if (!is_visible_) return;
+    
+    // Delegate backspace to TextField via HandleKeyPress
+    search_field_->HandleKeyPress(65288, 0);  // 65288 is Backspace key code
+    // Text change callback will automatically update search_query_ and render
 }
 
 void MenuBar::HandleEnter() {
@@ -336,12 +365,14 @@ void MenuBar::ExecuteSelectedItem() {
 bool MenuBar::HandleClick(int x, int y) {
     if (!is_visible_) return false;
     
-    // Check if click is in input area
+    // Check if click is in TextField input area
     int input_y_start = config_.padding;
     int input_y_end = input_y_start + config_.height;
     
     if (y >= input_y_start && y <= input_y_end) {
-        // Click in input area - do nothing, just capture
+        // Delegate click to TextField for cursor positioning
+        search_field_->HandleClick(x - config_.padding, y - input_y_start);
+        Render();  // Re-render to update cursor position
         return true;
     }
     
@@ -394,31 +425,18 @@ void MenuBar::RenderToBuffer() {
         config_.background_color.a);
     cairo_paint(cairo_);
     
-    // Render input field
+    // Render TextField input field
     int input_y = config_.padding;
-    
-    // Input field background (slightly lighter)
-    cairo_set_source_rgba(cairo_, 0.15, 0.15, 0.15, 1.0);
-    cairo_rectangle(cairo_, config_.padding, input_y,
-                    bar_width_ - 2 * config_.padding, config_.height - config_.padding);
-    cairo_fill(cairo_);
-    
-    // Input text
-    cairo_set_source_rgba(cairo_,
-        config_.text_color.r,
-        config_.text_color.g,
-        config_.text_color.b,
-        config_.text_color.a);
-    cairo_select_font_face(cairo_, config_.font_family.c_str(),
-                          CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cairo_, config_.font_size);
-    
-    std::string display_text = search_query_.empty() ? "Type to search..." : search_query_;
-    cairo_move_to(cairo_, config_.padding + 5, input_y + (config_.height / 2) + 5);
-    cairo_show_text(cairo_, display_text.c_str());
+    search_field_->SetPosition(config_.padding, input_y);
+    search_field_->CalculateSize(bar_width_ - 2 * config_.padding, config_.height - config_.padding);
+    search_field_->Render(cairo_);
     
     // Render menu items
     int item_y = config_.height;
+    const int icon_size = 24;  // Icon size in pixels
+    const int icon_padding = 8;  // Space between icon and text
+    const int text_x_offset = config_.padding + icon_size + icon_padding;
+    
     for (int i = 0; i < config_.max_visible_items && (scroll_offset_ + i) < static_cast<int>(filtered_items_.size()); i++) {
         int item_idx = scroll_offset_ + i;
         auto& item = filtered_items_[item_idx];
@@ -434,14 +452,27 @@ void MenuBar::RenderToBuffer() {
             cairo_fill(cairo_);
         }
         
+        // Draw icon if available
+        std::string icon_path = item->GetIconPath();
+        if (!icon_path.empty() && icon_loader_) {
+            cairo_surface_t* icon_surface = icon_loader_->LoadIcon(icon_path, icon_size);
+            if (icon_surface) {
+                int icon_y = item_y + (config_.item_height - icon_size) / 2;
+                cairo_set_source_surface(cairo_, icon_surface, config_.padding, icon_y);
+                cairo_paint(cairo_);
+            }
+        }
+        
         // Item name
         cairo_set_source_rgba(cairo_,
             config_.text_color.r,
             config_.text_color.g,
             config_.text_color.b,
             config_.text_color.a);
+        cairo_select_font_face(cairo_, config_.font_family.c_str(),
+                              CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
         cairo_set_font_size(cairo_, config_.font_size);
-        cairo_move_to(cairo_, config_.padding + 5, item_y + 18);
+        cairo_move_to(cairo_, text_x_offset, item_y + 18);
         cairo_show_text(cairo_, item->GetDisplayName().c_str());
         
         // Item description (if available)
@@ -453,7 +484,7 @@ void MenuBar::RenderToBuffer() {
                 config_.description_color.b,
                 config_.description_color.a);
             cairo_set_font_size(cairo_, config_.description_font_size);
-            cairo_move_to(cairo_, config_.padding + 5, item_y + 30);
+            cairo_move_to(cairo_, text_x_offset, item_y + 30);
             cairo_show_text(cairo_, desc.c_str());
         }
         
@@ -494,8 +525,26 @@ void MenuBar::UploadToTexture() {
 }
 
 void MenuBar::HandleKeyPress(uint32_t key, uint32_t modifiers) {
-    // This is a placeholder - actual key handling should be done
-    // through HandleEnter, HandleEscape, etc.
+    if (!is_visible_) return;
+    
+    // Handle special keys that TextField doesn't handle
+    if (key == 65307) {  // Escape
+        HandleEscape();
+        return;
+    } else if (key == 65362) {  // Up arrow
+        HandleArrowUp();
+        return;
+    } else if (key == 65364) {  // Down arrow
+        HandleArrowDown();
+        return;
+    }
+    
+    // Pass all other keys to the TextField
+    if (search_field_->HandleKeyPress(key, modifiers)) {
+        // TextField handled the key
+        // search_query_ is automatically updated via the OnTextChanged callback
+        return;
+    }
 }
 
 } // namespace UI

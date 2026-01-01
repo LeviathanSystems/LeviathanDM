@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(ClockWidget)
+project(SystemMonitorWidget)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -49,31 +49,31 @@ else()
 endif()
 
 # Build the plugin as a shared library
-add_library(clock-widget SHARED
-    ClockWidget.cpp
+add_library(system-monitor-widget SHARED
+    SystemMonitorWidget.cpp
 )
 
 # Link against Cairo and LeviathanDM
 if(LEVIATHAN_FOUND)
-    target_link_libraries(clock-widget
+    target_link_libraries(system-monitor-widget
         ${LEVIATHAN_LIBRARIES}
         ${CAIRO_LIBRARIES}
     )
 else()
-    target_link_libraries(clock-widget
+    target_link_libraries(system-monitor-widget
         ${CAIRO_LIBRARIES}
         pthread
     )
 endif()
 
 # Set output name and properties
-set_target_properties(clock-widget PROPERTIES
+set_target_properties(system-monitor-widget PROPERTIES
     PREFIX ""  # Don't add 'lib' prefix
     SUFFIX ".so"
-    OUTPUT_NAME "clock-widget"
+    OUTPUT_NAME "system-monitor-widget"
 )
 
-# Install to plugin directory
-install(TARGETS clock-widget
-    LIBRARY DESTINATION lib/leviathan/plugins
+# Installation
+install(TARGETS system-monitor-widget
+    LIBRARY DESTINATION ~/.config/leviathan/plugins
 )

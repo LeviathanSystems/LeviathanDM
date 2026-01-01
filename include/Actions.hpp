@@ -54,7 +54,7 @@ struct Action {
     std::vector<ActionParam> params;  // Parameters for the action
     
     // Optional: Direct function for custom actions
-    std::function<void()> custom_function;
+    std::function<void()> custom_function = nullptr;
 };
 
 // Action registry - maps action names to implementations

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <unordered_set>
 
 namespace Leviathan {
 namespace UI {
@@ -27,6 +28,9 @@ public:
     std::string GetDescription() const override { return description_; }
     void Execute() override;
     
+    // For deduplication
+    std::string GetExecCommand() const { return exec_; }
+    
 private:
     std::string name_;
     std::string exec_;
@@ -47,7 +51,8 @@ public:
     
 private:
     void LoadDesktopFilesFromDirectory(const std::string& dir,
-                                      std::vector<std::shared_ptr<MenuItem>>& items);
+                                      std::vector<std::shared_ptr<MenuItem>>& items,
+                                      std::unordered_set<std::string>& seen_apps);
     std::shared_ptr<MenuItem> ParseDesktopFile(const std::string& filepath);
     
     std::vector<std::string> search_paths_;

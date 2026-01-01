@@ -7,8 +7,8 @@ namespace UI {
 void Container::Render(cairo_t* cr) {
     if (!IsVisible()) return;
     
-    LOG_DEBUG_FMT("Container::Render - at ({}, {}) size={}x{}, children count={}", 
-        x_, y_, width_, height_, children_.size());
+    //LOG_DEBUG_FMT("Container::Render - at ({}, {}) size={}x{}, children count={}", 
+    //    x_, y_, width_, height_, children_.size());
     
     // Save cairo state
     cairo_save(cr);
@@ -24,7 +24,7 @@ void Container::Render(cairo_t* cr) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (auto& child : children_) {
         if (child->IsVisible()) {
-            LOG_DEBUG_FMT("  -> Rendering child at relative ({}, {})", child->GetX(), child->GetY());
+            //LOG_DEBUG_FMT("  -> Rendering child at relative ({}, {})", child->GetX(), child->GetY());
             child->Render(cr);
         }
     }

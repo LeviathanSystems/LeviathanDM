@@ -7,6 +7,10 @@
 #include <cairo.h>
 #include "wayland/WaylandTypes.hpp"
 #include "ui/ShmBuffer.hpp"
+#include "ui/reusable-widgets/TextField.hpp"
+#include "ui/reusable-widgets/VBox.hpp"
+#include "ui/reusable-widgets/ScrollView.hpp"
+#include "ui/IconLoader.hpp"
 
 namespace Leviathan {
 
@@ -198,6 +202,10 @@ private:
     std::string search_query_;
     int selected_index_;
     int scroll_offset_;
+    
+    // UI Components
+    std::shared_ptr<TextField> search_field_;
+    std::unique_ptr<IconLoader> icon_loader_;
     
     // Item management
     std::vector<std::shared_ptr<IMenuItemProvider>> providers_;

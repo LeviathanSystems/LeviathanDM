@@ -20,9 +20,13 @@ void Label::CalculateSize(int available_width, int available_height) {
     cairo_text_extents_t extents;
     cairo_text_extents(temp_cr, text_.c_str(), &extents);
     
+    // Use font metrics for consistent height across all labels
+    cairo_font_extents_t font_extents;
+    cairo_font_extents(temp_cr, &font_extents);
+    
     // Set size based on text with padding
     width_ = static_cast<int>(extents.width) + (padding_ * 2);
-    height_ = static_cast<int>(extents.height) + (padding_ * 2);
+    height_ = static_cast<int>(font_extents.ascent + font_extents.descent) + (padding_ * 2);
     
     // Constrain to available space
     width_ = std::min(width_, available_width);
@@ -59,9 +63,12 @@ void Label::Render(cairo_t* cr) {
     cairo_text_extents_t extents;
     cairo_text_extents(cr, text_.c_str(), &extents);
     
-    // Center text vertically and horizontally within the label
+    cairo_font_extents_t font_extents;
+    cairo_font_extents(cr, &font_extents);
+    
+    // Position text using font baseline for proper vertical centering
     double text_x = x_ + padding_;
-    double text_y = y_ + (height_ / 2.0) + (extents.height / 2.0);
+    double text_y = y_ + padding_ + font_extents.ascent;
     
     cairo_set_source_rgba(cr, text_color_[0], text_color_[1], text_color_[2], text_color_[3]);
     cairo_move_to(cr, text_x, text_y);

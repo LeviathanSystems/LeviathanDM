@@ -9,6 +9,7 @@
 #include "ui/WidgetPluginManager.hpp"
 #include "ui/NotificationDaemon.hpp"
 #include "ui/MenuBarManager.hpp"
+#include "ui/MenuItemProviders.hpp"
 #include "config/ConfigParser.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
@@ -331,6 +332,11 @@ bool Server::Initialize() {
     // Initialize MenuBar Manager
     UI::MenuBarManager::Instance().Initialize(wl_event_loop);
     LOG_INFO("MenuBarManager initialized");
+    
+    // Add Desktop Application provider to MenuBar
+    auto desktop_app_provider = std::make_shared<UI::DesktopApplicationProvider>();
+    UI::MenuBarManager::Instance().AddProvider(desktop_app_provider);
+    LOG_INFO("Desktop Application provider added to MenuBar");
     
     std::cout << "Compositor initialized successfully\n";
     return true;

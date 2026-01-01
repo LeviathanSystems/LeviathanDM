@@ -46,8 +46,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 
 # Compiler flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -DWLR_USE_UNSTABLE -fpermissive")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -DWLR_USE_UNSTABLE -fpermissive")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wpedantic")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
@@ -252,6 +252,7 @@ set(SOURCES
     src/ui/reusable-widgets/ScrollView.cpp
     src/ui/reusable-widgets/Label.cpp
     src/ui/reusable-widgets/Button.cpp
+    src/ui/reusable-widgets/TextField.cpp
     src/ui/reusable-widgets/BaseModal.cpp
     src/ui/KeybindingHelpModal.cpp
     src/ui/ModalManager.cpp
@@ -263,6 +264,7 @@ set(SOURCES
     src/ui/MenuBar.cpp
     src/ui/MenuBarManager.cpp
     src/ui/MenuItemProviders.cpp
+    src/ui/IconLoader.cpp
     # IPC
     src/ipc/IPC.cpp
     src/wayland/WallpaperManager.cpp
@@ -382,6 +384,19 @@ endif()
 
 # Installation
 install(TARGETS leviathan leviathanctl DESTINATION bin)
+install(TARGETS leviathan-ui LIBRARY DESTINATION lib)
+
+# Install public headers
+install(DIRECTORY include/ DESTINATION include/leviathan
+    FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h")
+
+# Install pkg-config file
+configure_file(
+    ${CMAKE_SOURCE_DIR}/leviathan.pc.in
+    ${CMAKE_BINARY_DIR}/leviathan.pc
+    @ONLY
+)
+install(FILES ${CMAKE_BINARY_DIR}/leviathan.pc DESTINATION lib/pkgconfig)
 
 # Optional: install config file template
 install(FILES config/leviathanrc DESTINATION share/leviathan)
@@ -402,8 +417,9 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "==================================================")
 
 
-# Installation
-install(TARGETS leviathan DESTINATION bin)
+# Installation (duplicate removed)
+# install(TARGETS leviathan DESTINATION bin)
 
-# Optional: install config file template
-install(FILES config/leviathanrc DESTINATION share/leviathan)
+# Optional: install config file template (duplicate removed)
+# install(FILES config/leviathanrc DESTINATION share/leviathan)
+

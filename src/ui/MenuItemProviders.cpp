@@ -92,9 +92,10 @@ DesktopApplicationProvider::DesktopApplicationProvider() {
 
 std::vector<std::shared_ptr<MenuItem>> DesktopApplicationProvider::LoadItems() {
     std::vector<std::shared_ptr<MenuItem>> items;
+    std::unordered_set<std::string> seen_apps;  // Track unique apps by name+exec
     
     for (const auto& path : search_paths_) {
-        LoadDesktopFilesFromDirectory(path, items);
+        LoadDesktopFilesFromDirectory(path, items, seen_apps);
     }
     
     return items;
@@ -102,7 +103,8 @@ std::vector<std::shared_ptr<MenuItem>> DesktopApplicationProvider::LoadItems() {
 
 void DesktopApplicationProvider::LoadDesktopFilesFromDirectory(
     const std::string& dir,
-    std::vector<std::shared_ptr<MenuItem>>& items)
+    std::vector<std::shared_ptr<MenuItem>>& items,
+    std::unordered_set<std::string>& seen_apps)
 {
     try {
         if (!std::filesystem::exists(dir)) {
@@ -113,7 +115,15 @@ void DesktopApplicationProvider::LoadDesktopFilesFromDirectory(
             if (entry.is_regular_file() && entry.path().extension() == ".desktop") {
                 auto item = ParseDesktopFile(entry.path().string());
                 if (item) {
-                    items.push_back(item);
+                    // Create unique key from name + exec to detect duplicates
+                    std::string unique_key = item->GetDisplayName() + "|" + 
+                                           dynamic_cast<DesktopAppMenuItem*>(item.get())->GetExecCommand();
+                    
+                    // Only add if not seen before
+                    if (seen_apps.find(unique_key) == seen_apps.end()) {
+                        seen_apps.insert(unique_key);
+                        items.push_back(item);
+                    }
                 }
             }
         }

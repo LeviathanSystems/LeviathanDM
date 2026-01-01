@@ -25,41 +25,69 @@ pkg_check_modules(CAIRO REQUIRED cairo)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 
-# Find the leviathan-ui library (includes logging support)
-find_library(LEVIATHAN_UI_LIB leviathan-ui
-    PATHS ${CMAKE_SOURCE_DIR}/../../build
-    NO_DEFAULT_PATH
-)
+# Try to find LeviathanDM via pkg-config
+pkg_check_modules(LEVIATHAN leviathan)
 
-if(NOT LEVIATHAN_UI_LIB)
-    message(FATAL_ERROR "Could not find leviathan-ui library. Build the main project first!")
+if(NOT LEVIATHAN_FOUND)
+    # Fall back to finding the library in the build directory
+    find_library(LEVIATHAN_UI_LIB leviathan-ui
+        PATHS ${CMAKE_SOURCE_DIR}/../../build
+        NO_DEFAULT_PATH
+    )
+    
+    if(NOT LEVIATHAN_UI_LIB)
+        message(FATAL_ERROR "Could not find leviathan-ui library. Build the main project first!")
+    endif()
+    
+    message(STATUS "Found leviathan-ui: ${LEVIATHAN_UI_LIB} (includes logging support)")
 endif()
-
-message(STATUS "Found leviathan-ui: ${LEVIATHAN_UI_LIB} (includes logging support)")
 
 # Plugin source
 add_library(battery-widget SHARED
     BatteryWidget.cpp
 )
 
-# Include directories - use compositor's logger (no external dependencies)
-target_include_directories(battery-widget PRIVATE
-    ${CMAKE_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/../../include
-    ${CMAKE_SOURCE_DIR}/../../logger
-    ${CAIRO_INCLUDE_DIRS}
-    ${GIO_INCLUDE_DIRS}
-    ${GLIB_INCLUDE_DIRS}
-)
+# Include directories
+if(LEVIATHAN_FOUND)
+    # Use installed headers
+    target_include_directories(battery-widget PRIVATE
+        ${CMAKE_BINARY_DIR}
+        ${CMAKE_SOURCE_DIR}/include
+        ${LEVIATHAN_INCLUDE_DIRS}
+        ${CAIRO_INCLUDE_DIRS}
+        ${GIO_INCLUDE_DIRS}
+        ${GLIB_INCLUDE_DIRS}
+    )
+else()
+    # Fall back to source tree headers for development
+    message(STATUS "LeviathanDM not installed, using source tree headers")
+    target_include_directories(battery-widget PRIVATE
+        ${CMAKE_BINARY_DIR}
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/../../include
+        ${CMAKE_SOURCE_DIR}/../../logger
+        ${CAIRO_INCLUDE_DIRS}
+        ${GIO_INCLUDE_DIRS}
+        ${GLIB_INCLUDE_DIRS}
+    )
+endif()
 
-# Link libraries - libleviathan-ui provides logging through SimpleLogger
-target_link_libraries(battery-widget PRIVATE
-    ${LEVIATHAN_UI_LIB}
-    ${CAIRO_LIBRARIES}
-    ${GIO_LIBRARIES}
-    ${GLIB_LIBRARIES}
-)
+# Link libraries
+if(LEVIATHAN_FOUND)
+    target_link_libraries(battery-widget PRIVATE
+        ${LEVIATHAN_LIBRARIES}
+        ${CAIRO_LIBRARIES}
+        ${GIO_LIBRARIES}
+        ${GLIB_LIBRARIES}
+    )
+else()
+    target_link_libraries(battery-widget PRIVATE
+        ${LEVIATHAN_UI_LIB}
+        ${CAIRO_LIBRARIES}
+        ${GIO_LIBRARIES}
+        ${GLIB_LIBRARIES}
+    )
+endif()
 
 # Compiler flags
 target_compile_options(battery-widget PRIVATE
@@ -69,6 +97,7 @@ target_compile_options(battery-widget PRIVATE
     -fPIC
     -Wall
     -Wextra
+    -Wno-unused-parameter
 )
 
 # Install plugin to plugins directory
