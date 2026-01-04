@@ -1,6 +1,6 @@
 #include "KeyBindings.hpp"
 #include "wayland/Server.hpp"
-#include "ui/MenuBarManager.hpp"
+#include "ui/menubar/MenuBarManager.hpp"
 #include "Logger.hpp"
 
 namespace Leviathan {

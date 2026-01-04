@@ -1,13 +1,8 @@
-#include "ui/MenuBar.hpp"
+#include "ui/menubar/MenuBar.hpp"
 #include "wayland/LayerManager.hpp"
 #include "Logger.hpp"
 #include <algorithm>
 #include <cctype>
-
-extern "C" {
-#include <wlr/types/wlr_scene.h>
-#include <wlr/render/wlr_renderer.h>
-}
 
 namespace Leviathan {
 namespace UI {
@@ -63,6 +58,7 @@ MenuBar::MenuBar(const MenuBarConfig& config,
     , is_visible_(false)
     , selected_index_(0)
     , scroll_offset_(0)
+    , active_provider_index_(0)
 {
     // Calculate dimensions
     bar_width_ = output_width_;
@@ -90,6 +86,38 @@ MenuBar::MenuBar(const MenuBarConfig& config,
     
     search_field_->SetOnSubmit([this](const std::string&) {
         ExecuteSelectedItem();
+    });
+    
+    // Create TabBar
+    TabBarConfig tab_config;
+    tab_config.height = config_.tab_height;
+    tab_config.tab_padding = config_.tab_padding;
+    tab_config.background_color.r = config_.tab_background_color.r;
+    tab_config.background_color.g = config_.tab_background_color.g;
+    tab_config.background_color.b = config_.tab_background_color.b;
+    tab_config.background_color.a = config_.tab_background_color.a;
+    tab_config.active_tab_color.r = config_.tab_active_color.r;
+    tab_config.active_tab_color.g = config_.tab_active_color.g;
+    tab_config.active_tab_color.b = config_.tab_active_color.b;
+    tab_config.active_tab_color.a = config_.tab_active_color.a;
+    tab_config.text_color.r = config_.tab_text_color.r;
+    tab_config.text_color.g = config_.tab_text_color.g;
+    tab_config.text_color.b = config_.tab_text_color.b;
+    tab_config.text_color.a = config_.tab_text_color.a;
+    tab_config.font_family = config_.font_family;
+    tab_config.font_size = config_.tab_font_size;
+    tab_config.equal_width_tabs = true;
+    
+    tab_bar_ = std::make_unique<TabBar>(tab_config);
+    
+    // Set up tab change callback
+    tab_bar_->SetOnTabChange([this](const std::string& tab_id, int index) {
+        if (index >= 0 && index < static_cast<int>(providers_.size())) {
+            active_provider_index_ = index;
+            RefreshItems();        // Load items from new active provider
+            UpdateFilteredItems();  // Apply search filter
+            Render();              // Update display
+        }
     });
     
     // Create buffer
@@ -199,31 +227,86 @@ void MenuBar::Toggle() {
 
 void MenuBar::AddProvider(std::shared_ptr<IMenuItemProvider> provider) {
     providers_.push_back(provider);
+    
+    // Add tab for this provider
+    std::string tab_id = std::to_string(providers_.size() - 1);
+    Tab tab(tab_id, provider->GetTabName(), provider->GetTabIcon());
+    tab_bar_->AddTab(tab);
+    
+    // Set first tab as active
+    if (providers_.size() == 1) {
+        tab_bar_->SetActiveTab(tab_id);
+        active_provider_index_ = 0;
+    }
+    
     LOG_INFO_FMT("Added menu item provider: {}", provider->GetName());
 }
 
 void MenuBar::RemoveProvider(const std::string& provider_name) {
+    // Find provider index
+    int removed_index = -1;
+    for (size_t i = 0; i < providers_.size(); ++i) {
+        if (providers_[i]->GetName() == provider_name) {
+            removed_index = static_cast<int>(i);
+            break;
+        }
+    }
+    
+    // Remove provider
     auto it = std::remove_if(providers_.begin(), providers_.end(),
         [&provider_name](const auto& p) { return p->GetName() == provider_name; });
     providers_.erase(it, providers_.end());
+    
+    // Remove tab
+    if (removed_index >= 0) {
+        std::string tab_id = std::to_string(removed_index);
+        tab_bar_->RemoveTab(tab_id);
+        
+        // Adjust active provider index if needed
+        if (active_provider_index_ == removed_index) {
+            active_provider_index_ = 0;
+            if (!providers_.empty()) {
+                tab_bar_->SetActiveTab("0");
+            }
+        } else if (active_provider_index_ > removed_index) {
+            active_provider_index_--;
+        }
+    }
 }
 
 void MenuBar::ClearProviders() {
     providers_.clear();
     all_items_.clear();
     filtered_items_.clear();
+    tab_bar_->ClearTabs();
+    active_provider_index_ = 0;
 }
 
 void MenuBar::RefreshItems() {
     all_items_.clear();
     
-    for (auto& provider : providers_) {
+    // If we have multiple providers, only load from the active one
+    // If we have one or no providers, load all
+    if (providers_.size() > 1 && active_provider_index_ >= 0 && 
+        active_provider_index_ < static_cast<int>(providers_.size())) {
+        auto& provider = providers_[active_provider_index_];
         try {
             auto items = provider->LoadItems();
             all_items_.insert(all_items_.end(), items.begin(), items.end());
-            LOG_DEBUG_FMT("Loaded {} items from provider '{}'", items.size(), provider->GetName());
+            LOG_DEBUG_FMT("Loaded {} items from active provider '{}'", items.size(), provider->GetName());
         } catch (const std::exception& e) {
             LOG_ERROR_FMT("Failed to load items from provider '{}': {}", provider->GetName(), e.what());
+        }
+    } else {
+        // Load from all providers
+        for (auto& provider : providers_) {
+            try {
+                auto items = provider->LoadItems();
+                all_items_.insert(all_items_.end(), items.begin(), items.end());
+                LOG_DEBUG_FMT("Loaded {} items from provider '{}'", items.size(), provider->GetName());
+            } catch (const std::exception& e) {
+                LOG_ERROR_FMT("Failed to load items from provider '{}': {}", provider->GetName(), e.what());
+            }
         }
     }
     
@@ -236,7 +319,8 @@ void MenuBar::RefreshItems() {
             return a->GetDisplayName() < b->GetDisplayName();
         });
     
-    LOG_INFO_FMT("Loaded {} total menu items from {} providers", all_items_.size(), providers_.size());
+    LOG_INFO_FMT("Loaded {} total menu items from {} provider(s)", all_items_.size(), 
+                 providers_.size() > 1 ? 1 : providers_.size());
 }
 
 void MenuBar::UpdateFilteredItems() {
@@ -376,6 +460,17 @@ bool MenuBar::HandleClick(int x, int y) {
         return true;
     }
     
+    // Check if click is on tabs (if multiple providers)
+    if (providers_.size() > 1 && config_.show_tabs) {
+        int tab_y_start = bar_height_ - config_.tab_height;
+        if (y >= tab_y_start) {
+            if (tab_bar_->HandleClick(x, y - tab_y_start)) {
+                // Tab change callback will handle provider switching
+                return true;
+            }
+        }
+    }
+    
     // Check if click is on a menu item
     int items_y_start = config_.height;
     for (int i = 0; i < config_.max_visible_items && (scroll_offset_ + i) < static_cast<int>(filtered_items_.size()); i++) {
@@ -392,6 +487,16 @@ bool MenuBar::HandleClick(int x, int y) {
 
 bool MenuBar::HandleHover(int x, int y) {
     if (!is_visible_) return false;
+    
+    // Check if hovering over tabs (if multiple providers)
+    if (providers_.size() > 1 && config_.show_tabs) {
+        int tab_y_start = bar_height_ - config_.tab_height;
+        if (y >= tab_y_start) {
+            tab_bar_->HandleHover(x, y - tab_y_start);
+            Render();
+            return true;
+        }
+    }
     
     // Update selection based on hover
     int items_y_start = config_.height;
@@ -491,6 +596,12 @@ void MenuBar::RenderToBuffer() {
         item_y += config_.item_height;
     }
     
+    // Render TabBar if there are multiple providers
+    if (providers_.size() > 1 && config_.show_tabs) {
+        int tab_y = bar_height_ - config_.tab_height;
+        tab_bar_->Render(cairo_, 0, tab_y, bar_width_);
+    }
+    
     cairo_surface_flush(cairo_surface_);
 }
 
@@ -527,15 +638,27 @@ void MenuBar::UploadToTexture() {
 void MenuBar::HandleKeyPress(uint32_t key, uint32_t modifiers) {
     if (!is_visible_) return;
     
+    // Debug: Log key presses
+    LOG_DEBUG_FMT("MenuBar received key: 0x{:x} (modifiers: {})", key, modifiers);
+    
     // Handle special keys that TextField doesn't handle
-    if (key == 65307) {  // Escape
+    if (key == XKB_KEY_Escape) {
         HandleEscape();
         return;
-    } else if (key == 65362) {  // Up arrow
+    } else if (key == XKB_KEY_Up) {
         HandleArrowUp();
         return;
-    } else if (key == 65364) {  // Down arrow
+    } else if (key == XKB_KEY_Down) {
         HandleArrowDown();
+        return;
+    } else if (key == XKB_KEY_Tab || key == XKB_KEY_ISO_Left_Tab) {
+        LOG_INFO_FMT("Tab key pressed! Providers: {}", providers_.size());
+        // Switch to next provider tab if multiple providers
+        if (providers_.size() > 1) {
+            LOG_INFO("Switching to next tab...");
+            tab_bar_->SelectNext();
+            // Tab change callback will update active_provider_index_ and refresh
+        }
         return;
     }
     

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui/MenuBar.hpp"
+#include "ui/menubar/MenuBar.hpp"
 #include "wayland/WaylandTypes.hpp"
 #include <memory>
 #include <map>

@@ -1,4 +1,4 @@
-#include "ui/MenuBarManager.hpp"
+#include "ui/menubar/MenuBarManager.hpp"
 #include "wayland/LayerManager.hpp"
 #include "Logger.hpp"
 

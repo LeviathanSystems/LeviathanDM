@@ -23,8 +23,11 @@ A lightweight, customizable tiling Wayland compositor built with wlroots and C++
 ## Features
 
 - **Multiple Tiling Layouts** - Master-stack, monocle, grid
+- **XWayland Support** - Run X11 applications seamlessly alongside Wayland clients
 - **Workspaces** - 9 dynamic workspaces with quick switching
 - **Built-in Notification Daemon** - No external daemon needed
+- **Tabbed Windows** - Organize windows with tabs (in development)
+- **Application Launcher** - Enhanced menubar with desktop app integration
 - **Vim-like Keybindings** - Familiar hjkl navigation
 - **Layer-Shell Support** - For panels, notifications, and overlays
 - **Built-in Help** - Press `Super + F1` for keybinding overlay

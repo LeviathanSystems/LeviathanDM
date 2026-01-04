@@ -48,11 +48,13 @@ struct View {
     struct wl_listener map;
     struct wl_listener unmap;
     struct wl_listener destroy;
+    struct wl_listener surface_destroy;  // wl_surface destroy (for X11 windows to clean up listeners)
     struct wl_listener request_move;
     struct wl_listener request_resize;
     struct wl_listener request_maximize;
     struct wl_listener request_fullscreen;
     struct wl_listener decoration_request_mode;  // Decoration mode request
+    struct wl_listener associate;  // XWayland surface association (when wl_surface becomes available)
     
     // Constructors for different surface types
     View(struct wlr_xdg_toplevel* toplevel, Server* server);

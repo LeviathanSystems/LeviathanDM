@@ -50,6 +50,11 @@ uint16_t xwayland_surface_get_height(struct wlr_xwayland_surface* surf) {
     return surf->height;
 }
 
+pid_t xwayland_surface_get_pid(struct wlr_xwayland_surface* surf) {
+    if (!surf) return -1;
+    return surf->pid;
+}
+
 struct wl_signal* xwayland_surface_get_events_commit(struct wlr_xwayland_surface* surf) {
     if (!surf || !surf->surface) return NULL;
     return &surf->surface->events.commit;
@@ -68,6 +73,11 @@ struct wl_signal* xwayland_surface_get_events_unmap(struct wlr_xwayland_surface*
 struct wl_signal* xwayland_surface_get_events_destroy(struct wlr_xwayland_surface* surf) {
     if (!surf) return NULL;
     return &surf->events.destroy;
+}
+
+struct wl_signal* xwayland_surface_get_events_associate(struct wlr_xwayland_surface* surf) {
+    if (!surf) return NULL;
+    return &surf->events.associate;
 }
 
 struct wl_signal* xwayland_surface_get_events_request_move(struct wlr_xwayland_surface* surf) {

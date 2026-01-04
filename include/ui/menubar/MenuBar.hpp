@@ -10,6 +10,7 @@
 #include "ui/reusable-widgets/TextField.hpp"
 #include "ui/reusable-widgets/VBox.hpp"
 #include "ui/reusable-widgets/ScrollView.hpp"
+#include "ui/reusable-widgets/TabBar.hpp"
 #include "ui/IconLoader.hpp"
 
 namespace Leviathan {
@@ -64,6 +65,12 @@ public:
     // Get the name of this provider (for debugging/logging)
     virtual std::string GetName() const = 0;
     
+    // Get the display name for the tab (defaults to GetName())
+    virtual std::string GetTabName() const { return GetName(); }
+    
+    // Get icon for the tab (optional)
+    virtual std::string GetTabIcon() const { return ""; }
+    
     // Load items (called during menubar initialization or refresh)
     virtual std::vector<std::shared_ptr<MenuItem>> LoadItems() = 0;
     
@@ -101,10 +108,28 @@ struct MenuBarConfig {
         double r = 0.7, g = 0.7, b = 0.7, a = 1.0;
     } description_color;
     
+    struct {
+        double r = 0.15, g = 0.15, b = 0.15, a = 1.0;
+    } tab_background_color;
+    
+    struct {
+        double r = 0.3, g = 0.5, b = 0.7, a = 1.0;
+    } tab_active_color;
+    
+    struct {
+        double r = 0.8, g = 0.8, b = 0.8, a = 1.0;
+    } tab_text_color;
+    
     // Fonts
     std::string font_family = "Sans";
     int font_size = 12;
     int description_font_size = 9;
+    int tab_font_size = 10;
+    
+    // Tab settings
+    int tab_height = 30;
+    int tab_padding = 15;
+    bool show_tabs = true;  // Show tabs when multiple providers
     
     // Behavior
     bool fuzzy_matching = true;
@@ -206,11 +231,13 @@ private:
     // UI Components
     std::shared_ptr<TextField> search_field_;
     std::unique_ptr<IconLoader> icon_loader_;
+    std::unique_ptr<TabBar> tab_bar_;
     
     // Item management
     std::vector<std::shared_ptr<IMenuItemProvider>> providers_;
     std::vector<std::shared_ptr<MenuItem>> all_items_;
     std::vector<std::shared_ptr<MenuItem>> filtered_items_;
+    int active_provider_index_;  // Index of currently active provider tab
 };
 
 } // namespace UI

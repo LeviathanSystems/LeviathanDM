@@ -1,7 +1,7 @@
 #include "Actions.hpp"
 #include "wayland/Server.hpp"
 #include "Logger.hpp"
-#include "ui/MenuBarManager.hpp"
+#include "ui/menubar/MenuBarManager.hpp"
 #include <unistd.h>
 #include <sys/wait.h>
 

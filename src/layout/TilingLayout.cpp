@@ -2,6 +2,7 @@
 #include "Logger.hpp"
 #include "config/ConfigParser.hpp"
 #include "wayland/Server.hpp"
+#include "wayland/XwaylandCompat.hpp"
 
 extern "C" {
 #include <wlr/types/wlr_xdg_shell.h>
@@ -137,8 +138,20 @@ void TilingLayout::MoveResizeView(View* view,
         LOG_DEBUG("  - WARNING: scene_tree is NULL!");
     }
     
-    wlr_xdg_toplevel_set_size(view->xdg_toplevel, width, height);
-    LOG_DEBUG("  - Set toplevel size");
+    // Use appropriate resize method based on window type
+    if (view->is_xwayland) {
+        // X11 window - use xwayland_surface configure
+        if (view->xwayland_surface) {
+            wlr_xwayland_surface_configure(view->xwayland_surface, x, y, width, height);
+            LOG_DEBUG("  - Configured XWayland surface");
+        }
+    } else {
+        // Wayland native window - use xdg_toplevel
+        if (view->xdg_toplevel) {
+            wlr_xdg_toplevel_set_size(view->xdg_toplevel, width, height);
+            LOG_DEBUG("  - Set toplevel size");
+        }
+    }
     
     // Border management is now handled by window decoration system
 }

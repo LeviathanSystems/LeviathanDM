@@ -2,6 +2,7 @@
 #define XWAYLAND_COMPAT_HPP
 
 #include <cstdint>
+#include <sys/types.h>  // For pid_t
 
 /*
  * C++ compatibility wrapper for wlr/xwayland.h
@@ -18,6 +19,7 @@ struct wlr_surface;
 struct wl_display;
 struct wlr_compositor;
 struct wlr_xcursor_manager;
+struct wlr_seat;
 
 // C wrapper functions to access xwayland_surface fields
 extern "C" {
@@ -29,6 +31,7 @@ extern "C" {
     int16_t xwayland_surface_get_y(struct wlr_xwayland_surface* surf);
     uint16_t xwayland_surface_get_width(struct wlr_xwayland_surface* surf);
     uint16_t xwayland_surface_get_height(struct wlr_xwayland_surface* surf);
+    pid_t xwayland_surface_get_pid(struct wlr_xwayland_surface* surf);
     struct wl_signal* xwayland_surface_get_events_commit(struct wlr_xwayland_surface* surf);
     struct wl_signal* xwayland_surface_get_events_map(struct wlr_xwayland_surface* surf);
     struct wl_signal* xwayland_surface_get_events_unmap(struct wlr_xwayland_surface* surf);
@@ -37,6 +40,7 @@ extern "C" {
     struct wl_signal* xwayland_surface_get_events_request_resize(struct wlr_xwayland_surface* surf);
     struct wl_signal* xwayland_surface_get_events_request_maximize(struct wlr_xwayland_surface* surf);
     struct wl_signal* xwayland_surface_get_events_request_fullscreen(struct wlr_xwayland_surface* surf);
+    struct wl_signal* xwayland_surface_get_events_associate(struct wlr_xwayland_surface* surf);
     
     // Access wlr_xwayland fields
     const char* xwayland_get_display_name(struct wlr_xwayland* xwayland);
@@ -49,6 +53,9 @@ extern "C" {
 extern "C" {
     struct wlr_xwayland* wlr_xwayland_create(struct wl_display*, struct wlr_compositor*, bool lazy);
     void wlr_xwayland_set_cursor(struct wlr_xwayland*, uint8_t* pixels, uint32_t stride, uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y);
+    void wlr_xwayland_set_seat(struct wlr_xwayland*, struct wlr_seat*);
+    void wlr_xwayland_surface_close(struct wlr_xwayland_surface*);
+    void wlr_xwayland_surface_configure(struct wlr_xwayland_surface*, int16_t x, int16_t y, uint16_t width, uint16_t height);
 }
 
 // Helper macros for convenience

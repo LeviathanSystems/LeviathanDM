@@ -1,5 +1,6 @@
 #include "wayland/XwaylandCompat.hpp"  // Must be first to define wlr_xwayland_surface
 #include "wayland/View.hpp"
+#include "wayland/Output.hpp"  // For Output struct
 #include "Logger.hpp"
 #include "wayland/Server.hpp"
 #include "config/ConfigParser.hpp"
@@ -11,6 +12,8 @@ namespace Leviathan {
 namespace Wayland {
 
 // Forward declare static callbacks
+static void view_handle_associate(struct wl_listener* listener, void* data);
+static void view_handle_surface_destroy(struct wl_listener* listener, void* data);
 static void view_handle_commit(struct wl_listener* listener, void* data);
 static void view_handle_map(struct wl_listener* listener, void* data);
 static void view_handle_unmap(struct wl_listener* listener, void* data);
@@ -96,17 +99,10 @@ View::View(struct ::wlr_xwayland_surface* xwayland_surf, Server* srv)
     , opacity(1.0f)
     , border_radius(0) {
     
-    // Setup commit listener
-    commit.notify = view_handle_commit;
-    wl_signal_add(xwayland_surface_get_events_commit(xwayland_surf), &commit);
+    // For XWayland surfaces, only add listeners for events that exist immediately
+    // Surface-related events (commit, map, unmap) require waiting for the associate event
     
-    // Setup listeners
-    map.notify = view_handle_map;
-    wl_signal_add(xwayland_surface_get_events_map(xwayland_surf), &map);
-    
-    unmap.notify = view_handle_unmap;
-    wl_signal_add(xwayland_surface_get_events_unmap(xwayland_surf), &unmap);
-    
+    // These events exist immediately on the xwayland_surface itself
     destroy.notify = view_handle_destroy;
     wl_signal_add(xwayland_surface_get_events_destroy(xwayland_surf), &destroy);
     
@@ -122,7 +118,35 @@ View::View(struct ::wlr_xwayland_surface* xwayland_surf, Server* srv)
     request_fullscreen.notify = view_handle_request_fullscreen;
     wl_signal_add(xwayland_surface_get_events_request_fullscreen(xwayland_surf), &request_fullscreen);
     
-    LOG_DEBUG("Created Xwayland view");
+    // Register the associate event listener to add surface listeners when wl_surface becomes available
+    associate.notify = view_handle_associate;
+    wl_signal_add(xwayland_surface_get_events_associate(xwayland_surf), &associate);
+    
+    // These events require a wl_surface, which might not exist yet
+    // Only add them if the surface is already associated
+    if (surface) {
+        commit.notify = view_handle_commit;
+        wl_signal_add(&surface->events.commit, &commit);
+        
+        map.notify = view_handle_map;
+        wl_signal_add(&surface->events.map, &map);
+        
+        unmap.notify = view_handle_unmap;
+        wl_signal_add(&surface->events.unmap, &unmap);
+        
+        // Add surface destroy listener
+        surface_destroy.notify = view_handle_surface_destroy;
+        wl_signal_add(&surface->events.destroy, &surface_destroy);
+        
+        LOG_DEBUG("XWayland view created with surface already associated");
+    } else {
+        // Initialize the wl_list links so wl_list_remove() in destructor is safe
+        wl_list_init(&commit.link);
+        wl_list_init(&map.link);
+        wl_list_init(&unmap.link);
+        wl_list_init(&surface_destroy.link);
+        LOG_DEBUG("XWayland view created, waiting for surface association");
+    }
 }
 
 View::~View() {
@@ -144,11 +168,108 @@ View::~View() {
     wl_list_remove(&request_resize.link);
     wl_list_remove(&request_maximize.link);
     wl_list_remove(&request_fullscreen.link);
+    
+    // Remove X11-specific listeners
+    if (is_xwayland) {
+        wl_list_remove(&associate.link);
+        wl_list_remove(&surface_destroy.link);
+    }
+}
+
+// Handler for wl_surface destroy (X11 windows only)
+// This is called when the wl_surface is destroyed, which happens BEFORE the xwayland_surface is destroyed
+// We need to remove our listeners from the surface before it's destroyed
+static void view_handle_surface_destroy(struct wl_listener* listener, void* data) {
+    View* view = wl_container_of(listener, view, surface_destroy);
+    
+    LOG_DEBUG_FMT("wl_surface destroyed for X11 view={}, removing surface listeners", 
+                 static_cast<void*>(view));
+    
+    // Remove listeners that were attached to the wl_surface
+    wl_list_remove(&view->commit.link);
+    wl_list_remove(&view->map.link);
+    wl_list_remove(&view->unmap.link);
+    wl_list_remove(&view->surface_destroy.link);
+    
+    // Re-initialize the links so destructor doesn't crash
+    wl_list_init(&view->commit.link);
+    wl_list_init(&view->map.link);
+    wl_list_init(&view->unmap.link);
+    wl_list_init(&view->surface_destroy.link);
+    
+    view->surface = nullptr;
+}
+
+void view_handle_associate(struct wl_listener* listener, void* data) {
+    View* view = wl_container_of(listener, view, associate);
+    
+    LOG_DEBUG_FMT("XWayland surface associated! view={}, now adding surface listeners", 
+                 static_cast<void*>(view));
+    
+    // Now the wl_surface is available, so we can add the surface-related listeners
+    view->surface = xwayland_surface_get_surface(view->xwayland_surface);
+    
+    if (view->surface) {
+        // IMPORTANT: Remove the initialized list links first to avoid double-linking
+        wl_list_remove(&view->commit.link);
+        wl_list_remove(&view->map.link);
+        wl_list_remove(&view->unmap.link);
+        
+        // Add commit listener
+        view->commit.notify = view_handle_commit;
+        wl_signal_add(&view->surface->events.commit, &view->commit);
+        
+        // Add map listener
+        view->map.notify = view_handle_map;
+        wl_signal_add(&view->surface->events.map, &view->map);
+        
+        // Add unmap listener
+        view->unmap.notify = view_handle_unmap;
+        wl_signal_add(&view->surface->events.unmap, &view->unmap);
+        
+        // Add surface destroy listener to clean up when wl_surface is destroyed
+        view->surface_destroy.notify = view_handle_surface_destroy;
+        wl_signal_add(&view->surface->events.destroy, &view->surface_destroy);
+        
+        LOG_DEBUG("Added commit, map, unmap, and surface_destroy listeners to XWayland surface");
+        
+        // Check if the surface is already mapped (can happen with X11 windows)
+        // If so, we need to manually trigger the map handler
+        if (wlr_surface_has_buffer(view->surface)) {
+            LOG_DEBUG("Surface already has buffer, manually triggering map handler");
+            view_handle_map(&view->map, view->surface);
+        }
+    } else {
+        LOG_ERROR("Associate event fired but surface is still NULL!");
+    }
 }
 
 static void view_handle_commit(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, commit);
     
+    // XWayland surfaces don't use XDG shell protocol, so skip XDG-specific handling
+    if (view->is_xwayland) {
+        // X11 windows don't need configure events - they manage their own size
+        // Just handle size updates if needed
+        if (view->border_top && view->server) {
+            int surface_width = xwayland_surface_get_width(view->xwayland_surface);
+            int surface_height = xwayland_surface_get_height(view->xwayland_surface);
+            
+            // Only update if the surface size has actually changed
+            if (surface_width > 0 && surface_height > 0 &&
+                (surface_width != view->width || surface_height != view->height)) {
+                LOG_DEBUG_FMT("X11 surface size changed from {}x{} to {}x{}, updating borders",
+                             view->width, view->height, surface_width, surface_height);
+                
+                // Update view dimensions to match surface
+                view->width = surface_width;
+                view->height = surface_height;
+            }
+        }
+        return;
+    }
+    
+    // XDG toplevel handling
     //LOG_DEBUG_FMT("Commit handler called! view={}, xdg_toplevel={}, base={}", 
     //          static_cast<void*>(view),
     //          static_cast<void*>(view->xdg_toplevel),
@@ -214,62 +335,94 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
 static void view_handle_map(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, map);
     view->mapped = true;
-    LOG_INFO_FMT("View mapped! view={}, xdg_toplevel={}", 
-             static_cast<void*>(view),
-             static_cast<void*>(view->xdg_toplevel));
     
-    // Apply window decorations based on rules
-    if (view->xdg_toplevel) {
-        std::string app_id = view->xdg_toplevel->app_id ? view->xdg_toplevel->app_id : "";
-        std::string title = view->xdg_toplevel->title ? view->xdg_toplevel->title : "";
+    std::string app_id;
+    std::string title;
+    
+    if (view->is_xwayland) {
+        // X11 window
+        LOG_INFO_FMT("X11 View mapped! view={}, xwayland_surface={}", 
+                 static_cast<void*>(view),
+                 static_cast<void*>(view->xwayland_surface));
+        
+        app_id = XWAYLAND_CLASS(view->xwayland_surface) ? XWAYLAND_CLASS(view->xwayland_surface) : "";
+        title = XWAYLAND_TITLE(view->xwayland_surface) ? XWAYLAND_TITLE(view->xwayland_surface) : "";
+        
+        LOG_DEBUG_FMT("X11 window mapped - class='{}', title='{}'", app_id, title);
+        
+        // Create scene tree for X11 window now that it's mapped
+        if (!view->scene_tree && view->server) {
+            struct wlr_scene_tree* parent_layer = &view->server->GetScene()->tree;
+            
+            // Find first output's WorkingArea layer
+            Output* first_output = view->server->GetFirstOutput();
+            if (first_output && first_output->layer_manager) {
+                parent_layer = first_output->layer_manager->GetLayer(Layer::WorkingArea);
+                LOG_DEBUG("Adding X11 window to WorkingArea layer");
+            }
+            
+            view->scene_tree = wlr_scene_subsurface_tree_create(parent_layer, view->surface);
+            if (view->scene_tree) {
+                view->scene_tree->node.data = view;
+                LOG_DEBUG("Created scene tree for mapped X11 window");
+            }
+        }
+    } else {
+        // Wayland native (XDG) window
+        LOG_INFO_FMT("View mapped! view={}, xdg_toplevel={}", 
+                 static_cast<void*>(view),
+                 static_cast<void*>(view->xdg_toplevel));
+        
+        app_id = view->xdg_toplevel->app_id ? view->xdg_toplevel->app_id : "";
+        title = view->xdg_toplevel->title ? view->xdg_toplevel->title : "";
         
         LOG_DEBUG_FMT("Window mapped - app_id='{}', title='{}'", app_id, title);
+    }
+    
+    // Apply window decorations based on rules (works for both XDG and X11)
+    const auto* rule = Leviathan::Config().window_rules.FindMatch(
+        app_id, title, "", view->is_floating
+    );
+    
+    if (rule) {
+        LOG_INFO_FMT("Matched window rule: '{}' for app_id='{}'", rule->name, app_id);
         
-        // Find matching window rule
-        const auto* rule = Leviathan::Config().window_rules.FindMatch(
-            app_id, title, "", view->is_floating
-        );
+        // Apply decoration group if specified
+        if (!rule->decoration_group.empty()) {
+            const auto* decoration = Leviathan::Config().window_decorations.FindByName(
+                rule->decoration_group
+            );
+            
+            if (decoration) {
+                view->ApplyDecorationConfig(*decoration, true);  // true = focused
+                LOG_INFO_FMT("Applied decoration group '{}' to window", rule->decoration_group);
+            } else {
+                LOG_WARN_FMT("Decoration group '{}' not found", rule->decoration_group);
+            }
+        }
         
-        if (rule) {
-            LOG_INFO_FMT("Matched window rule: '{}' for app_id='{}'", rule->name, app_id);
-            
-            // Apply decoration group if specified
-            if (!rule->decoration_group.empty()) {
-                const auto* decoration = Leviathan::Config().window_decorations.FindByName(
-                    rule->decoration_group
-                );
-                
-                if (decoration) {
-                    view->ApplyDecorationConfig(*decoration, true);  // true = focused
-                    LOG_INFO_FMT("Applied decoration group '{}' to window", rule->decoration_group);
-                } else {
-                    LOG_WARN_FMT("Decoration group '{}' not found", rule->decoration_group);
-                }
-            }
-            
-            // Apply other rule actions
-            if (rule->force_floating && !view->is_floating) {
-                view->is_floating = true;
-                LOG_DEBUG_FMT("Forced window '{}' to float", app_id);
-            }
-            if (rule->force_tiled && view->is_floating) {
-                view->is_floating = false;
-                LOG_DEBUG_FMT("Forced window '{}' to tile", app_id);
-            }
-            if (rule->opacity_override.has_value()) {
-                float opacity = rule->opacity_override.value() / 100.0f;
-                view->SetOpacity(opacity);
-                LOG_DEBUG_FMT("Overrode opacity to {}%", rule->opacity_override.value());
-            }
-        } else {
-            LOG_DEBUG_FMT("No matching rule found for app_id='{}', title='{}'", app_id, title);
-            
-            // Apply default decoration if available
-            const auto* default_decoration = Leviathan::Config().window_decorations.GetDefault();
-            if (default_decoration) {
-                view->ApplyDecorationConfig(*default_decoration, true);
-                LOG_DEBUG("Applied default decoration");
-            }
+        // Apply other rule actions
+        if (rule->force_floating && !view->is_floating) {
+            view->is_floating = true;
+            LOG_DEBUG_FMT("Forced window '{}' to float", app_id);
+        }
+        if (rule->force_tiled && view->is_floating) {
+            view->is_floating = false;
+            LOG_DEBUG_FMT("Forced window '{}' to tile", app_id);
+        }
+        if (rule->opacity_override.has_value()) {
+            float opacity = rule->opacity_override.value() / 100.0f;
+            view->SetOpacity(opacity);
+            LOG_DEBUG_FMT("Overrode opacity to {}%", rule->opacity_override.value());
+        }
+    } else {
+        LOG_DEBUG_FMT("No matching rule found for app_id='{}', title='{}'", app_id, title);
+        
+        // Apply default decoration if available
+        const auto* default_decoration = Leviathan::Config().window_decorations.GetDefault();
+        if (default_decoration) {
+            view->ApplyDecorationConfig(*default_decoration, true);
+            LOG_DEBUG("Applied default decoration");
         }
     }
     
@@ -341,6 +494,14 @@ static void view_handle_request_maximize(struct wl_listener* listener, void* dat
 
 static void view_handle_request_fullscreen(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, request_fullscreen);
+    
+    if (view->is_xwayland) {
+        // XWayland fullscreen handling
+        // TODO: Implement XWayland fullscreen support
+        LOG_DEBUG("XWayland fullscreen request (not yet implemented)");
+        return;
+    }
+    
     struct wlr_xdg_toplevel* toplevel = static_cast<struct wlr_xdg_toplevel*>(data);
     
     view->is_fullscreen = toplevel->requested.fullscreen;

@@ -255,6 +255,7 @@ set(SOURCES
     src/ui/reusable-widgets/Button.cpp
     src/ui/reusable-widgets/TextField.cpp
     src/ui/reusable-widgets/BaseModal.cpp
+    src/ui/reusable-widgets/TabBar.cpp
     src/ui/KeybindingHelpModal.cpp
     src/ui/ModalManager.cpp
     src/ui/WidgetPluginManager.cpp
@@ -262,9 +263,12 @@ set(SOURCES
     src/ui/PluginAPI.cpp
     src/ui/DBusHelper.cpp
     src/ui/NotificationDaemon.cpp
-    src/ui/MenuBar.cpp
-    src/ui/MenuBarManager.cpp
-    src/ui/MenuItemProviders.cpp
+    src/ui/menubar/MenuBar.cpp
+    src/ui/menubar/MenuBarManager.cpp
+    src/ui/menubar/MenuItemProviders.cpp
+    src/ui/menubar/providers/AppsProvider.cpp
+    src/ui/menubar/providers/CommandsProvider.cpp
+    src/ui/menubar/providers/BookmarksProvider.cpp
     src/ui/IconLoader.cpp
     # IPC
     src/ipc/IPC.cpp
@@ -294,9 +298,12 @@ set(HEADERS
     include/layout/TilingLayout.hpp
     # UI
     include/ui/StatusBar.hpp
-    include/ui/MenuBar.hpp
-    include/ui/MenuBarManager.hpp
-    include/ui/MenuItemProviders.hpp
+    include/ui/menubar/MenuBar.hpp
+    include/ui/menubar/MenuBarManager.hpp
+    include/ui/menubar/MenuItemProviders.hpp
+    include/ui/menubar/providers/AppsProvider.hpp
+    include/ui/menubar/providers/CommandsProvider.hpp
+    include/ui/menubar/providers/BookmarksProvider.hpp
     # IPC
     include/ipc/IPC.hpp
     include/wayland/WallpaperManager.hpp

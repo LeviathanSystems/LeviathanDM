@@ -68,6 +68,7 @@ public:
     View* GetFocusedView() const { return focused_view_; }
     UI::NotificationDaemon* GetNotificationDaemon() { return notification_daemon_.get(); }
     UI::MenuBarManager* GetMenuBarManager();  // Returns singleton instance
+    Output* GetFirstOutput();  // Get first output in the list
     
     // Find Output struct by wlr_output
     Output* FindOutput(struct wlr_output* wlr_output);

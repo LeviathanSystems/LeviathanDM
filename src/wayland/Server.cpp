@@ -8,8 +8,8 @@
 #include "ui/KeybindingHelpModal.hpp"
 #include "ui/WidgetPluginManager.hpp"
 #include "ui/NotificationDaemon.hpp"
-#include "ui/MenuBarManager.hpp"
-#include "ui/MenuItemProviders.hpp"
+#include "ui/menubar/MenuBarManager.hpp"
+#include "ui/menubar/MenuItemProviders.hpp"
 #include "config/ConfigParser.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cstring>
+#include <cerrno>  // For errno and EPIPE
 #include <unistd.h>  // For fork(), execlp(), setenv()
 #include <sys/types.h>  // For pid_t
 
@@ -295,7 +296,8 @@ bool Server::Initialize() {
     wl_signal_add(&xdg_shell->events.new_toplevel, &new_xdg_toplevel);
     
     // Create Xwayland server for X11 compatibility
-    xwayland = wlr_xwayland_create(wl_display, compositor, true);
+    // Use lazy=false to start Xwayland immediately (lazy=true requires shell_v1 protocol)
+    xwayland = wlr_xwayland_create(wl_display, compositor, false);
     if (xwayland) {
         xwayland_ready.notify = handle_xwayland_ready;
         wl_signal_add(xwayland_get_ready_signal(xwayland), &xwayland_ready);
@@ -390,6 +392,36 @@ bool Server::Initialize() {
     UI::MenuBarManager::Instance().AddProvider(desktop_app_provider);
     LOG_INFO("Desktop Application provider added to MenuBar");
     
+    // Add Custom Commands provider with some example commands
+    auto commands_provider = std::make_shared<UI::CustomCommandProvider>();
+    commands_provider->AddCommand("Terminal", "alacritty", "Open a new terminal window", 100);
+    commands_provider->AddCommand("File Manager", "thunar", "Open the file manager", 90);
+    commands_provider->AddCommand("Screenshot", "grim ~/screenshot-$(date +%Y%m%d-%H%M%S).png", "Take a screenshot", 80);
+    commands_provider->AddCommand("Lock Screen", "swaylock", "Lock the screen", 70);
+    commands_provider->AddCommand("System Monitor", "htop", "Open system monitor in terminal", 60);
+    UI::MenuBarManager::Instance().AddProvider(commands_provider);
+    LOG_INFO("Custom Commands provider added to MenuBar");
+    
+    // Add Bookmarks provider with some example bookmarks
+    auto bookmarks_provider = std::make_shared<UI::BookmarkProvider>();
+    const char* home = getenv("HOME");
+    if (home) {
+        bookmarks_provider->AddBookmark("Home", std::string(home), 
+            UI::BookmarkMenuItem::BookmarkType::Directory, "Home directory");
+        bookmarks_provider->AddBookmark("Documents", std::string(home) + "/Documents", 
+            UI::BookmarkMenuItem::BookmarkType::Directory, "Documents folder");
+        bookmarks_provider->AddBookmark("Downloads", std::string(home) + "/Downloads", 
+            UI::BookmarkMenuItem::BookmarkType::Directory, "Downloads folder");
+        bookmarks_provider->AddBookmark("Pictures", std::string(home) + "/Pictures", 
+            UI::BookmarkMenuItem::BookmarkType::Directory, "Pictures folder");
+    }
+    bookmarks_provider->AddBookmark("GitHub", "https://github.com", 
+        UI::BookmarkMenuItem::BookmarkType::URL, "Open GitHub");
+    bookmarks_provider->AddBookmark("Google", "https://google.com", 
+        UI::BookmarkMenuItem::BookmarkType::URL, "Search with Google");
+    UI::MenuBarManager::Instance().AddProvider(bookmarks_provider);
+    LOG_INFO("Bookmarks provider added to MenuBar");
+    
     std::cout << "Compositor initialized successfully\n";
     return true;
 }
@@ -447,9 +479,17 @@ void Server::Run() {
             notification_daemon_->Update();
         }
         
-        // Process Wayland events
-        wl_display_flush_clients(wl_display);
-        wl_event_loop_dispatch(wl_event_loop, 1);  // 1ms timeout
+        // Process Wayland events with error handling
+        wl_display_flush_clients(wl_display);  // Returns void, not int
+        
+        int dispatch_result = wl_event_loop_dispatch(wl_event_loop, 1);  // 1ms timeout
+        if (dispatch_result < 0) {
+            if (errno == EPIPE) {
+                LOG_DEBUG("Client disconnected (broken pipe during dispatch) - continuing");
+            } else {
+                LOG_ERROR_FMT("wl_event_loop_dispatch failed: {} - continuing", strerror(errno));
+            }
+        }
     }
 }
 
@@ -977,6 +1017,12 @@ void Server::OnXwaylandReady() {
         setenv("DISPLAY", display_name, true);
         LOG_INFO_FMT("X11 DISPLAY set to {}", display_name);
         
+        // Assign seat to Xwayland for clipboard/selection handling
+        if (seat) {
+            wlr_xwayland_set_seat(xwayland, seat);
+            LOG_INFO("Assigned seat to Xwayland for clipboard/selection support");
+        }
+        
         // Set cursor for Xwayland
         struct wlr_xcursor* xcursor = wlr_xcursor_manager_get_xcursor(cursor_mgr, "default", 1);
         if (xcursor && xcursor->image_count > 0) {
@@ -993,39 +1039,25 @@ void Server::OnXwaylandReady() {
 }
 
 void Server::OnNewXwaylandSurface(struct ::wlr_xwayland_surface* xwayland_surface) {
-    const char* title = XWAYLAND_TITLE(xwayland_surface);
-    LOG_INFO_FMT("New Xwayland surface: title='{}'", 
-                 title ? title : "(null)");
-    
     // Ignore override-redirect windows (popup menus, tooltips, etc.)
     if (XWAYLAND_OVERRIDE_REDIRECT(xwayland_surface)) {
-        LOG_DEBUG("Ignoring override-redirect window");
-        return;
+        return;  // These are normal and expected, no need to log
     }
     
-    // Create view for X11 window
+    const char* title = XWAYLAND_TITLE(xwayland_surface);
+    const char* class_name = XWAYLAND_CLASS(xwayland_surface);
+    LOG_INFO_FMT("New X11 surface: class='{}', title='{}'", 
+                 class_name ? class_name : "(none)",
+                 title ? title : "(none)");
+    
+    // Create view for X11 window immediately
+    // The wl_surface will be set later when the X11 window is fully ready
+    // Note: scene_tree setup happens in view_handle_map (View.cpp)
+    // when the surface is actually mapped
     View* view = new View(xwayland_surface, this);
     views.push_back(view);
     
-    // Find first output's WorkingArea layer
-    struct wlr_scene_tree* parent_layer = &scene->tree;  // Fallback to root
-    if (!wl_list_empty(&outputs)) {
-        Output* first_output = wl_container_of(outputs.next, first_output, link);
-        if (first_output && first_output->layer_manager) {
-            parent_layer = first_output->layer_manager->GetLayer(Layer::WorkingArea);
-            LOG_DEBUG("Adding X11 window to WorkingArea layer");
-        }
-    }
-    
-    // Add to scene graph
-    struct wlr_surface* surface = XWAYLAND_SURFACE(xwayland_surface);
-    view->scene_tree = wlr_scene_subsurface_tree_create(parent_layer, surface);
-    if (view->scene_tree) {
-        view->scene_tree->node.data = view;
-        LOG_DEBUG("Created scene tree for X11 window");
-    }
-    
-    // Create client wrapper
+    // Create client wrapper (same as XDG toplevels)
     auto* client = new Core::Client(view);
     clients_.push_back(client);
     
@@ -1048,11 +1080,17 @@ void Server::OnNewXwaylandSurface(struct ::wlr_xwayland_surface* xwayland_surfac
         }
     }
     
-    LOG_INFO("X11 window created and added to tag");
+    LOG_DEBUG("Created X11 view, waiting for surface to be ready and map");
 }
 
 void Server::FocusView(View* view) {
     if (!view || !view->mapped) {
+        return;
+    }
+    
+    // Validate the surface is still valid before focusing
+    if (!view->surface) {
+        LOG_WARN("Attempted to focus view with null surface");
         return;
     }
     
@@ -1067,7 +1105,9 @@ void Server::FocusView(View* view) {
     view->UpdateBorderColor(border_focused_);
     
     // Raise view in scene graph
-    wlr_scene_node_raise_to_top(&view->scene_tree->node);
+    if (view->scene_tree) {
+        wlr_scene_node_raise_to_top(&view->scene_tree->node);
+    }
     
     // Set keyboard focus
     if (view->surface) {
@@ -1095,7 +1135,14 @@ void Server::CloseView(View* view) {
         return;
     }
     
-    wlr_xdg_toplevel_send_close(view->xdg_toplevel);
+    // Close the appropriate surface type
+    if (view->is_xwayland && view->xwayland_surface) {
+        // For XWayland surfaces, use wlr_xwayland_surface_close
+        wlr_xwayland_surface_close(view->xwayland_surface);
+    } else if (view->xdg_toplevel) {
+        // For XDG toplevels, use send_close
+        wlr_xdg_toplevel_send_close(view->xdg_toplevel);
+    }
 }
 
 void Server::RemoveView(View* view) {
@@ -1115,6 +1162,12 @@ void Server::RemoveView(View* view) {
     // Clear focus if this view was focused
     if (focused_view_ == view) {
         focused_view_ = nullptr;
+        
+        // Clear keyboard focus from the seat to prevent issues with destroyed surfaces
+        if (seat) {
+            wlr_seat_keyboard_clear_focus(seat);
+        }
+        
         LOG_DEBUG("Cleared focused_view since it was the destroyed view");
     }
     
@@ -1649,6 +1702,14 @@ Core::Client* Server::GetFocusedClient() const {
 
 UI::MenuBarManager* Server::GetMenuBarManager() {
     return &UI::MenuBarManager::Instance();
+}
+
+Output* Server::GetFirstOutput() {
+    if (wl_list_empty(&outputs)) {
+        return nullptr;
+    }
+    Output* first = wl_container_of(outputs.next, first, link);
+    return first;
 }
 
 LayerManager* Server::GetLayerManagerForScreen(Core::Screen* screen) const {

@@ -1,7 +1,7 @@
 #include "wayland/Input.hpp"
 #include "wayland/Server.hpp"
 #include "config/ConfigParser.hpp"
-#include "ui/MenuBarManager.hpp"
+#include "ui/menubar/MenuBarManager.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
 #include <cstdlib>
@@ -79,6 +79,11 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data) {
                     break;
                 } else if (sym == XKB_KEY_Down) {
                     menubar_mgr->HandleArrowDown();
+                    handled = true;
+                    break;
+                } else if (sym == XKB_KEY_Tab || sym == XKB_KEY_ISO_Left_Tab) {
+                    // Pass Tab key to menubar's HandleKeyPress for tab switching
+                    menubar_mgr->HandleKeyPress(sym, modifiers);
                     handled = true;
                     break;
                 } else {
