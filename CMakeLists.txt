@@ -229,6 +229,7 @@ set(SOURCES
     src/wayland/Input.cpp
     src/wayland/LayerManager.cpp
     src/wayland/LayerSurface.cpp
+    src/wayland/NightLight.cpp
     src/wayland/xwayland_compat.c
     # Core layer
     src/core/Seat.cpp

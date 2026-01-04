@@ -4,6 +4,114 @@
 
 ## Major Features
 
+### Night Light - Automatic Blue Light Reduction
+Implemented a time-based night light feature that reduces blue light during evening/night hours by applying a warm color temperature overlay to the entire screen.
+
+#### What It Does
+- **Automatically adjusts screen color temperature** based on configurable schedule
+- **Reduces eye strain** during nighttime computer use
+- **Smooth transitions** with configurable fade-in/fade-out periods
+- **Fully customizable** temperature, strength, and active hours
+
+#### Configuration
+```yaml
+night_light:
+  enabled: true
+  start_time: "20:00"      # When to activate (8:00 PM)
+  end_time: "06:00"        # When to deactivate (6:00 AM)
+  temperature: 4500        # Color temperature in Kelvin (4500K = late afternoon)
+  strength: 0.50           # Effect intensity (0.0-1.0, 0.5 = 50%)
+  transition_duration: 1800 # Fade time in seconds (30 minutes)
+  smooth_transition: true   # Gradual strength changes
+```
+
+#### Technical Implementation
+
+##### 1. Dedicated Layer Architecture
+Created a new top-most layer specifically for the night light overlay:
+
+```cpp
+enum class Layer {
+    Background = 0,      // Wallpaper
+    WorkingArea = 1,     // Windows
+    Top = 2,             // Popups, notifications
+    NightLight = 3,      // Night light overlay (new)
+    COUNT = 4
+};
+```
+
+##### 2. Temperature to RGB Conversion
+Uses the Tanner Helland algorithm to convert color temperature to RGB values:
+
+```cpp
+// 4500K temperature → warm RGB (255, 228, 206)
+// Applied with strength multiplier for subtle effect
+float r = temp <= 6600 ? 255 : /* calculation */;
+float g = temp <= 6600 ? /* calculation */ : 255;
+float b = temp >= 6600 ? 255 : /* calculation */;
+
+// Tint further for warmer appearance
+r_tinted = r;
+g_tinted = g * 0.7;  // Reduce green
+b_tinted = b * 0.3;  // Reduce blue
+```
+
+##### 3. Time-Based Activation
+Checks current time against configured schedule every frame:
+
+```cpp
+bool NightLight::IsNightTime() {
+    time_t now = time(nullptr);
+    tm* local = localtime(&now);
+    int current_minutes = local->tm_hour * 60 + local->tm_min;
+    
+    int start = config_.start_hour * 60 + config_.start_minute;
+    int end = config_.end_hour * 60 + config_.end_minute;
+    
+    // Handle overnight schedules (e.g., 20:00-06:00)
+    if (end < start) {
+        return current_minutes >= start || current_minutes < end;
+    }
+    return current_minutes >= start && current_minutes < end;
+}
+```
+
+##### 4. Smooth Transitions
+Gradually fades in/out over configured duration:
+
+```cpp
+float CalculateTransitionProgress(time_t start_time, int duration) {
+    if (!config_.smooth_transition || duration == 0) return 1.0f;
+    
+    time_t now = time(nullptr);
+    float elapsed = difftime(now, start_time);
+    return std::min(elapsed / duration, 1.0f);
+}
+```
+
+##### 5. Semi-Transparent Overlay
+Renders a screen-sized colored rectangle with alpha blending:
+
+```cpp
+// Create overlay rectangle at screen size
+overlay_rect_ = wlr_scene_rect_create(night_light_tree_, 
+                                      output_width, output_height,
+                                      &color);
+
+// Apply color with alpha (max 25% opacity)
+float alpha = target_strength * 0.25f;
+float color[4] = { r_tinted, g_tinted, b_tinted, alpha };
+wlr_scene_rect_set_color(overlay_rect_, color);
+
+// Raise to top and enable
+wlr_scene_node_raise_to_top(&overlay_rect_->node);
+wlr_scene_node_set_enabled(&overlay_rect_->node, true);
+```
+
+#### Bug Fixes
+- Fixed config parsing: `LoadWithIncludes()` now properly calls `ParseNightLight()`
+- Added to frame update cycle via `Output::HandleFrame()`
+
 ### XWayland Support - Full X11 Application Integration
 Implemented comprehensive XWayland support enabling X11 applications to run seamlessly alongside native Wayland clients with full window management integration.
 

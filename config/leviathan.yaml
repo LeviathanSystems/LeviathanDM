@@ -63,6 +63,29 @@ general:
   # Set to false to allow client-side decorations
   remove_client_titlebars: true
 
+# Night Light - Reduces blue light during evening/night hours
+night_light:
+  enabled: true
+  
+  # Schedule (24-hour format)
+  start_time: "20:00"      # When to activate (8:00 PM)
+  end_time: "06:00"        # When to deactivate (6:00 AM)
+  
+  # Color temperature in Kelvin (lower = warmer/more orange)
+  # Daylight: ~6500K, Late Afternoon: ~4500K, Sunset: ~3400K, Candle: ~1850K
+  temperature: 4500
+  
+  # Effect strength (0.0 - 1.0)
+  # 1.0 = full effect, 0.5 = half effect, 0.0 = no effect
+  strength: 0.50
+  
+  # Transition duration in seconds (smooth fade in/out)
+  # 1800 = 30 minutes, 3600 = 1 hour
+  transition_duration: 1800
+  
+  # Smooth transition vs instant on/off
+  smooth_transition: true
+
 libinput:
   mouse:
     # Speed range: -1.0 (slow) to 1.0 (fast), default: 0.5

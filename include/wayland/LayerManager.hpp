@@ -33,6 +33,7 @@ class TilingLayout;
 struct StatusBarsConfig;
 class StatusBar;
 class ShmBuffer;
+class NightLight;
 enum class LayoutType;
 
 namespace UI {
@@ -53,13 +54,15 @@ class Server;
  * - Working Area: Regular application windows and bars
  *   - Bars take reserved space from working area
  *   - Applications tile in remaining space
- * - Top: Scratchpads, notifications, overlays
+ * - Top: Scratchpads, notifications, overlays, modals
+ * - NightLight: Screen-wide color temperature overlay (renders above everything)
  */
 enum class Layer {
     Background = 0,
     WorkingArea = 1,
     Top = 2,
-    COUNT = 3
+    NightLight = 3,
+    COUNT = 4
 };
 
 /**
@@ -110,6 +113,7 @@ public:
     struct wlr_scene_tree* GetBackgroundLayer() { return GetLayer(Layer::Background); }
     struct wlr_scene_tree* GetWorkingAreaLayer() { return GetLayer(Layer::WorkingArea); }
     struct wlr_scene_tree* GetTopLayer() { return GetLayer(Layer::Top); }
+    struct wlr_scene_tree* GetNightLightLayer() { return GetLayer(Layer::NightLight); }
     
     // Get the output this manager belongs to
     struct wlr_output* GetOutput() const { return output_; }
@@ -165,6 +169,9 @@ public:
     // Auto-tile current tag's views
     void AutoTile();
     
+    // Update night light effect (called periodically)
+    void UpdateNightLight();
+    
 private:
     struct wlr_scene_tree* layers_[static_cast<size_t>(Layer::COUNT)];
     ReservedSpace reserved_space_;
@@ -211,6 +218,9 @@ private:
     size_t wallpaper_index_ = 0;
     std::vector<std::string> wallpaper_paths_;
     struct wl_event_source* wallpaper_timer_ = nullptr;
+    
+    // Night light (warm color overlay for night hours)
+    std::unique_ptr<NightLight> night_light_;
     
     // Wallpaper helpers (private)
     class ShmBuffer* LoadWallpaperImage(const std::string& path, int width, int height);

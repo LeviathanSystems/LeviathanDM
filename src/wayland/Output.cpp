@@ -44,6 +44,11 @@ void OutputManager::HandleFrame(struct wl_listener* listener, void* data) {
         return;
     }
     
+    // Update night light effect (checks time and applies color temperature)
+    if (output->layer_manager) {
+        output->layer_manager->UpdateNightLight();
+    }
+    
     // Render the scene if needed and commit the output
     if (!wlr_scene_output_commit(output->scene_output, nullptr)) {
         // Scene is clean, nothing needs to be rendered

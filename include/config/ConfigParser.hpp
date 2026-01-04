@@ -57,6 +57,19 @@ struct GeneralConfig {
     float shadow_opacity = 0.5f;                      // Shadow opacity (0.0 - 1.0)
 };
 
+// Night Light configuration
+struct NightLightConfig {
+    bool enabled = false;                // Enable/disable night light
+    int start_hour = 20;                 // Start time (24-hour format)
+    int start_minute = 0;
+    int end_hour = 6;                    // End time (24-hour format)
+    int end_minute = 0;
+    float temperature = 3400.0f;         // Color temperature in Kelvin
+    float strength = 0.85f;              // Strength of the effect (0.0 - 1.0)
+    int transition_duration = 1800;      // Transition duration in seconds
+    bool smooth_transition = true;       // Gradual transition vs instant
+};
+
 // Forward declaration for recursive structure
 struct WidgetConfig;
 
@@ -286,6 +299,7 @@ struct StatusBarsConfig {
 struct ConfigParser {
     LibInputConfig libinput;
     GeneralConfig general;
+    NightLightConfig night_light;
     PluginsConfig plugins;
     StatusBarsConfig status_bars;
     MonitorGroupsConfig monitor_groups;
@@ -308,6 +322,7 @@ struct ConfigParser {
 private:
     void ParseLibInput(const YAML::Node& node);
     void ParseGeneral(const YAML::Node& node);
+    void ParseNightLight(const YAML::Node& node);
     void ParsePlugins(const YAML::Node& node);
     void ParseStatusBars(const YAML::Node& node);
     void ParseMonitorGroups(const YAML::Node& node);

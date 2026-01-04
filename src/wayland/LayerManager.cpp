@@ -2,6 +2,7 @@
 #include "wayland/WaylandTypes.hpp"
 #include "wayland/View.hpp"
 #include "wayland/Server.hpp"
+#include "wayland/NightLight.hpp"
 #include "core/Tag.hpp"
 #include "core/Client.hpp"
 #include "core/Events.hpp"
@@ -45,14 +46,38 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, s
     layers_[static_cast<size_t>(Layer::Top)] = 
         wlr_scene_tree_create(&scene->tree);
     
+    layers_[static_cast<size_t>(Layer::NightLight)] = 
+        wlr_scene_tree_create(&scene->tree);
+    
     // Ensure proper stacking order - raise each layer in sequence
-    // This ensures Top layer is always above WorkingArea, which is above Background
+    // This ensures layers render in the correct order: Background < WorkingArea < Top < NightLight
     wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::Background)]->node);
     wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::WorkingArea)]->node);
     wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::Top)]->node);
+    wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::NightLight)]->node);
+    
+    LOG_INFO("=== About to create NightLight ===");
+    LOG_INFO_FMT("Night light config - enabled: {}, temp: {}, strength: {}",
+                 Config().night_light.enabled,
+                 Config().night_light.temperature,
+                 Config().night_light.strength);
     
     // Create layout engine for this output
     layout_engine_ = new TilingLayout();
+    
+    // Initialize night light on its dedicated layer
+    night_light_ = std::make_unique<NightLight>(
+        layers_[static_cast<size_t>(Layer::NightLight)],
+        Config().night_light
+    );
+    
+    LOG_INFO("=== NightLight created ===");
+    
+    // Set output dimensions for night light
+    if (night_light_) {
+        night_light_->SetOutputDimensions(output_->width, output_->height);
+        LOG_INFO_FMT("Set night light dimensions: {}x{}", output_->width, output_->height);
+    }
     
     // Wallpaper will be initialized when SetMonitorConfig is called
     
@@ -60,6 +85,7 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, s
     //LOG_INFO_FMT("  - Background layer: {}", static_cast<void*>(layers_[0]));
     //LOG_INFO_FMT("  - Working area layer: {}", static_cast<void*>(layers_[1]));
     //LOG_INFO_FMT("  - Top layer: {}", static_cast<void*>(layers_[2]));
+    //LOG_INFO_FMT("  - Night light layer: {}", static_cast<void*>(layers_[3]));
 }
 
 LayerManager::~LayerManager() {
@@ -556,6 +582,12 @@ void LayerManager::AutoTile() {
     if (!tiled_views.empty()) {
         TileViews(tiled_views, tag, layout_engine_);
         LOG_DEBUG_FMT("Auto-tiled {} views on output '{}'", tiled_views.size(), output_->name);
+    }
+}
+
+void LayerManager::UpdateNightLight() {
+    if (night_light_) {
+        night_light_->Update();
     }
 }
 

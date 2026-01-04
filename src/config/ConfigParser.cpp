@@ -23,6 +23,10 @@ bool ConfigParser::Load(const std::string& config_path) {
             ParseGeneral(config["general"]);
         }
         
+        if (config["night_light"]) {
+            ParseNightLight(config["night_light"]);
+        }
+        
         if (config["plugins"]) {
             ParsePlugins(config["plugins"]);
         }
@@ -86,6 +90,11 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
         
         if (config["general"]) {
             ParseGeneral(config["general"]);
+        }
+        
+        if (config["night_light"]) {
+            LOG_INFO("Found night_light section in config (LoadWithIncludes)");
+            ParseNightLight(config["night_light"]);
         }
         
         if (config["plugins"]) {
@@ -287,6 +296,70 @@ void ConfigParser::ParseGeneral(const YAML::Node& node) {
         general.shadow_opacity = node["shadow_opacity"].as<float>();
         general.shadow_opacity = std::max(0.0f, std::min(1.0f, general.shadow_opacity));
     }
+}
+
+void ConfigParser::ParseNightLight(const YAML::Node& node) {
+    LOG_INFO("=== ParseNightLight called ===");
+    LOG_INFO_FMT("Node type: {}, defined: {}, IsMap: {}", 
+                 static_cast<int>(node.Type()), node.IsDefined(), node.IsMap());
+    
+    if (node["enabled"]) {
+        night_light.enabled = node["enabled"].as<bool>();
+        LOG_INFO_FMT("Night light enabled (parsed): {}", night_light.enabled);
+    } else {
+        LOG_WARN("No 'enabled' field found in night_light config!");
+    }
+    
+    // Parse start time (format: "HH:MM")
+    if (node["start_time"]) {
+        std::string time_str = node["start_time"].as<std::string>();
+        size_t colon = time_str.find(':');
+        if (colon != std::string::npos) {
+            night_light.start_hour = std::stoi(time_str.substr(0, colon));
+            night_light.start_minute = std::stoi(time_str.substr(colon + 1));
+            LOG_DEBUG_FMT("Night light start: {:02d}:{:02d}", 
+                         night_light.start_hour, night_light.start_minute);
+        }
+    }
+    
+    // Parse end time (format: "HH:MM")
+    if (node["end_time"]) {
+        std::string time_str = node["end_time"].as<std::string>();
+        size_t colon = time_str.find(':');
+        if (colon != std::string::npos) {
+            night_light.end_hour = std::stoi(time_str.substr(0, colon));
+            night_light.end_minute = std::stoi(time_str.substr(colon + 1));
+            LOG_DEBUG_FMT("Night light end: {:02d}:{:02d}", 
+                         night_light.end_hour, night_light.end_minute);
+        }
+    }
+    
+    if (node["temperature"]) {
+        night_light.temperature = node["temperature"].as<float>();
+        // Clamp between 1000K (candle) and 6500K (daylight)
+        night_light.temperature = std::max(1000.0f, std::min(6500.0f, night_light.temperature));
+        LOG_DEBUG_FMT("Night light temperature: {}K", night_light.temperature);
+    }
+    
+    if (node["strength"]) {
+        night_light.strength = node["strength"].as<float>();
+        // Clamp between 0.0 and 1.0
+        night_light.strength = std::max(0.0f, std::min(1.0f, night_light.strength));
+        LOG_DEBUG_FMT("Night light strength: {:.2f}", night_light.strength);
+    }
+    
+    if (node["transition_duration"]) {
+        night_light.transition_duration = node["transition_duration"].as<int>();
+        // Clamp between 0 and 7200 seconds (2 hours)
+        night_light.transition_duration = std::max(0, std::min(7200, night_light.transition_duration));
+        LOG_DEBUG_FMT("Night light transition: {}s", night_light.transition_duration);
+    }
+    
+    if (node["smooth_transition"]) {
+        night_light.smooth_transition = node["smooth_transition"].as<bool>();
+    }
+    
+    LOG_INFO("=== ParseNightLight complete ===");
 }
 
 void ConfigParser::ParsePlugins(const YAML::Node& node) {

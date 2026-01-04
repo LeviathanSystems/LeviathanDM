@@ -11,6 +11,10 @@ Explore LeviathanDM's built-in features and capabilities.
 
 ## Available Features
 
+### [Night Light](night-light)
+**New in v0.0.5**  
+Automatic blue light reduction during evening hours with configurable color temperature and smooth transitions. Helps reduce eye strain and improve sleep quality.
+
 ### [XWayland Support](xwayland)
 **New in v0.0.5**  
 Full X11 application support enabling legacy applications to run seamlessly alongside native Wayland clients. Chrome, Firefox, and other X11 apps now work without crashes.
