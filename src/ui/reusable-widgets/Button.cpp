@@ -22,8 +22,8 @@ void Button::CalculateSize(int available_width, int available_height) {
     cairo_text_extents(temp_cr, text_.c_str(), &extents);
     
     // Set size based on text with padding
-    width_ = static_cast<int>(extents.width) + (padding_ * 2);
-    height_ = static_cast<int>(extents.height) + (padding_ * 2);
+    width_ = static_cast<int>(extents.width) + (padding_h_ * 2);
+    height_ = static_cast<int>(extents.height) + (padding_v_ * 2);
     
     // Constrain to available space
     width_ = std::min(width_, available_width);
@@ -46,7 +46,7 @@ void Button::Render(cairo_t* cr) {
     cairo_set_source_rgba(cr, bg[0], bg[1], bg[2], bg[3]);
     
     // Rounded rectangle
-    double radius = 4.0;
+    double radius = border_radius_;
     double x = x_;
     double y = y_;
     double w = width_;

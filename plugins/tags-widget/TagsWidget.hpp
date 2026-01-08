@@ -43,6 +43,7 @@ private:
     void RebuildTagButtons();
     void OnCompositorEvent(const UI::Plugin::Event& event);
     void OnTagClicked(int tag_id);
+    std::string LightenColor(const std::string& hex_color, double amount);
     
     std::vector<TagInfo> tags_;
     std::vector<std::shared_ptr<UI::Button>> tag_buttons_;
@@ -53,7 +54,8 @@ private:
     int tag_spacing_ = 5;          // Space between tags
     int tag_padding_h_ = 8;        // Horizontal padding inside tag box
     int tag_padding_v_ = 4;        // Vertical padding inside tag box
-    std::string active_bg_color_ = "#5E81AC";      // Nord blue
+    int border_radius_ = 6;        // Border radius for tags
+    std::string active_bg_color_ = "#5E81AC";      // Nord bluecag
     std::string active_fg_color_ = "#ECEFF4";      // Nord snow storm
     std::string occupied_bg_color_ = "#3B4252";    // Nord dark gray
     std::string occupied_fg_color_ = "#D8DEE9";    // Nord lighter gray

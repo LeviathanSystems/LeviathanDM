@@ -47,6 +47,7 @@
 
 #include "ui/WidgetPlugin.hpp"
 #include "ui/CompositorState.hpp"
+#include "Types.hpp"
 #include <string>
 #include <vector>
 #include <functional>
@@ -168,6 +169,7 @@ std::string GetTagName(Core::Tag* tag);
 bool IsTagVisible(Core::Tag* tag);
 int GetTagClientCount(Core::Tag* tag);
 std::vector<Core::Client*> GetTagClients(Core::Tag* tag);
+LayoutType GetTagLayout(Core::Tag* tag);
 
 // Tag (workspace) actions
 void SwitchToTag(int tag_index);
@@ -187,6 +189,16 @@ std::string GetScreenSerial(Core::Screen* screen);
 int GetScreenWidth(Core::Screen* screen);
 int GetScreenHeight(Core::Screen* screen);
 Core::Tag* GetScreenCurrentTag(Core::Screen* screen);
+
+// Context management for multi-monitor support
+// Get the Screen for the current widget context
+// Widgets should call this instead of GetCompositorState()->GetActiveTag()
+// to ensure they get the correct screen in multi-monitor setups
+Core::Screen* GetWidgetScreen();
+
+// Internal function for StatusBar to set widget screen context
+// Not intended for plugin use
+void SetCurrentRenderScreen(Core::Screen* screen);
 
 } // namespace Plugin
 } // namespace UI

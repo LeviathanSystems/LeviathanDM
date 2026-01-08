@@ -120,7 +120,7 @@ public:
     
     // Tile windows in this output's working area
     // Takes a list of views that should be tiled according to the tag's layout
-    void TileViews(std::vector<class View*>& views, 
+    void TileViews(std::vector<class View*>& views,
                    Core::Tag* tag,
                    TilingLayout* layout_engine);
     

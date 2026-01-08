@@ -51,6 +51,11 @@ bool TagsWidget::InitializeImpl(const std::map<std::string, std::string>& config
         tag_padding_v_ = std::stoi(it->second);
     }
     
+    it = config.find("border_radius");
+    if (it != config.end()) {
+        border_radius_ = std::stoi(it->second);
+    }
+    
     it = config.find("active_bg_color");
     if (it != config.end()) {
         active_bg_color_ = it->second;
@@ -207,17 +212,26 @@ void TagsWidget::RebuildTagButtons() {
         
         auto button = std::make_shared<UI::Button>(label);
         
+        // Set button properties
+        button->SetFontSize(font_size_);
+        button->SetPadding(tag_padding_h_, tag_padding_v_);
+        button->SetBorderRadius(border_radius_);
+        
         // Set colors based on tag state
-        std::string bg_color, fg_color;
+        std::string bg_color, fg_color, hover_color;
         if (tag.is_active) {
             bg_color = active_bg_color_;
             fg_color = active_fg_color_;
+            // Lighter hover color for active tag
+            hover_color = LightenColor(active_bg_color_, 0.15);
         } else if (tag.has_clients) {
             bg_color = occupied_bg_color_;
             fg_color = occupied_fg_color_;
+            hover_color = LightenColor(occupied_bg_color_, 0.2);
         } else {
             bg_color = empty_bg_color_;
             fg_color = empty_fg_color_;
+            hover_color = LightenColor(empty_bg_color_, 0.25);
         }
         
         // Parse and set background color
@@ -225,9 +239,13 @@ void TagsWidget::RebuildTagButtons() {
             int r, g, b;
             sscanf(bg_color.c_str(), "#%02x%02x%02x", &r, &g, &b);
             button->SetBackgroundColor(r/255.0, g/255.0, b/255.0);
-            
-            // Also set hover color to be slightly lighter
-            button->SetHoverColor((r+30)/255.0, (g+30)/255.0, (b+30)/255.0);
+        }
+        
+        // Parse and set hover color
+        if (hover_color.size() >= 7 && hover_color[0] == '#') {
+            int r, g, b;
+            sscanf(hover_color.c_str(), "#%02x%02x%02x", &r, &g, &b);
+            button->SetHoverColor(r/255.0, g/255.0, b/255.0);
         }
         
         // Parse and set text color
@@ -245,6 +263,24 @@ void TagsWidget::RebuildTagButtons() {
         
         tag_buttons_.push_back(button);
     }
+}
+
+std::string TagsWidget::LightenColor(const std::string& hex_color, double amount) {
+    if (hex_color.size() < 7 || hex_color[0] != '#') {
+        return hex_color;
+    }
+    
+    int r, g, b;
+    sscanf(hex_color.c_str(), "#%02x%02x%02x", &r, &g, &b);
+    
+    // Lighten by mixing with white
+    r = std::min(255, static_cast<int>(r + (255 - r) * amount));
+    g = std::min(255, static_cast<int>(g + (255 - g) * amount));
+    b = std::min(255, static_cast<int>(b + (255 - b) * amount));
+    
+    char result[8];
+    snprintf(result, sizeof(result), "#%02x%02x%02x", r, g, b);
+    return std::string(result);
 }
 
 void TagsWidget::OnTagClicked(int tag_id) {
@@ -265,13 +301,13 @@ void TagsWidget::CalculateSize(int available_width, int available_height) {
         // Calculate button size
         button->CalculateSize(available_width, available_height);
         
-        total_width += button->GetWidth() + 4; // 4px spacing
+        total_width += button->GetWidth() + tag_spacing_;
         max_height = std::max(max_height, button->GetHeight());
     }
     
     // Remove last spacing
     if (!tag_buttons_.empty()) {
-        total_width -= 4;
+        total_width -= tag_spacing_;
     }
     
     width_ = std::min(total_width, available_width);
@@ -302,7 +338,7 @@ void TagsWidget::Render(cairo_t* cr) {
         cairo_restore(cr);
         
         // Update offset for next button
-        x_offset += button->GetWidth() + 4; // 4px spacing between buttons
+        x_offset += button->GetWidth() + tag_spacing_;
     }
 }
 
@@ -332,7 +368,7 @@ bool TagsWidget::HandleClick(int click_x, int click_y) {
             return true;
         }
         
-        x_offset += button_width + 4; // 4px spacing between buttons
+        x_offset += button_width + tag_spacing_;
     }
     
     return false;

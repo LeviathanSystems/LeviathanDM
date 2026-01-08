@@ -108,7 +108,7 @@ void ActionRegistry::RegisterBuiltinActions() {
 
 void ActionRegistry::RegisterAction(const Action& action) {
     actions_[action.name] = action;
-    LOG_DEBUG_FMT("Registered action: {} - {}", action.name, action.description);
+    //LOG_DEBUG_FMT("Registered action: {} - {}", action.name, action.description);
 }
 
 bool ActionRegistry::ExecuteAction(const std::string& action_name) {

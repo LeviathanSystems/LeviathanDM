@@ -580,6 +580,9 @@ void Server::OnNewOutput(struct wlr_output* wlr_output) {
     wl_list_insert(&outputs, &output->link);
     LOG_DEBUG("Added Output to outputs list");
     
+    // Store Output pointer in wlr_output->data for easy access by LayerManager
+    wlr_output->data = output;
+    
     // Add to layout
     struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(output_layout, wlr_output);
     

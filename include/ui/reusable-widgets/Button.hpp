@@ -16,7 +16,10 @@ public:
           text_color_{1.0, 1.0, 1.0, 1.0},
           bg_color_{0.2, 0.2, 0.2, 1.0},
           hover_color_{0.3, 0.3, 0.3, 1.0},
-          hovered_(false)
+          hovered_(false),
+          padding_h_(8),
+          padding_v_(4),
+          border_radius_(4.0)
     {}
     
     void SetText(const std::string& text) {
@@ -67,6 +70,31 @@ public:
         dirty_ = true;
     }
     
+    void SetFontSize(int size) {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        if (font_size_ != size) {
+            font_size_ = size;
+            dirty_ = true;
+        }
+    }
+    
+    void SetPadding(int horizontal, int vertical) {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        if (padding_h_ != horizontal || padding_v_ != vertical) {
+            padding_h_ = horizontal;
+            padding_v_ = vertical;
+            dirty_ = true;
+        }
+    }
+    
+    void SetBorderRadius(double radius) {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        if (border_radius_ != radius) {
+            border_radius_ = radius;
+            dirty_ = true;
+        }
+    }
+    
     void Click() {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (on_click_) {
@@ -85,7 +113,9 @@ private:
     double hover_color_[4];
     bool hovered_;
     std::function<void()> on_click_;
-    int padding_ = 8;
+    int padding_h_;
+    int padding_v_;
+    double border_radius_;
 };
 
 } // namespace UI

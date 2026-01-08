@@ -78,6 +78,11 @@ std::vector<Core::Client*> GetTagClients(Core::Tag* tag) {
     return tag->GetClients();
 }
 
+LayoutType GetTagLayout(Core::Tag* tag) {
+    if (!tag) return LayoutType::MASTER_STACK;
+    return tag->GetLayout();
+}
+
 // Client queries
 std::string GetClientTitle(Core::Client* client) {
     if (!client) return "";
@@ -129,6 +134,32 @@ int GetScreenHeight(Core::Screen* screen) {
 Core::Tag* GetScreenCurrentTag(Core::Screen* screen) {
     if (!screen) return nullptr;
     return screen->GetCurrentTag();
+}
+
+// Thread-local storage for current render screen context
+// Internal use only - StatusBar sets this before rendering widgets
+namespace {
+    thread_local Core::Screen* current_render_screen_ = nullptr;
+}
+
+// Internal function used by StatusBar
+void SetCurrentRenderScreen(Core::Screen* screen) {
+    current_render_screen_ = screen;
+}
+
+Core::Screen* GetWidgetScreen() {
+    // Return the thread-local screen context if set
+    // Otherwise fallback to focused screen
+    if (current_render_screen_) {
+        return current_render_screen_;
+    }
+    
+    auto* state = GetCompositorState();
+    if (state) {
+        return state->GetFocusedScreen();
+    }
+    
+    return nullptr;
 }
 
 } // namespace Plugin

@@ -1,10 +1,13 @@
 #include "ui/StatusBar.hpp"
 #include "ui/ShmBuffer.hpp"
 #include "wayland/LayerManager.hpp"
+#include "wayland/Output.hpp"
 #include "ui/WidgetPluginManager.hpp"
 #include "ui/IPopoverProvider.hpp"
+#include "ui/PluginAPI.hpp"
 #include "ui/reusable-widgets/Popover.hpp"
 #include "ui/reusable-widgets/Label.hpp"
+#include "core/Screen.hpp"
 #include "Logger.hpp"
 #include "wayland/WaylandTypes.hpp"
 #include <ctime>
@@ -495,18 +498,45 @@ void StatusBar::UploadToTexture() {
 }
 
 void StatusBar::Render() {
+    // Set the screen context for widgets on this output
+    // Get Screen from Output via wlr_output->data
+    Core::Screen* screen = nullptr;
+    if (layer_manager_ && layer_manager_->GetOutput() && layer_manager_->GetOutput()->data) {
+        auto* output_data = static_cast<Wayland::Output*>(layer_manager_->GetOutput()->data);
+        if (output_data) {
+            screen = output_data->core_screen;
+        }
+    }
+    UI::Plugin::SetCurrentRenderScreen(screen);
+    
     //LOG_DEBUG_FMT("StatusBar::Render() called for '{}'", config_.name);
     RenderToBuffer();
     UploadToTexture();
     // Don't render popovers on every render - only when explicitly needed (on click)
+    
+    // Clear the screen context
+    UI::Plugin::SetCurrentRenderScreen(nullptr);
 }
 
 void StatusBar::Update() {
+    // Set the screen context for widgets on this output
+    Core::Screen* screen = nullptr;
+    if (layer_manager_ && layer_manager_->GetOutput() && layer_manager_->GetOutput()->data) {
+        auto* output_data = static_cast<Wayland::Output*>(layer_manager_->GetOutput()->data);
+        if (output_data) {
+            screen = output_data->core_screen;
+        }
+    }
+    UI::Plugin::SetCurrentRenderScreen(screen);
+    
     // Update widgets that need periodic updates
     // TODO: Call update on dynamic widgets (clock, etc.)
     RenderToBuffer();
     UploadToTexture();
     // Don't render popovers on every update - only when explicitly needed (on click)
+    
+    // Clear the screen context
+    UI::Plugin::SetCurrentRenderScreen(nullptr);
 }
 
 int StatusBar::GetReservedSize() const {
