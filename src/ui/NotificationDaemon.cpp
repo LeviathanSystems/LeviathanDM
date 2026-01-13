@@ -73,11 +73,11 @@ NotificationDaemon::~NotificationDaemon() {
 
 // Initialize
 bool NotificationDaemon::Initialize() {
-    LOG_INFO("Initializing notification daemon");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Initializing notification daemon");
     
     // Connect to session bus using DBusHelper
     if (!ConnectToSessionBus()) {
-        LOG_ERROR("Failed to connect to session bus");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to connect to session bus");
         return false;
     }
     
@@ -87,7 +87,7 @@ bool NotificationDaemon::Initialize() {
         NOTIFICATIONS_INTROSPECTION, &error);
     
     if (error) {
-        LOG_ERROR_FMT("Failed to parse introspection XML: {}", error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to parse introspection XML: {}", error->message);
         g_error_free(error);
         return false;
     }
@@ -112,7 +112,7 @@ bool NotificationDaemon::Initialize() {
     g_dbus_node_info_unref(introspection_data);
     
     if (error) {
-        LOG_ERROR_FMT("Failed to register object: {}", error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to register object: {}", error->message);
         g_error_free(error);
         return false;
     }
@@ -124,13 +124,13 @@ bool NotificationDaemon::Initialize() {
         return false;
     }
     
-    LOG_INFO("Notification daemon initialized successfully");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Notification daemon initialized successfully");
     return true;
 }
 
 // Shutdown
 void NotificationDaemon::Shutdown() {
-    LOG_INFO("Shutting down notification daemon");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Shutting down notification daemon");
     
     std::lock_guard<std::mutex> lock(notifications_mutex_);
     
@@ -165,12 +165,12 @@ bool NotificationDaemon::AcquireDBusName() {
     );
     
     if (bus_name_id_ == 0) {
-        LOG_ERROR("Failed to acquire DBus name 'org.freedesktop.Notifications'");
-        LOG_ERROR("Another notification daemon may already be running");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to acquire DBus name 'org.freedesktop.Notifications'");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Another notification daemon may already be running");
         return false;
     }
     
-    LOG_INFO("Acquired DBus name 'org.freedesktop.Notifications'");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Acquired DBus name 'org.freedesktop.Notifications'");
     return true;
 }
 
@@ -228,7 +228,7 @@ void NotificationDaemon::HandleMethodCall(
         }
     }
     catch (const std::exception& e) {
-        LOG_ERROR_FMT("Exception in notification method {}: {}", method_name, e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Exception in notification method {}: {}", method_name, e.what());
         g_dbus_method_invocation_return_error(
             invocation,
             G_DBUS_ERROR,
@@ -283,7 +283,7 @@ GVariant* NotificationDaemon::HandleNotify(GVariant* parameters) {
         // Replace existing notification
         notification = FindNotification(replaces_id);
         if (notification) {
-            LOG_DEBUG_FMT("Replacing notification {}", replaces_id);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Replacing notification {}", replaces_id);
         } else {
             // ID not found, create new
             notification_id = GenerateNotificationId();
@@ -341,7 +341,7 @@ GVariant* NotificationDaemon::HandleNotify(GVariant* parameters) {
         notification->expire_time = notification->created_time + timeout;
     }
     
-    LOG_INFO_FMT("Notification {}: '{}' from {}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Notification {}: '{}' from {}", 
                  notification_id, notification->summary, notification->app_name);
     
     // Render notification
@@ -381,7 +381,7 @@ void NotificationDaemon::CloseNotification(uint32_t id, CloseReason reason) {
         return;
     }
     
-    LOG_DEBUG_FMT("Closing notification {} (reason: {})", id, static_cast<int>(reason));
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Closing notification {} (reason: {})", id, static_cast<int>(reason));
     
     // TODO: Animate out / destroy Wayland surface
     
@@ -411,7 +411,7 @@ void NotificationDaemon::EmitNotificationClosed(uint32_t id, CloseReason reason)
     );
     
     if (error) {
-        LOG_ERROR_FMT("Failed to emit NotificationClosed: {}", error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to emit NotificationClosed: {}", error->message);
         g_error_free(error);
     }
 }
@@ -432,7 +432,7 @@ void NotificationDaemon::EmitActionInvoked(uint32_t id, const std::string& actio
     );
     
     if (error) {
-        LOG_ERROR_FMT("Failed to emit ActionInvoked: {}", error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to emit ActionInvoked: {}", error->message);
         g_error_free(error);
     }
 }
@@ -495,7 +495,7 @@ void NotificationDaemon::ProcessExpiredNotifications() {
     }
     
     for (uint32_t id : expired_ids) {
-        LOG_DEBUG_FMT("Notification {} expired", id);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Notification {} expired", id);
         auto it = notifications_.find(id);
         if (it != notifications_.end()) {
             EmitNotificationClosed(id, EXPIRED);
@@ -536,7 +536,7 @@ void NotificationDaemon::RenderNotification(NotificationData* notification) {
     // TODO: Render notification content using Cairo
     // TODO: Position based on screen size and existing notifications
     
-    LOG_DEBUG_FMT("Rendering notification {}: {}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Rendering notification {}: {}", 
                   notification->id, notification->summary);
 }
 
@@ -548,7 +548,7 @@ void NotificationDaemon::UpdateNotificationPositions() {
 
 // OnConnected override - called by DBusHelper after connection established
 void NotificationDaemon::OnConnected() {
-    LOG_DEBUG("NotificationDaemon: DBus connection established");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "NotificationDaemon: DBus connection established");
 }
 
 } // namespace UI

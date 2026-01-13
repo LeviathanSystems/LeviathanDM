@@ -23,7 +23,6 @@ public:
     {}
     
     void SetText(const std::string& text) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (text_ != text) {
             text_ = text;
             dirty_ = true;
@@ -31,12 +30,10 @@ public:
     }
     
     void SetOnClick(std::function<void()> callback) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         on_click_ = callback;
     }
     
     void SetHovered(bool hovered) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (hovered_ != hovered) {
             hovered_ = hovered;
             dirty_ = true;
@@ -44,7 +41,6 @@ public:
     }
     
     void SetTextColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         text_color_[0] = r;
         text_color_[1] = g;
         text_color_[2] = b;
@@ -53,7 +49,6 @@ public:
     }
     
     void SetBackgroundColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         bg_color_[0] = r;
         bg_color_[1] = g;
         bg_color_[2] = b;
@@ -62,7 +57,6 @@ public:
     }
     
     void SetHoverColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         hover_color_[0] = r;
         hover_color_[1] = g;
         hover_color_[2] = b;
@@ -71,7 +65,6 @@ public:
     }
     
     void SetFontSize(int size) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (font_size_ != size) {
             font_size_ = size;
             dirty_ = true;
@@ -79,7 +72,6 @@ public:
     }
     
     void SetPadding(int horizontal, int vertical) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (padding_h_ != horizontal || padding_v_ != vertical) {
             padding_h_ = horizontal;
             padding_v_ = vertical;
@@ -88,7 +80,6 @@ public:
     }
     
     void SetBorderRadius(double radius) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (border_radius_ != radius) {
             border_radius_ = radius;
             dirty_ = true;
@@ -96,7 +87,6 @@ public:
     }
     
     void Click() {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (on_click_) {
             on_click_();
         }

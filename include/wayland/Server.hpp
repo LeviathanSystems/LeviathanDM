@@ -12,6 +12,7 @@
 #include "wayland/WaylandTypes.hpp"
 #include "wayland/XwaylandCompat.hpp"
 #include "ui/CompositorState.hpp"
+#include "core/WatchdogTimer.hpp"
 
 // Forward declarations
 namespace Leviathan {
@@ -208,6 +209,9 @@ private:
     
     // Notification daemon
     std::unique_ptr<UI::NotificationDaemon> notification_daemon_;
+    
+    // Watchdog timer to prevent compositor freezes
+    std::unique_ptr<Core::WatchdogTimer> watchdog_;
     
     
     // Colors (RGBA format for wlroots)

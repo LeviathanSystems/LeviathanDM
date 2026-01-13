@@ -57,15 +57,15 @@ void Screen::ParseOutputInfo() {
     desc << " (" << name_ << ")";
     description_ = desc.str();
     
-    LOG_INFO_FMT("Screen: {} - {}", name_, description_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Screen: {} - {}", name_, description_);
     if (!serial_.empty()) {
-        LOG_DEBUG_FMT("  Serial: {}", serial_);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Serial: {}", serial_);
     }
-    LOG_DEBUG_FMT("  Resolution: {}x{} @ {:.1f}x", width_, height_, scale_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Resolution: {}x{} @ {:.1f}x", width_, height_, scale_);
     
     // Log physical dimensions if available (from EDID)
     if (wlr_output_->phys_width > 0 && wlr_output_->phys_height > 0) {
-        LOG_DEBUG_FMT("  Physical Size: {}mm x {}mm", wlr_output_->phys_width, wlr_output_->phys_height);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Physical Size: {}mm x {}mm", wlr_output_->phys_width, wlr_output_->phys_height);
     }
 }
 

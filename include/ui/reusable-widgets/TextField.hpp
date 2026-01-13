@@ -43,7 +43,6 @@ public:
     
     // Text manipulation
     void SetText(const std::string& text) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (text_ != text) {
             text_ = text;
             cursor_pos_ = text_.length();
@@ -57,37 +56,31 @@ public:
     }
     
     std::string GetText() const {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         return text_;
     }
     
     void SetPlaceholder(const std::string& placeholder) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         placeholder_ = placeholder;
         dirty_ = true;
     }
     
     // Styling
     void SetVariant(Variant variant) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         variant_ = variant;
         dirty_ = true;
     }
     
     void SetFontSize(int size) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         font_size_ = size;
         dirty_ = true;
     }
     
     void SetFontFamily(const std::string& family) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         font_family_ = family;
         dirty_ = true;
     }
     
     void SetTextColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         text_color_[0] = r;
         text_color_[1] = g;
         text_color_[2] = b;
@@ -96,7 +89,6 @@ public:
     }
     
     void SetPlaceholderColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         placeholder_color_[0] = r;
         placeholder_color_[1] = g;
         placeholder_color_[2] = b;
@@ -105,7 +97,6 @@ public:
     }
     
     void SetBackgroundColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         bg_color_[0] = r;
         bg_color_[1] = g;
         bg_color_[2] = b;
@@ -114,7 +105,6 @@ public:
     }
     
     void SetBorderColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         border_color_[0] = r;
         border_color_[1] = g;
         border_color_[2] = b;
@@ -123,7 +113,6 @@ public:
     }
     
     void SetFocusBorderColor(double r, double g, double b, double a = 1.0) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         focus_border_color_[0] = r;
         focus_border_color_[1] = g;
         focus_border_color_[2] = b;
@@ -132,38 +121,32 @@ public:
     }
     
     void SetMinWidth(int width) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         min_width_ = width;
         dirty_ = true;
     }
     
     void SetMaxWidth(int width) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         max_width_ = width;
         dirty_ = true;
     }
     
     void SetPadding(int padding) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         padding_ = padding;
         dirty_ = true;
     }
     
     void SetBorderWidth(int width) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         border_width_ = width;
         dirty_ = true;
     }
     
     void SetBorderRadius(int radius) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         border_radius_ = radius;
         dirty_ = true;
     }
     
     // Focus management
     void Focus() {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         is_focused_ = true;
         cursor_visible_ = true;
         last_cursor_blink_ = 0;
@@ -175,7 +158,6 @@ public:
     }
     
     void Blur() {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         is_focused_ = false;
         ClearSelection();
         dirty_ = true;
@@ -186,7 +168,6 @@ public:
     }
     
     bool IsFocused() const {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         return is_focused_;
     }
     

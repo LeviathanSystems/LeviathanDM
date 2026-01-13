@@ -20,12 +20,12 @@ WallpaperManager::WallpaperManager(struct wlr_scene_tree* background_layer, stru
       event_loop_(event_loop),
       width_(width),
       height_(height) {
-    LOG_DEBUG_FMT("Created WallpaperManager with dimensions: {}x{}", width, height);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created WallpaperManager with dimensions: {}x{}", width, height);
 }
 
 WallpaperManager::~WallpaperManager() {
     ClearWallpaper();
-    LOG_DEBUG("Destroyed WallpaperManager");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Destroyed WallpaperManager");
 }
 
 void WallpaperManager::SetMonitorConfig(const MonitorConfig& config) {
@@ -86,13 +86,13 @@ void WallpaperManager::NextWallpaper() {
     wallpaper_index_ = (wallpaper_index_ + 1) % wallpaper_paths_.size();
     const std::string& wallpaper_path = wallpaper_paths_[wallpaper_index_];
     
-    LOG_INFO_FMT("Rotating to next wallpaper: {}", wallpaper_path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Rotating to next wallpaper: {}", wallpaper_path);
     
     if (current_type_ == WallpaperType::StaticImage) {
         // Load the new wallpaper image
         ShmBuffer* new_buffer = LoadWallpaperImage(wallpaper_path, width_, height_);
         if (!new_buffer) {
-            LOG_ERROR_FMT("Failed to load wallpaper image '{}' during rotation", wallpaper_path);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load wallpaper image '{}' during rotation", wallpaper_path);
             return;
         }
         
@@ -127,7 +127,7 @@ ShmBuffer* WallpaperManager::LoadWallpaperImage(const std::string& path, int tar
     GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(path.c_str(), &error);
     
     if (!pixbuf) {
-        LOG_ERROR_FMT("Failed to load wallpaper image '{}': {}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load wallpaper image '{}': {}", 
                       path, error ? error->message : "unknown error");
         if (error) g_error_free(error);
         return nullptr;
@@ -136,12 +136,12 @@ ShmBuffer* WallpaperManager::LoadWallpaperImage(const std::string& path, int tar
     int img_width = gdk_pixbuf_get_width(pixbuf);
     int img_height = gdk_pixbuf_get_height(pixbuf);
     
-    LOG_DEBUG_FMT("Loaded wallpaper image: {}x{} from '{}'", img_width, img_height, path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Loaded wallpaper image: {}x{} from '{}'", img_width, img_height, path);
     
     // Create SHM buffer for the scaled wallpaper
     ShmBuffer* buffer = ShmBuffer::Create(target_width, target_height);
     if (!buffer) {
-        LOG_ERROR("Failed to create SHM buffer for wallpaper");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create SHM buffer for wallpaper");
         g_object_unref(pixbuf);
         return nullptr;
     }
@@ -220,7 +220,7 @@ ShmBuffer* WallpaperManager::LoadWallpaperImage(const std::string& path, int tar
     cairo_surface_destroy(target_surface);
     g_object_unref(pixbuf);
     
-    LOG_INFO_FMT("Scaled wallpaper from {}x{} to {}x{} (scale: {:.2f})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Scaled wallpaper from {}x{} to {}x{} (scale: {:.2f})", 
                  img_width, img_height, target_width, target_height, scale);
     
     return buffer;
@@ -236,12 +236,12 @@ void WallpaperManager::InitializeWallpaper() {
     // Find the wallpaper config by name
     const auto* wallpaper_config = config.wallpapers.FindByName(monitor_config_->wallpaper);
     if (!wallpaper_config) {
-        LOG_WARN_FMT("Wallpaper config '{}' not found", monitor_config_->wallpaper);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Wallpaper config '{}' not found", monitor_config_->wallpaper);
         return;
     }
     
     if (wallpaper_config->wallpapers.empty()) {
-        LOG_WARN_FMT("Wallpaper config '{}' has no wallpaper paths", monitor_config_->wallpaper);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Wallpaper config '{}' has no wallpaper paths", monitor_config_->wallpaper);
         return;
     }
     
@@ -252,7 +252,7 @@ void WallpaperManager::InitializeWallpaper() {
     
     // Load and render the first wallpaper based on type
     const std::string& wallpaper_path = wallpaper_paths_[wallpaper_index_];
-    LOG_INFO_FMT("Setting wallpaper: {} (type: {})", wallpaper_path, 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Setting wallpaper: {} (type: {})", wallpaper_path, 
                  current_type_ == WallpaperType::StaticImage ? "static" : "wallpaper_engine");
     
     if (current_type_ == WallpaperType::StaticImage) {
@@ -275,7 +275,7 @@ void WallpaperManager::InitializeWallpaper() {
         if (wallpaper_timer_) {
             wl_event_source_timer_update(wallpaper_timer_, 
                                         wallpaper_config->change_interval_seconds * 1000);
-            LOG_INFO_FMT("Started wallpaper rotation every {} seconds",
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Started wallpaper rotation every {} seconds",
                         wallpaper_config->change_interval_seconds);
         }
     }
@@ -285,7 +285,7 @@ void WallpaperManager::InitializeStaticWallpaper(const std::string& wallpaper_pa
     // Load the image and create buffer
     wallpaper_buffer_ = LoadWallpaperImage(wallpaper_path, width_, height_);
     if (!wallpaper_buffer_) {
-        LOG_ERROR_FMT("Failed to load wallpaper image '{}'", wallpaper_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load wallpaper image '{}'", wallpaper_path);
         return;
     }
     
@@ -296,7 +296,7 @@ void WallpaperManager::InitializeStaticWallpaper(const std::string& wallpaper_pa
     );
     
     if (!scene_buffer) {
-        LOG_ERROR("Failed to create scene buffer for wallpaper");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create scene buffer for wallpaper");
         // Drop our reference to the buffer since we're not using it
         wlr_buffer_drop(wallpaper_buffer_->GetWlrBuffer());
         wallpaper_buffer_ = nullptr;
@@ -321,12 +321,12 @@ void WallpaperManager::InitializeWallpaperEngine(const std::string& wallpaper_pa
     
     // Load the WallpaperEngine project
     if (!we_renderer_->LoadWallpaper(wallpaper_path)) {
-        LOG_ERROR_FMT("Failed to load WallpaperEngine wallpaper '{}'", wallpaper_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load WallpaperEngine wallpaper '{}'", wallpaper_path);
         we_renderer_.reset();
         return;
     }
     
-    LOG_INFO_FMT("Loaded WallpaperEngine wallpaper: {}", wallpaper_path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded WallpaperEngine wallpaper: {}", wallpaper_path);
 }
 */
 

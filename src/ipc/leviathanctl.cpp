@@ -18,6 +18,7 @@ void print_usage(const char* prog) {
     std::cout << "  set-active-tag <name>   - Switch to specified tag\n";
     std::cout << "  get-layout              - Get current layout mode\n";
     std::cout << "  get-plugin-stats        - Show memory usage per plugin\n";
+    std::cout << "  get-widget-tree [output] - Show status bar widget tree\n";
     std::cout << "  action <name>           - Execute an action by name\n";
     std::cout << "  shutdown                - Gracefully shutdown the compositor\n";
     std::cout << "\nExamples:\n";
@@ -74,6 +75,11 @@ int main(int argc, char* argv[]) {
         cmd_type = CommandType::GET_LAYOUT;
     } else if (command == "get-plugin-stats") {
         cmd_type = CommandType::GET_PLUGIN_STATS;
+    } else if (command == "get-widget-tree") {
+        cmd_type = CommandType::GET_WIDGET_TREE;
+        if (argc >= 3) {
+            args["output"] = argv[2];
+        }
     } else if (command == "action") {
         if (argc < 3) {
             std::cerr << "Error: action requires an action name\n";
@@ -200,6 +206,11 @@ int main(int argc, char* argv[]) {
             std::cout << "  Total RSS:  " << format_bytes(total_rss) << "\n";
             std::cout << "  Total Virt: " << format_bytes(total_virtual) << "\n";
         }
+    } else if (command == "get-widget-tree" && response->data.count("widget_tree")) {
+        if (response->data.count("output")) {
+            std::cout << "Output: " << response->data["output"] << "\n\n";
+        }
+        std::cout << response->data["widget_tree"];
     } else if (response->data.count("raw")) {
         std::cout << response->data["raw"];
     } else {

@@ -55,9 +55,9 @@ void DesktopAppMenuItem::Execute() {
         execl("/bin/sh", "sh", "-c", cleaned_exec.c_str(), nullptr);
         exit(1);  // If execl fails
     } else if (pid < 0) {
-        LOG_ERROR_FMT("Failed to fork process for: {}", name_);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to fork process for: {}", name_);
     } else {
-        LOG_INFO_FMT("Launched application: {} (PID: {})", name_, pid);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Launched application: {} (PID: {})", name_, pid);
     }
 }
 
@@ -127,7 +127,7 @@ void DesktopApplicationProvider::LoadDesktopFilesFromDirectory(
             }
         }
     } catch (const std::exception& e) {
-        LOG_ERROR_FMT("Failed to read directory {}: {}", dir, e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to read directory {}: {}", dir, e.what());
     }
 }
 

@@ -214,7 +214,7 @@ protected:
         
         // Connect to UPower via DBus
         if (!ConnectToSystemBus()) {
-            LOG_ERROR("BatteryWidget: Failed to connect to system bus");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "BatteryWidget: Failed to connect to system bus");
             return false;
         }
         
@@ -222,7 +222,7 @@ protected:
         if (!CreateProxy("org.freedesktop.UPower",
                         "/org/freedesktop/UPower",
                         "org.freedesktop.UPower")) {
-            LOG_ERROR("BatteryWidget: Failed to create UPower proxy");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "BatteryWidget: Failed to create UPower proxy");
             return false;
         }
         
@@ -237,9 +237,9 @@ protected:
         
         // Defer initial update to avoid blocking during initialization
         // The first UpdateData() call will populate the battery info
-        dirty_ = true;
+        MarkNeedsPaint();  // Flutter-style dirty tracking
         
-        LOG_INFO_FMT("BatteryWidget v{} initialized successfully", PLUGIN_VERSION);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "BatteryWidget v{} initialized successfully", PLUGIN_VERSION);
         return true;
     }
     
@@ -248,7 +248,7 @@ protected:
     }
     
     void CalculateSize(int available_width, int available_height) override {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        // No lock needed - main thread only reads cached data
         
         // Build display string
         std::string display_text = BuildDisplayText();
@@ -263,9 +263,10 @@ protected:
     void Render(cairo_t* cr) override {
         if (!IsVisible()) return;
         
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        // No lock needed - main thread only reads cached data
         
         cairo_save(cr);
+        cairo_translate(cr, x_, y_);
         
         // Choose color based on battery level
         double r = text_color_[0];
@@ -279,8 +280,8 @@ protected:
         }
         
         std::string display_text = BuildDisplayText();
-        double center_x = x_ + width_ / 2.0;
-        double center_y = y_ + height_ / 2.0;
+        double center_x = width_ / 2.0;
+        double center_y = height_ / 2.0;
         
         // Use custom color
         cairo_set_source_rgba(cr, r, g, b, text_color_[3]);
@@ -302,22 +303,22 @@ protected:
     
     // Override click handler to manage popover
     bool HandleClick(int click_x, int click_y) override {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-        LOG_DEBUG_FMT("BatteryWidget::HandleClick at ({}, {}) - widget bounds: x={} y={} w={} h={}", 
+        // No lock needed - all input handling on main thread
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "BatteryWidget::HandleClick at ({}, {}) - widget bounds: x={} y={} w={} h={}", 
                      click_x, click_y, x_, y_, width_, height_);
         
         if (click_x >= x_ && click_x <= x_ + width_ &&
             click_y >= y_ && click_y <= y_ + height_) {
             
-            LOG_DEBUG_FMT("Click is INSIDE battery widget bounds. Popover currently visible: {}", 
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Click is INSIDE battery widget bounds. Popover currently visible: {}", 
                          popover_->IsVisible());
             
             // Toggle popover
             if (popover_->IsVisible()) {
-                LOG_DEBUG("Hiding popover");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Hiding popover");
                 popover_->Hide();
             } else {
-                LOG_DEBUG("Showing popover");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Showing popover");
                 // Update popover content
                 UpdatePopover();
                 
@@ -330,14 +331,14 @@ protected:
                 popover_->SetPosition(abs_x, abs_y + height_ + 2);
                 popover_->CalculateSize();
                 popover_->Show();
-                LOG_DEBUG_FMT("Popover shown at absolute ({}, {}), IsVisible={}", 
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Popover shown at absolute ({}, {}), IsVisible={}", 
                              abs_x, abs_y + height_ + 2, popover_->IsVisible());
             }
             
             RequestRender();
             return true;
         }
-        LOG_DEBUG("Click is OUTSIDE battery widget bounds");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Click is OUTSIDE battery widget bounds");
         return false;
     }
 
@@ -372,7 +373,7 @@ private:
             }
             
             g_variant_unref(result);
-            dirty_ = true;
+            MarkNeedsPaint();  // Flutter-style dirty tracking
         }
         
         // Check AC power status
@@ -401,7 +402,7 @@ private:
         );
         
         if (error) {
-            LOG_ERROR_FMT("Failed to create device proxy: {}", error->message);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create device proxy: {}", error->message);
             g_error_free(error);
             return device;
         }
@@ -490,11 +491,11 @@ private:
     void UpdatePopover() {
         if (!popover_) return;
         
-        LOG_DEBUG("UpdatePopover: Clearing old content");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "UpdatePopover: Clearing old content");
         // Clear old content first
         popover_->ClearContent();
         
-        LOG_DEBUG_FMT("UpdatePopover: Creating new content with {} devices", devices_.size());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "UpdatePopover: Creating new content with {} devices", devices_.size());
         // Create a VBox to hold all device rows
         auto container = std::make_shared<UI::VBox>();
         container->SetSpacing(4);
@@ -579,11 +580,11 @@ private:
         
         // Set the container as the popover content
         popover_->SetContent(container);
-        LOG_DEBUG("UpdatePopover: Content set, calculating size");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "UpdatePopover: Content set, calculating size");
         popover_->CalculateSize();
         int pw, ph;
         popover_->GetSize(pw, ph);
-        LOG_DEBUG_FMT("UpdatePopover: Popover size calculated: {}x{}", pw, ph);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "UpdatePopover: Popover size calculated: {}x{}", pw, ph);
     }
 
     // Configuration

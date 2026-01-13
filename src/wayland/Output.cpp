@@ -21,7 +21,7 @@ Output::~Output() {
         auto* core_seat = server->GetCoreSeat();
         if (core_seat) {
             core_seat->RemoveScreen(core_screen);
-            LOG_INFO_FMT("Removed screen '{}' from core seat", core_screen->GetName());
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Removed screen '{}' from core seat", core_screen->GetName());
         }
     }
     
@@ -40,7 +40,7 @@ void OutputManager::HandleFrame(struct wl_listener* listener, void* data) {
     Output* output = wl_container_of(listener, output, frame);
     
     if (!output->scene_output) {
-        LOG_ERROR("scene_output is NULL in frame handler!");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "scene_output is NULL in frame handler!");
         return;
     }
     

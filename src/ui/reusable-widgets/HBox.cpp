@@ -6,7 +6,6 @@ namespace Leviathan {
 namespace UI {
 
 void HBox::CalculateSize(int available_width, int available_height) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     if (children_.empty()) {
         width_ = 0;
@@ -18,21 +17,25 @@ void HBox::CalculateSize(int available_width, int available_height) {
     int total_width = 0;
     int max_height = 0;
     
-    // First pass: calculate each child's preferred size
-    // Give children unlimited width to get their natural size
+    // Count visible children
+    int visible_count = 0;
+    for (auto& child : children_) {
+        if (child->IsVisible()) visible_count++;
+    }
+    
+    // First pass: Let each child calculate its INTRINSIC/NATURAL size
+    // Pass the full available width so children can determine their own needs
+    // Children should return their minimum/natural size, not necessarily use all available space
     for (auto& child : children_) {
         if (!child->IsVisible()) continue;
         
-        child->CalculateSize(10000, available_height);  // Large width for natural sizing
+        // Let child calculate its natural size (it should use only what it needs)
+        child->CalculateSize(available_width, available_height);
         total_width += child->GetWidth();
         max_height = std::max(max_height, child->GetHeight());
     }
     
     // Add spacing between children (except for Apart alignment which handles spacing differently)
-    int visible_count = 0;
-    for (auto& child : children_) {
-        if (child->IsVisible()) visible_count++;
-    }
     if (visible_count > 1 && align_ != Align::Apart) {
         total_width += spacing_ * (visible_count - 1);
     }

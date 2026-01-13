@@ -300,6 +300,10 @@ bool NetworkWidget::ParseColor(const std::string& hex, double& r, double& g, dou
 }
 
 void NetworkWidget::Render(cairo_t* cr) {
+    // Translate to widget position
+    cairo_save(cr);
+    cairo_translate(cr, x_, y_);
+    
     // Draw background
     double bg_r, bg_g, bg_b, bg_a;
     if (ParseColor(bg_color_, bg_r, bg_g, bg_b, bg_a)) {
@@ -357,6 +361,8 @@ void NetworkWidget::Render(cairo_t* cr) {
     if (popover_visible_) {
         RenderPopoverContent(cr);
     }
+    
+    cairo_restore(cr);
 }
 
 void NetworkWidget::RenderPopoverContent(cairo_t* cr) {
@@ -490,4 +496,5 @@ void NetworkWidget::HidePopover() {
 extern "C" {
     EXPORT_PLUGIN_CREATE(NetworkWidget)
     EXPORT_PLUGIN_DESTROY(NetworkWidget)
+    EXPORT_PLUGIN_METADATA(NetworkWidget)
 }

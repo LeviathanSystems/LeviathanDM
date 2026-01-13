@@ -22,12 +22,12 @@ const wlr_buffer_impl ShmBuffer::buffer_impl_ = {
 int ShmBuffer::CreateShmFd(size_t size) {
     int fd = memfd_create("leviathan-statusbar", MFD_CLOEXEC);
     if (fd < 0) {
-        LOG_ERROR("Failed to create memfd");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create memfd");
         return -1;
     }
     
     if (ftruncate(fd, size) < 0) {
-        LOG_ERROR_FMT("Failed to resize memfd to {} bytes", size);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to resize memfd to {} bytes", size);
         close(fd);
         return -1;
     }
@@ -37,7 +37,7 @@ int ShmBuffer::CreateShmFd(size_t size) {
 
 ShmBuffer* ShmBuffer::Create(int width, int height) {
     if (width <= 0 || height <= 0) {
-        LOG_ERROR_FMT("Invalid buffer dimensions: {}x{}", width, height);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Invalid buffer dimensions: {}x{}", width, height);
         return nullptr;
     }
     
@@ -54,7 +54,7 @@ ShmBuffer* ShmBuffer::Create(int width, int height) {
     // Map the shared memory
     void* data = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (data == MAP_FAILED) {
-        LOG_ERROR("Failed to mmap SHM buffer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to mmap SHM buffer");
         close(fd);
         return nullptr;
     }
@@ -62,7 +62,7 @@ ShmBuffer* ShmBuffer::Create(int width, int height) {
     // Create the buffer object
     ShmBuffer* buffer = new ShmBuffer(width, height, fd, data, size);
     
-    LOG_INFO_FMT("Created ShmBuffer: {}x{}, fd={}, size={} bytes", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created ShmBuffer: {}x{}, fd={}, size={} bytes", 
              width, height, fd, size);
     
     return buffer;
@@ -95,12 +95,12 @@ ShmBuffer::ShmBuffer(int width, int height, int fd, void* data, size_t size)
     wl_list* addon_list = reinterpret_cast<wl_list*>(&buffer_.addons);
     wl_list_init(addon_list);
     
-    LOG_DEBUG_FMT("Manually initialized wlr_buffer struct at {}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Manually initialized wlr_buffer struct at {}", 
               static_cast<void*>(&buffer_));
 }
 
 ShmBuffer::~ShmBuffer() {
-    LOG_DEBUG_FMT("Destroying ShmBuffer (fd={})", fd_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Destroying ShmBuffer (fd={})", fd_);
     
     // Unmap memory
     if (data_ && data_ != MAP_FAILED) {
@@ -122,7 +122,7 @@ void ShmBuffer::BufferDestroy(wlr_buffer* wlr_buffer) {
     // Cast back to ShmBuffer (buffer_ is first member, so address matches)
     ShmBuffer* buffer = reinterpret_cast<ShmBuffer*>(wlr_buffer);
     
-    LOG_DEBUG_FMT("BufferDestroy callback for ShmBuffer at {}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "BufferDestroy callback for ShmBuffer at {}", 
               static_cast<void*>(buffer));
     
     // Emit destroy signal (wlroots convention)
@@ -142,7 +142,7 @@ bool ShmBuffer::BufferGetShm(wlr_buffer* wlr_buffer, wlr_shm_attributes* attribs
     attribs->stride = buffer->stride_;
     attribs->offset = 0;
     
-    LOG_TRACE_FMT("BufferGetShm: fd={}, {}x{}, stride={}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::TRACE, "BufferGetShm: fd={}, {}x{}, stride={}", 
               attribs->fd, attribs->width, attribs->height, attribs->stride);
     
     return true;
@@ -153,7 +153,7 @@ bool ShmBuffer::BufferBeginDataPtrAccess(wlr_buffer* wlr_buffer, uint32_t /* fla
     ShmBuffer* buffer = reinterpret_cast<ShmBuffer*>(wlr_buffer);
     
     if (buffer->data_ptr_locked_) {
-        LOG_WARN("Buffer data pointer already locked");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Buffer data pointer already locked");
         return false;
     }
     
@@ -164,7 +164,7 @@ bool ShmBuffer::BufferBeginDataPtrAccess(wlr_buffer* wlr_buffer, uint32_t /* fla
     buffer->data_ptr_locked_ = true;
     wlr_buffer->accessing_data_ptr = true;
     
-    LOG_TRACE_FMT("BufferBeginDataPtrAccess: data={}, format=ARGB8888, stride={}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::TRACE, "BufferBeginDataPtrAccess: data={}, format=ARGB8888, stride={}", 
               *data, *stride);
     
     return true;
@@ -174,14 +174,14 @@ void ShmBuffer::BufferEndDataPtrAccess(wlr_buffer* wlr_buffer) {
     ShmBuffer* buffer = reinterpret_cast<ShmBuffer*>(wlr_buffer);
     
     if (!buffer->data_ptr_locked_) {
-        LOG_WARN("Buffer data pointer was not locked");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Buffer data pointer was not locked");
         return;
     }
     
     buffer->data_ptr_locked_ = false;
     wlr_buffer->accessing_data_ptr = false;
     
-    LOG_TRACE("BufferEndDataPtrAccess");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::TRACE, "BufferEndDataPtrAccess");
 }
 
 } // namespace Leviathan

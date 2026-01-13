@@ -73,8 +73,8 @@ void KeyBindings::SetupDefaultBindings() {
     // Tag switching (1-9)
     for (int i = 1; i <= 9; ++i) {
         xkb_keysym_t key = XKB_KEY_1 + (i - 1);
-        AddBinding(mod, key, "switch-to-tag-" + std::to_string(i));
-        AddBinding(mod | MOD_SHIFT, key, "move-to-tag-" + std::to_string(i));
+        AddBinding(mod | MOD_SHIFT | MOD_CTRL, key, "switch-to-tag-" + std::to_string(i));
+        //AddBinding(mod | MOD_SHIFT, key, "move-to-tag-" + std::to_string(i));
     }
     
     // Application launcher / menubar
@@ -83,7 +83,7 @@ void KeyBindings::SetupDefaultBindings() {
     // Help
     AddBinding(mod, XKB_KEY_F1, "show-help");
     
-    LOG_INFO_FMT("Loaded {} key bindings", bindings_.size());
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded {} key bindings", bindings_.size());
 }
 
 void KeyBindings::AddBinding(uint32_t modifiers, xkb_keysym_t keysym, const std::string& action_name) {
@@ -104,13 +104,13 @@ bool KeyBindings::HandleKeyPress(uint32_t modifiers, xkb_keysym_t keysym) {
             char key_name[64];
             xkb_keysym_get_name(keysym, key_name, sizeof(key_name));
             
-            LOG_DEBUG_FMT("Keybinding triggered: {}{} -> {}", mod_str, key_name, binding.action_name);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Keybinding triggered: {}{} -> {}", mod_str, key_name, binding.action_name);
             
             // Execute the action
             if (action_registry_->ExecuteAction(binding.action_name)) {
                 return true;
             } else {
-                LOG_ERROR_FMT("Failed to execute action: {}", binding.action_name);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to execute action: {}", binding.action_name);
                 return false;
             }
         }

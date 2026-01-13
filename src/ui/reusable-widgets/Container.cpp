@@ -4,11 +4,23 @@
 namespace Leviathan {
 namespace UI {
 
+// Flutter-style: When a container is marked dirty, ALL children must be marked too
+// This is critical because children might depend on parent state
+void Container::MarkNeedsPaint() {
+    needs_paint_ = true;
+    dirty_ = true;  // Keep legacy flag in sync
+    
+    // Propagate to ALL children - no questions asked
+    for (auto& child : children_) {
+        child->MarkNeedsPaint();
+    }
+}
+
 void Container::Render(cairo_t* cr) {
     if (!IsVisible()) return;
     
-    //LOG_DEBUG_FMT("Container::Render - at ({}, {}) size={}x{}, children count={}", 
-    //    x_, y_, width_, height_, children_.size());
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Container::Render - at ({}, {}) size={}x{}, children count={}, needs_paint={}", 
+    //    x_, y_, width_, height_, children_.size(), needs_paint_);
     
     // Save cairo state
     cairo_save(cr);
@@ -20,11 +32,12 @@ void Container::Render(cairo_t* cr) {
     cairo_rectangle(cr, 0, 0, width_, height_);
     cairo_clip(cr);
     
-    // Render all children at their RELATIVE positions
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    // Render all visible children
+    // NOTE: Selective rendering based on needs_paint_ is done at StatusBar level
+    // Here we render all children that were passed down from the parent
     for (auto& child : children_) {
         if (child->IsVisible()) {
-            //LOG_DEBUG_FMT("  -> Rendering child at relative ({}, {})", child->GetX(), child->GetY());
+            //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  -> Rendering child at relative ({}, {})", child->GetX(), child->GetY());
             child->Render(cr);
         }
     }
@@ -45,11 +58,10 @@ bool Container::HandleClick(int click_x, int click_y) {
     int local_x = click_x - x_;
     int local_y = click_y - y_;
     
-    LOG_DEBUG_FMT("Container::HandleClick at ({}, {}) transformed to local ({}, {})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Container::HandleClick at ({}, {}) transformed to local ({}, {})", 
                   click_x, click_y, local_x, local_y);
     
     // Check children in reverse order (top to bottom rendering = bottom to top for clicks)
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
         auto& child = *it;
         if (child->IsVisible() && child->HandleClick(local_x, local_y)) {
@@ -73,7 +85,6 @@ bool Container::HandleHover(int hover_x, int hover_y) {
     int local_y = hover_y - y_;
     
     // Check children in reverse order (top to bottom rendering = bottom to top for hover)
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
         auto& child = *it;
         if (child->IsVisible() && child->HandleHover(local_x, local_y)) {
@@ -85,7 +96,6 @@ bool Container::HandleHover(int hover_x, int hover_y) {
 }
 
 bool Container::HandleScroll(int x, int y, double delta_x, double delta_y) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     // Transform scroll coordinates to local space (same as click/hover)
     int local_x = x - x_;

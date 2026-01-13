@@ -6,7 +6,6 @@ namespace Leviathan {
 namespace UI {
 
 void VBox::CalculateSize(int available_width, int available_height) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     if (children_.empty()) {
         width_ = 0;
@@ -18,21 +17,24 @@ void VBox::CalculateSize(int available_width, int available_height) {
     int total_height = 0;
     int max_width = 0;
     
-    // First pass: calculate each child's preferred size
-    // Give children unlimited height to get their natural size
+    // Count visible children
+    int visible_count = 0;
+    for (auto& child : children_) {
+        if (child->IsVisible()) visible_count++;
+    }
+    
+    // First pass: Let each child calculate its INTRINSIC/NATURAL size
+    // Pass the full available height so children can determine their own needs
     for (auto& child : children_) {
         if (!child->IsVisible()) continue;
         
-        child->CalculateSize(available_width, 10000);  // Large height for natural sizing
+        // Let child calculate its natural size
+        child->CalculateSize(available_width, available_height);
         total_height += child->GetHeight();
         max_width = std::max(max_width, child->GetWidth());
     }
     
     // Add spacing between children
-    int visible_count = 0;
-    for (auto& child : children_) {
-        if (child->IsVisible()) visible_count++;
-    }
     if (visible_count > 1) {
         total_height += spacing_ * (visible_count - 1);
     }

@@ -51,10 +51,10 @@ int main(int argc, char** argv) {
         true                          // Enable console colors
     );
     
-    LOG_INFO("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    LOG_INFO_FMT("{} v{}", LEVIATHAN_NAME, LEVIATHAN_VERSION);
-    LOG_INFO_FMT("{}", LEVIATHAN_DESCRIPTION);
-    LOG_INFO("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "{} v{}", LEVIATHAN_NAME, LEVIATHAN_VERSION);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "{}", LEVIATHAN_DESCRIPTION);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
     // Load configuration from standard locations
     auto& config = Leviathan::Config();
@@ -79,53 +79,53 @@ int main(int argc, char** argv) {
     }
     
     if (!config_loaded) {
-        LOG_INFO("No configuration file found, using defaults");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "No configuration file found, using defaults");
     }
     
     // Load widget plugins
-    LOG_INFO("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    LOG_INFO("Loading Widget Plugins");
-    LOG_INFO("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loading Widget Plugins");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
     auto& plugin_manager = Leviathan::UI::PluginManager();
     
     // Discover plugins from configured paths
     if (!config.plugins.plugin_paths.empty()) {
         for (const auto& path : config.plugins.plugin_paths) {
-            LOG_INFO_FMT("Searching for plugins in: {}", path);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Searching for plugins in: {}", path);
             plugin_manager.DiscoverPlugins(path);
         }
     } else {
-        LOG_INFO("No plugin paths configured, plugins will not be loaded");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "No plugin paths configured, plugins will not be loaded");
     }
     
     // Log loaded plugins
     auto loaded_plugins = plugin_manager.GetLoadedPlugins();
     if (!loaded_plugins.empty()) {
-        LOG_INFO_FMT("Loaded {} plugin(s):", loaded_plugins.size());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded {} plugin(s):", loaded_plugins.size());
         for (const auto& plugin_name : loaded_plugins) {
             auto metadata = plugin_manager.GetPluginMetadata(plugin_name);
-            LOG_INFO_FMT("  ✓ {} v{} by {}", 
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "  ✓ {} v{} by {}", 
                      metadata.name, metadata.version, metadata.author);
-            LOG_INFO_FMT("    {}", metadata.description);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "    {}", metadata.description);
         }
     } else {
-        LOG_INFO("No plugins loaded");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "No plugins loaded");
     }
     
     // Create plugin instances from config
     if (!config.plugins.plugins.empty()) {
-        LOG_INFO_FMT("Creating {} plugin instance(s) from config...", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Creating {} plugin instance(s) from config...", 
                  config.plugins.plugins.size());
         
         for (const auto& plugin_cfg : config.plugins.plugins) {
-            LOG_INFO_FMT("Initializing: {}", plugin_cfg.name);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Initializing: {}", plugin_cfg.name);
             
             // Log config
             if (!plugin_cfg.config.empty()) {
-                LOG_DEBUG("  Configuration:");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Configuration:");
                 for (const auto& [key, value] : plugin_cfg.config) {
-                    LOG_DEBUG_FMT("    {}: {}", key, value);
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "    {}: {}", key, value);
                 }
             }
             
@@ -136,22 +136,22 @@ int main(int argc, char** argv) {
             );
             
             if (widget) {
-                LOG_INFO_FMT("  ✓ Successfully initialized {}", plugin_cfg.name);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "  ✓ Successfully initialized {}", plugin_cfg.name);
             } else {
-                LOG_WARN_FMT("  ✗ Failed to initialize {}", plugin_cfg.name);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "  ✗ Failed to initialize {}", plugin_cfg.name);
             }
         }
     } else {
-        LOG_INFO("No plugin instances configured");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "No plugin instances configured");
     }
     
-    LOG_INFO("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
-    LOG_INFO("Starting compositor...");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Starting compositor...");
     
     auto server = Leviathan::Wayland::Server::Create();
     if (!server) {
-        LOG_ERROR("Failed to initialize compositor");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to initialize compositor");
         return EXIT_FAILURE;
     }
     
@@ -166,9 +166,9 @@ int main(int argc, char** argv) {
     delete server;
     
     // Cleanup plugins
-    LOG_INFO("Unloading plugins...");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Unloading plugins...");
     plugin_manager.UnloadAll();
-    LOG_INFO("Plugins unloaded");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Plugins unloaded");
     
     // Shutdown logger (flushes all sinks and stops worker thread)
     Leviathan::SimpleLogger::Instance().Shutdown();

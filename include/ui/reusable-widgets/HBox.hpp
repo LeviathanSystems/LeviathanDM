@@ -11,7 +11,6 @@ public:
     HBox() : align_(Align::Start) {}
     
     void SetAlign(Align align) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         align_ = align;
         dirty_ = true;
     }

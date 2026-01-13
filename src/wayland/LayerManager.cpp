@@ -59,8 +59,8 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, s
     wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::Top)]->node);
     wlr_scene_node_raise_to_top(&layers_[static_cast<size_t>(Layer::NightLight)]->node);
     
-    LOG_INFO("=== About to create NightLight ===");
-    LOG_INFO_FMT("Night light config - enabled: {}, temp: {}, strength: {}",
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "=== About to create NightLight ===");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Night light config - enabled: {}, temp: {}, strength: {}",
                  Config().night_light.enabled,
                  Config().night_light.temperature,
                  Config().night_light.strength);
@@ -74,21 +74,21 @@ LayerManager::LayerManager(struct wlr_scene* scene, struct wlr_output* output, s
         Config().night_light
     );
     
-    LOG_INFO("=== NightLight created ===");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "=== NightLight created ===");
     
     // Set output dimensions for night light
     if (night_light_) {
         night_light_->SetOutputDimensions(output_->width, output_->height);
-        LOG_INFO_FMT("Set night light dimensions: {}x{}", output_->width, output_->height);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Set night light dimensions: {}x{}", output_->width, output_->height);
     }
     
     // Wallpaper will be initialized when SetMonitorConfig is called
     
-    //LOG_INFO_FMT("Created per-output layer hierarchy for '{}':", output->name);
-    //LOG_INFO_FMT("  - Background layer: {}", static_cast<void*>(layers_[0]));
-    //LOG_INFO_FMT("  - Working area layer: {}", static_cast<void*>(layers_[1]));
-    //LOG_INFO_FMT("  - Top layer: {}", static_cast<void*>(layers_[2]));
-    //LOG_INFO_FMT("  - Night light layer: {}", static_cast<void*>(layers_[3]));
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created per-output layer hierarchy for '{}':", output->name);
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "  - Background layer: {}", static_cast<void*>(layers_[0]));
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "  - Working area layer: {}", static_cast<void*>(layers_[1]));
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "  - Top layer: {}", static_cast<void*>(layers_[2]));
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "  - Night light layer: {}", static_cast<void*>(layers_[3]));
 }
 
 LayerManager::~LayerManager() {
@@ -110,7 +110,7 @@ LayerManager::~LayerManager() {
     delete layout_engine_;
     
     // Scene trees are cleaned up automatically by wlroots
-    LOG_DEBUG_FMT("Destroyed LayerManager for output '{}'", output_ ? output_->name : "unknown");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Destroyed LayerManager for output '{}'", output_ ? output_->name : "unknown");
 }
 
 void LayerManager::SetMonitorConfig(const MonitorConfig& config) {
@@ -125,7 +125,7 @@ void LayerManager::SetMonitorConfig(const MonitorConfig& config) {
 struct wlr_scene_tree* LayerManager::GetLayer(Layer layer) {
     size_t index = static_cast<size_t>(layer);
     if (index >= static_cast<size_t>(Layer::COUNT)) {
-        LOG_ERROR_FMT("Invalid layer index: {}", index);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Invalid layer index: {}", index);
         return nullptr;
     }
     return layers_[index];
@@ -133,7 +133,7 @@ struct wlr_scene_tree* LayerManager::GetLayer(Layer layer) {
 
 void LayerManager::SetReservedSpace(const ReservedSpace& space) {
     reserved_space_ = space;
-    LOG_INFO_FMT("Reserved space updated: top={}, bottom={}, left={}, right={}",
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Reserved space updated: top={}, bottom={}, left={}, right={}",
              space.top, space.bottom, space.left, space.right);
 }
 
@@ -149,7 +149,7 @@ UsableArea LayerManager::CalculateUsableArea(int32_t output_x, int32_t output_y,
     area.width = output_width - reserved_space_.left - reserved_space_.right;
     area.height = output_height - reserved_space_.top - reserved_space_.bottom;
     
-    LOG_DEBUG_FMT("Usable area: x={}, y={}, w={}, h={}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Usable area: x={}, y={}, w={}, h={}", 
               area.x, area.y, area.width, area.height);
     
     return area;
@@ -159,21 +159,21 @@ void LayerManager::TileViews(std::vector<View*>& views,
                              Core::Tag* tag,
                              TilingLayout* layout_engine) {
     if (!output_ || !tag || !layout_engine) {
-        LOG_WARN_FMT("TileViews: Invalid parameters (output={}, tag={}, layout={})",
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "TileViews: Invalid parameters (output={}, tag={}, layout={})",
                  static_cast<void*>(output_), static_cast<void*>(tag), 
                  static_cast<void*>(layout_engine));
         return;
     }
     
     if (views.empty()) {
-        LOG_DEBUG_FMT("TileViews: No views to tile on output '{}'", output_->name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TileViews: No views to tile on output '{}'", output_->name);
         return;
     }
     
     // Calculate usable workspace area for this output
     auto workspace = CalculateUsableArea(0, 0, output_->width, output_->height);
     
-    LOG_DEBUG_FMT("Tiling {} views on output '{}' in workspace: pos=({},{}), size=({}x{})",
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Tiling {} views on output '{}' in workspace: pos=({},{}), size=({}x{})",
               views.size(), output_->name,
               workspace.x, workspace.y, workspace.width, workspace.height);
     
@@ -196,7 +196,7 @@ void LayerManager::TileViews(std::vector<View*>& views,
             layout_engine->ApplyGrid(views, workspace.width, workspace.height, gap);
             break;
         default:
-            LOG_WARN("Unknown layout type");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Unknown layout type");
             break;
     }
     
@@ -209,7 +209,7 @@ void LayerManager::TileViews(std::vector<View*>& views,
                 wlr_scene_node_set_position(&view->scene_tree->node,
                                            view->x + workspace.x,
                                            view->y + workspace.y);
-                LOG_DEBUG_FMT("  Offset view to ({},{}) for workspace at ({},{})",
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Offset view to ({},{}) for workspace at ({},{})",
                          view->x + workspace.x, view->y + workspace.y,
                          workspace.x, workspace.y);
             }
@@ -219,19 +219,19 @@ void LayerManager::TileViews(std::vector<View*>& views,
 
 void LayerManager::AddStatusBar(Leviathan::StatusBar* bar) {
     if (!bar) {
-        LOG_WARN("Attempted to add null StatusBar to LayerManager");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Attempted to add null StatusBar to LayerManager");
         return;
     }
     
     status_bars_.push_back(bar);
-    LOG_DEBUG_FMT("Added StatusBar to LayerManager for output '{}'", output_->name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Added StatusBar to LayerManager for output '{}'", output_->name);
 }
 
 void LayerManager::RemoveStatusBar(Leviathan::StatusBar* bar) {
     auto it = std::find(status_bars_.begin(), status_bars_.end(), bar);
     if (it != status_bars_.end()) {
         status_bars_.erase(it);
-        LOG_DEBUG_FMT("Removed StatusBar from LayerManager for output '{}'", output_->name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Removed StatusBar from LayerManager for output '{}'", output_->name);
     }
 }
 
@@ -240,7 +240,7 @@ void LayerManager::ClearAllStatusBars() {
         delete bar;
     }
     status_bars_.clear();
-    LOG_DEBUG_FMT("Cleared all status bars for output '{}'", output_->name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Cleared all status bars for output '{}'", output_->name);
 }
 
 void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
@@ -248,11 +248,11 @@ void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
                                    uint32_t output_width,
                                    uint32_t output_height) {
     if (bar_names.empty()) {
-        LOG_DEBUG_FMT("No status bars to create for output '{}'", output_->name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "No status bars to create for output '{}'", output_->name);
         return;
     }
     
-    LOG_INFO_FMT("Creating {} status bar(s) for output '{}'", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Creating {} status bar(s) for output '{}'", 
              bar_names.size(), output_->name);
     
     ReservedSpace reserved = reserved_space_;
@@ -261,7 +261,7 @@ void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
         const StatusBarConfig* bar_config = all_bars_config.FindByName(bar_name);
         
         if (!bar_config) {
-            LOG_WARN_FMT("Status bar '{}' not found in configuration", bar_name);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Status bar '{}' not found in configuration", bar_name);
             continue;
         }
         
@@ -269,25 +269,25 @@ void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
         switch (bar_config->position) {
             case StatusBarConfig::Position::Top:
                 reserved.top += bar_config->height;
-                LOG_INFO_FMT("Reserved {}px at top for status bar '{}'", 
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Reserved {}px at top for status bar '{}'", 
                          bar_config->height, bar_name);
                 break;
             
             case StatusBarConfig::Position::Bottom:
                 reserved.bottom += bar_config->height;
-                LOG_INFO_FMT("Reserved {}px at bottom for status bar '{}'", 
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Reserved {}px at bottom for status bar '{}'", 
                          bar_config->height, bar_name);
                 break;
             
             case StatusBarConfig::Position::Left:
                 reserved.left += bar_config->width;
-                LOG_INFO_FMT("Reserved {}px at left for status bar '{}'", 
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Reserved {}px at left for status bar '{}'", 
                          bar_config->width, bar_name);
                 break;
             
             case StatusBarConfig::Position::Right:
                 reserved.right += bar_config->width;
-                LOG_INFO_FMT("Reserved {}px at right for status bar '{}'", 
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Reserved {}px at right for status bar '{}'", 
                          bar_config->width, bar_name);
                 break;
         }
@@ -299,7 +299,7 @@ void LayerManager::CreateStatusBars(const std::vector<std::string>& bar_names,
     
     // Apply the accumulated reserved space
     SetReservedSpace(reserved);
-    LOG_DEBUG_FMT("Total reserved space: top={}, bottom={}, left={}, right={}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Total reserved space: top={}, bottom={}, left={}, right={}", 
              reserved.top, reserved.bottom, reserved.left, reserved.right);
 }
 
@@ -309,7 +309,7 @@ void LayerManager::InitializeTags(const std::vector<TagConfig>& tag_configs) {
     current_tag_index_ = 0;
     
     if (tag_configs.empty()) {
-        LOG_WARN_FMT("No tag configs provided to LayerManager for output '{}'", output_->name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No tag configs provided to LayerManager for output '{}'", output_->name);
         // Create default single tag
         auto tag = std::make_unique<Core::Tag>("1");
         tag->SetVisible(true);
@@ -325,11 +325,11 @@ void LayerManager::InitializeTags(const std::vector<TagConfig>& tag_configs) {
             // First tag is visible by default
             tag->SetVisible(tags_.empty());
             tags_.push_back(std::move(tag));
-            LOG_DEBUG_FMT("Created tag {} for output '{}': {}", tag_config.id, output_->name, tag_name);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created tag {} for output '{}': {}", tag_config.id, output_->name, tag_name);
         }
     }
     
-    LOG_INFO_FMT("Initialized {} tags for output '{}'", tags_.size(), output_->name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Initialized {} tags for output '{}'", tags_.size(), output_->name);
 }
 
 void LayerManager::ToggleModal(const std::string& modal_name) {
@@ -341,19 +341,19 @@ void LayerManager::ToggleModal(const std::string& modal_name) {
         if (it->second->IsVisible()) {
             // Hide it
             it->second->Hide();
-            LOG_INFO_FMT("Closed modal: '{}'", modal_name);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Closed modal: '{}'", modal_name);
             RenderModals();  // Re-render to hide modal
         } else {
             // Show it
             it->second->Show();
-            LOG_INFO_FMT("Opened modal: '{}'", modal_name);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Opened modal: '{}'", modal_name);
             RenderModals();  // Render the modal
         }
     } else {
         // Modal doesn't exist, create it from registry
         auto modal = UI::ModalManager::GetModal(modal_name);
         if (!modal) {
-            LOG_ERROR_FMT("Failed to create modal: '{}'", modal_name);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create modal: '{}'", modal_name);
             return;
         }
         
@@ -363,7 +363,7 @@ void LayerManager::ToggleModal(const std::string& modal_name) {
         // Show and store the modal
         modal->Show();
         active_modals_[modal_name] = std::move(modal);
-        LOG_INFO_FMT("Created and opened modal: '{}'", modal_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created and opened modal: '{}'", modal_name);
         RenderModals();  // Render the modal
     }
 }
@@ -393,13 +393,13 @@ bool LayerManager::HandleModalScroll(int x, int y, double delta_x, double delta_
 // Tag management
 void LayerManager::SwitchToTag(int index) {
     if (index < 0 || index >= static_cast<int>(tags_.size())) {
-        LOG_WARN_FMT("Invalid tag index {} for output '{}' (has {} tags)", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Invalid tag index {} for output '{}' (has {} tags)", 
                  index, output_->name, tags_.size());
         return;
     }
     
     if (index == current_tag_index_) {
-        LOG_DEBUG_FMT("Already on tag {} for output '{}'", index, output_->name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Already on tag {} for output '{}'", index, output_->name);
         return;
     }
     
@@ -411,18 +411,18 @@ void LayerManager::SwitchToTag(int index) {
     // Hide current tag
     if (old_tag) {
         old_tag->SetVisible(false);
-        LOG_DEBUG_FMT("Hiding tag {} on output '{}'", current_tag_index_, output_->name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Hiding tag {} on output '{}'", current_tag_index_, output_->name);
     }
     
     // Switch to new tag
     current_tag_index_ = index;
     new_tag->SetVisible(true);
-    LOG_INFO_FMT("Switched to tag {} on output '{}'", index, output_->name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Switched to tag {} on output '{}'", index, output_->name);
     
     // Publish tag switched event
     Core::TagSwitchedEvent event(old_tag, new_tag, nullptr);  // TODO: Pass screen once available
     Core::EventBus::Instance().Publish(event);
-    LOG_DEBUG_FMT("Published TagSwitchedEvent for output '{}'", output_->name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Published TagSwitchedEvent for output '{}'", output_->name);
 }
 
 Core::Tag* LayerManager::GetCurrentTag() {
@@ -444,14 +444,14 @@ std::vector<Core::Tag*> LayerManager::GetTags() const {
 void LayerManager::SetLayout(LayoutType layout) {
     auto* tag = GetCurrentTag();
     if (!tag) {
-        LOG_WARN("SetLayout: No active tag");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "SetLayout: No active tag");
         return;
     }
     
     tag->SetLayout(layout);
     AutoTile();
     
-    LOG_DEBUG_FMT("Set layout for output '{}' tag {}", output_->name, current_tag_index_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Set layout for output '{}' tag {}", output_->name, current_tag_index_);
 }
 
 void LayerManager::IncreaseMasterCount() {
@@ -510,7 +510,7 @@ void LayerManager::MoveClientToTag(Core::Client* client, int target_tag_index) {
     }
     
     if (target_tag_index < 0 || target_tag_index >= static_cast<int>(tags_.size())) {
-        LOG_WARN_FMT("MoveClientToTag: Invalid tag index {} (have {} tags)", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "MoveClientToTag: Invalid tag index {} (have {} tags)", 
                    target_tag_index, tags_.size());
         return;
     }
@@ -539,7 +539,7 @@ void LayerManager::MoveClientToTag(Core::Client* client, int target_tag_index) {
     // Re-tile current tag
     AutoTile();
     
-    LOG_DEBUG_FMT("Moved client to tag {} on output '{}'", target_tag_index, output_->name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Moved client to tag {} on output '{}'", target_tag_index, output_->name);
 }
 
 void LayerManager::AddView(View* view) {
@@ -547,7 +547,7 @@ void LayerManager::AddView(View* view) {
         return;
     }
     
-    LOG_DEBUG_FMT("AddView called for view {} on output '{}'", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "AddView called for view {} on output '{}'", 
                   static_cast<void*>(view), output_->name);
     
     // View will be tiled when it's mapped
@@ -559,7 +559,7 @@ void LayerManager::RemoveView(View* view) {
         return;
     }
     
-    LOG_DEBUG_FMT("RemoveView called for view {} on output '{}'", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "RemoveView called for view {} on output '{}'", 
                   static_cast<void*>(view), output_->name);
     
     // Trigger auto-tiling to reorganize remaining views
@@ -584,7 +584,7 @@ void LayerManager::AutoTile() {
     
     if (!tiled_views.empty()) {
         TileViews(tiled_views, tag, layout_engine_);
-        LOG_DEBUG_FMT("Auto-tiled {} views on output '{}'", tiled_views.size(), output_->name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Auto-tiled {} views on output '{}'", tiled_views.size(), output_->name);
     }
 }
 
@@ -602,7 +602,7 @@ ShmBuffer* LayerManager::LoadWallpaperImage(const std::string& path, int target_
     GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(path.c_str(), &error);
     
     if (!pixbuf) {
-        LOG_ERROR_FMT("Failed to load wallpaper image '{}': {}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load wallpaper image '{}': {}", 
                       path, error ? error->message : "unknown error");
         if (error) g_error_free(error);
         return nullptr;
@@ -611,12 +611,12 @@ ShmBuffer* LayerManager::LoadWallpaperImage(const std::string& path, int target_
     int img_width = gdk_pixbuf_get_width(pixbuf);
     int img_height = gdk_pixbuf_get_height(pixbuf);
     
-    LOG_DEBUG_FMT("Loaded wallpaper image: {}x{} from '{}'", img_width, img_height, path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Loaded wallpaper image: {}x{} from '{}'", img_width, img_height, path);
     
     // Create SHM buffer for the scaled wallpaper
     ShmBuffer* buffer = ShmBuffer::Create(target_width, target_height);
     if (!buffer) {
-        LOG_ERROR("Failed to create SHM buffer for wallpaper");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create SHM buffer for wallpaper");
         g_object_unref(pixbuf);
         return nullptr;
     }
@@ -695,7 +695,7 @@ ShmBuffer* LayerManager::LoadWallpaperImage(const std::string& path, int target_
     cairo_surface_destroy(target_surface);
     g_object_unref(pixbuf);
     
-    LOG_INFO_FMT("Scaled wallpaper from {}x{} to {}x{} (scale: {:.2f})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Scaled wallpaper from {}x{} to {}x{} (scale: {:.2f})", 
                  img_width, img_height, target_width, target_height, scale);
     
     return buffer;
@@ -711,13 +711,13 @@ void LayerManager::InitializeWallpaper() {
     // Find the wallpaper config by name
     const auto* wallpaper_config = config.wallpapers.FindByName(monitor_config_->wallpaper);
     if (!wallpaper_config) {
-        LOG_WARN_FMT("Wallpaper config '{}' not found for output '{}'", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Wallpaper config '{}' not found for output '{}'", 
                      monitor_config_->wallpaper, output_->name);
         return;
     }
     
     if (wallpaper_config->wallpapers.empty()) {
-        LOG_WARN_FMT("Wallpaper config '{}' has no wallpaper paths", monitor_config_->wallpaper);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Wallpaper config '{}' has no wallpaper paths", monitor_config_->wallpaper);
         return;
     }
     
@@ -727,12 +727,12 @@ void LayerManager::InitializeWallpaper() {
     
     // Load and render the first wallpaper
     const std::string& wallpaper_path = wallpaper_paths_[wallpaper_index_];
-    LOG_INFO_FMT("Setting wallpaper for output '{}': {}", output_->name, wallpaper_path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Setting wallpaper for output '{}': {}", output_->name, wallpaper_path);
     
     // Load the image and create buffer
     wallpaper_buffer_ = LoadWallpaperImage(wallpaper_path, output_->width, output_->height);
     if (!wallpaper_buffer_) {
-        LOG_ERROR_FMT("Failed to load wallpaper image '{}'", wallpaper_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load wallpaper image '{}'", wallpaper_path);
         return;
     }
     
@@ -743,7 +743,7 @@ void LayerManager::InitializeWallpaper() {
     );
     
     if (!scene_buffer) {
-        LOG_ERROR("Failed to create scene buffer for wallpaper");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create scene buffer for wallpaper");
         // Drop our reference to the buffer since we're not using it
         wlr_buffer_drop(wallpaper_buffer_->GetWlrBuffer());
         wallpaper_buffer_ = nullptr;
@@ -762,7 +762,7 @@ void LayerManager::InitializeWallpaper() {
         if (wallpaper_timer_) {
             wl_event_source_timer_update(wallpaper_timer_, 
                                         wallpaper_config->change_interval_seconds * 1000);
-            LOG_INFO_FMT("Started wallpaper rotation every {} seconds for output '{}'",
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Started wallpaper rotation every {} seconds for output '{}'",
                         wallpaper_config->change_interval_seconds, output_->name);
         }
     }
@@ -803,7 +803,7 @@ void LayerManager::NextWallpaper() {
     wallpaper_index_ = (wallpaper_index_ + 1) % wallpaper_paths_.size();
     const std::string& wallpaper_path = wallpaper_paths_[wallpaper_index_];
     
-    LOG_INFO_FMT("Rotating to next wallpaper for output '{}': {}", output_->name, wallpaper_path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Rotating to next wallpaper for output '{}': {}", output_->name, wallpaper_path);
     
     // Note: We don't drop the old buffer reference here because the scene
     // buffer node holds it. When we call wlr_scene_buffer_set_buffer, it will
@@ -812,7 +812,7 @@ void LayerManager::NextWallpaper() {
     // Load the new wallpaper image
     ShmBuffer* new_buffer = LoadWallpaperImage(wallpaper_path, output_->width, output_->height);
     if (!new_buffer) {
-        LOG_ERROR_FMT("Failed to load wallpaper image '{}' during rotation", wallpaper_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load wallpaper image '{}' during rotation", wallpaper_path);
         return;
     }
     
@@ -851,11 +851,11 @@ void LayerManager::RenderModals() {
         if (modal_scene_buffer_) {
             wlr_scene_node_set_enabled(&modal_scene_buffer_->node, false);
         }
-        LOG_DEBUG("No visible modal, hiding modal scene buffer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "No visible modal, hiding modal scene buffer");
         return;
     }
     
-    LOG_DEBUG("Rendering visible modal to top layer");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Rendering visible modal to top layer");
     
     // Modal always renders full screen
     int modal_width = output_->width;
@@ -870,10 +870,10 @@ void LayerManager::RenderModals() {
         modal_shm_buffer_ = nullptr;
     }
     
-    LOG_DEBUG_FMT("Creating modal buffer: {}x{}", modal_width, modal_height);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Creating modal buffer: {}x{}", modal_width, modal_height);
     modal_shm_buffer_ = ShmBuffer::Create(modal_width, modal_height);
     if (!modal_shm_buffer_) {
-        LOG_ERROR("Failed to create SHM buffer for modal");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create SHM buffer for modal");
         return;
     }
     
@@ -886,13 +886,13 @@ void LayerManager::RenderModals() {
     );
     
     if (!surface) {
-        LOG_ERROR("Failed to create Cairo surface for modal");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create Cairo surface for modal");
         return;
     }
     
     cairo_t* cr = cairo_create(surface);
     if (!cr) {
-        LOG_ERROR("Failed to create Cairo context for modal");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create Cairo context for modal");
         cairo_surface_destroy(surface);
         return;
     }
@@ -922,30 +922,30 @@ void LayerManager::RenderModals() {
         );
         
         if (!modal_scene_buffer_) {
-            LOG_ERROR("Failed to create scene buffer for modal");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create scene buffer for modal");
             return;
         }
         
         // Position at (0, 0) since modal covers full screen
         wlr_scene_node_set_position(&modal_scene_buffer_->node, 0, 0);
-        LOG_DEBUG("Created modal scene buffer in Top layer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created modal scene buffer in Top layer");
     } else if (modal_scene_buffer_) {
         // Update existing buffer
         wlr_scene_buffer_set_buffer(modal_scene_buffer_, modal_shm_buffer_->GetWlrBuffer());
-        LOG_DEBUG("Updated modal scene buffer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Updated modal scene buffer");
     }
     
     // Ensure the scene buffer is visible
     if (modal_scene_buffer_) {
         wlr_scene_node_set_enabled(&modal_scene_buffer_->node, true);
-        LOG_INFO("Modal rendered and displayed on Top layer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Modal rendered and displayed on Top layer");
     }
 }
 
 void LayerManager::RenderPopovers() {
     // Guard against recursive calls
     if (is_rendering_popover_) {
-        LOG_WARN("Preventing recursive popover rendering");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Preventing recursive popover rendering");
         return;
     }
     is_rendering_popover_ = true;
@@ -966,7 +966,7 @@ void LayerManager::RenderPopovers() {
                     visible_popover = popover;
                     // Get popover position (already in screen coordinates)
                     popover->GetPosition(popover_x, popover_y);
-                    LOG_DEBUG_FMT("Found visible popover at ({}, {})", popover_x, popover_y);
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Found visible popover at ({}, {})", popover_x, popover_y);
                     return;
                 }
             }
@@ -997,7 +997,7 @@ void LayerManager::RenderPopovers() {
         return;
     }
     
-    LOG_DEBUG("Found visible popover, rendering it");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Found visible popover, rendering it");
     
     // Get popover dimensions
     int popover_width = 0, popover_height = 0;
@@ -1005,7 +1005,7 @@ void LayerManager::RenderPopovers() {
     
     // Validate dimensions
     if (popover_width <= 0 || popover_height <= 0) {
-        LOG_ERROR_FMT("Invalid popover dimensions: {}x{}", popover_width, popover_height);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Invalid popover dimensions: {}x{}", popover_width, popover_height);
         if (popover_scene_buffer_) {
             wlr_scene_node_set_enabled(&popover_scene_buffer_->node, false);
         }
@@ -1026,7 +1026,7 @@ void LayerManager::RenderPopovers() {
     if (popover_x < 0) popover_x = 0;
     if (popover_y < 0) popover_y = 0;
     
-    LOG_DEBUG_FMT("Rendering popover at ({}, {}) size {}x{}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Rendering popover at ({}, {}) size {}x{}", 
               popover_x, popover_y, popover_width, popover_height);
     
     // Create or recreate SHM buffer if size changed
@@ -1060,7 +1060,7 @@ void LayerManager::RenderPopovers() {
         // Create new buffer
         popover_shm_buffer_ = ShmBuffer::Create(popover_width, popover_height);
         if (!popover_shm_buffer_) {
-            LOG_ERROR("Failed to create SHM buffer for popover");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create SHM buffer for popover");
             is_rendering_popover_ = false;
             return;
         }
@@ -1098,7 +1098,7 @@ void LayerManager::RenderPopovers() {
     
     // Upload to scene buffer
     if (!popover_shm_buffer_ || !popover_cairo_) {
-        LOG_WARN("Cannot upload popover - missing buffer or cairo");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Cannot upload popover - missing buffer or cairo");
         is_rendering_popover_ = false;
         return;
     }
@@ -1110,13 +1110,13 @@ void LayerManager::RenderPopovers() {
     if (!popover_scene_buffer_ && top_layer) {
         popover_scene_buffer_ = wlr_scene_buffer_create(top_layer, wlr_buf);
         if (!popover_scene_buffer_) {
-            LOG_ERROR("Failed to create popover scene buffer");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create popover scene buffer");
             is_rendering_popover_ = false;
             return;
         }
         wlr_scene_node_set_position(&popover_scene_buffer_->node, popover_x, popover_y);
         popover_buffer_attached_ = true;
-        LOG_INFO("Created popover scene buffer in Top layer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created popover scene buffer in Top layer");
     } else if (popover_scene_buffer_) {
         wlr_scene_buffer_set_buffer(popover_scene_buffer_, wlr_buf);
         wlr_scene_node_set_position(&popover_scene_buffer_->node, popover_x, popover_y);
@@ -1126,7 +1126,7 @@ void LayerManager::RenderPopovers() {
     if (popover_scene_buffer_) {
         wlr_scene_node_raise_to_top(&popover_scene_buffer_->node);
         wlr_scene_node_set_enabled(&popover_scene_buffer_->node, true);
-        LOG_DEBUG_FMT("Popover rendered and uploaded to Top layer at ({}, {})", popover_x, popover_y);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Popover rendered and uploaded to Top layer at ({}, {})", popover_x, popover_y);
     }
     
     is_rendering_popover_ = false;

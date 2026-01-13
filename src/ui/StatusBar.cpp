@@ -51,7 +51,7 @@ StatusBar::StatusBar(const StatusBarConfig& config,
         bar_height_ = output_height_;
     }
     
-    LOG_INFO_FMT("Creating status bar '{}' at position {} with size {}x{}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Creating status bar '{}' at position {} with size {}x{}", 
              config_.name, 
              static_cast<int>(config_.position),
              bar_width_, 
@@ -61,16 +61,16 @@ StatusBar::StatusBar(const StatusBarConfig& config,
     CreateWidgets();
     
     // Initial render
-    //LOG_DEBUG("About to call RenderToBuffer()");
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "About to call RenderToBuffer()");
     RenderToBuffer();
-    //LOG_DEBUG("RenderToBuffer() completed, about to call UploadToTexture()");
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "RenderToBuffer() completed, about to call UploadToTexture()");
     UploadToTexture();
-    //LOG_DEBUG("UploadToTexture() completed");
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "UploadToTexture() completed");
     
     // Setup dirty check timer to poll widgets for updates
     SetupDirtyCheckTimer();
     
-    LOG_INFO_FMT("Status bar '{}' created successfully", config_.name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Status bar '{}' created successfully", config_.name);
 }
 
 StatusBar::~StatusBar() {
@@ -99,7 +99,7 @@ StatusBar::~StatusBar() {
     }
     // Scene nodes are cleaned up automatically by wlroots
     // Popover rendering is now handled by LayerManager
-    LOG_DEBUG_FMT("Destroyed status bar '{}'", config_.name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Destroyed status bar '{}'", config_.name);
 }
 
 void StatusBar::CreateSceneNodes() {
@@ -153,11 +153,11 @@ void StatusBar::CreateSceneNodes() {
     
     // Popover rendering is now handled globally by LayerManager
     
-    LOG_DEBUG_FMT("Status bar '{}' scene nodes created at ({}, {})", config_.name, pos_x_, pos_y_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Status bar '{}' scene nodes created at ({}, {})", config_.name, pos_x_, pos_y_);
 }
 
 void StatusBar::CreateWidgets() {
-    LOG_INFO_FMT("Creating widgets for status bar '{}'", config_.name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Creating widgets for status bar '{}'", config_.name);
     
     // Recursive widget creation function
     std::function<std::shared_ptr<UI::Widget>(const WidgetConfig&)> create_widget;
@@ -257,7 +257,7 @@ void StatusBar::CreateWidgets() {
         auto& plugin_mgr = UI::WidgetPluginManager::Instance();
         
         if (plugin_mgr.IsPluginLoaded(widget_config.type)) {
-            LOG_DEBUG_FMT("Creating plugin widget: {}", widget_config.type);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Creating plugin widget: {}", widget_config.type);
             
             // Create plugin instance with config properties
             auto plugin_widget = plugin_mgr.CreatePluginWidget(
@@ -270,10 +270,10 @@ void StatusBar::CreateWidgets() {
                 plugin_widgets_.push_back(plugin_widget);
                 return plugin_widget;
             } else {
-                LOG_ERROR_FMT("Failed to create plugin widget: {}", widget_config.type);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create plugin widget: {}", widget_config.type);
             }
         } else {
-            LOG_WARN_FMT("Unknown widget type '{}' and no plugin found with that name", 
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Unknown widget type '{}' and no plugin found with that name", 
                      widget_config.type);
         }
         
@@ -282,18 +282,18 @@ void StatusBar::CreateWidgets() {
     
     // Check if we have a root widget structure (new style)
     if (!config_.root.type.empty()) {
-        LOG_INFO("Using new root widget structure");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Using new root widget structure");
         auto root_widget = create_widget(config_.root);
         root_container_ = std::dynamic_pointer_cast<UI::Container>(root_widget);
         
         if (!root_container_) {
-            LOG_ERROR("Root widget must be a container (hbox or vbox)");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Root widget must be a container (hbox or vbox)");
             return;
         }
     }
     // Fall back to legacy left/center/right sections
     else {
-        LOG_INFO("Using legacy left/center/right structure");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Using legacy left/center/right structure");
         
         // Create the container hierarchy (old style)
         root_container_ = std::make_shared<UI::HBox>();
@@ -317,7 +317,7 @@ void StatusBar::CreateWidgets() {
             auto widget = create_widget(widget_config);
             if (widget) {
                 left_container_->AddChild(widget);
-                LOG_DEBUG_FMT("Added widget '{}' to left section", widget_config.type);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Added widget '{}' to left section", widget_config.type);
             }
         }
         
@@ -326,7 +326,7 @@ void StatusBar::CreateWidgets() {
             auto widget = create_widget(widget_config);
             if (widget) {
                 center_container_->AddChild(widget);
-                LOG_DEBUG_FMT("Added widget '{}' to center section", widget_config.type);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Added widget '{}' to center section", widget_config.type);
             }
         }
         
@@ -335,7 +335,7 @@ void StatusBar::CreateWidgets() {
             auto widget = create_widget(widget_config);
             if (widget) {
                 right_container_->AddChild(widget);
-                LOG_DEBUG_FMT("Added widget '{}' to right section", widget_config.type);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Added widget '{}' to right section", widget_config.type);
             }
         }
         
@@ -344,11 +344,18 @@ void StatusBar::CreateWidgets() {
         root_container_->AddChild(center_container_);
         root_container_->AddChild(right_container_);
         
-        LOG_INFO_FMT("Created {} left, {} center, {} right widgets",
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created {} left, {} center, {} right widgets",
                  left_container_->GetChildren().size(), 
                  center_container_->GetChildren().size(), 
                  right_container_->GetChildren().size());
+        
+        // Mark entire tree as needing initial paint
+        root_container_->MarkNeedsPaint();
     }
+    
+    // Create the WidgetTree for dirty tracking and rendering management
+    widget_tree_ = std::make_unique<UI::WidgetTree>(root_container_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created WidgetTree for dirty tracking");
 }
 
 void StatusBar::RenderToBuffer() {
@@ -356,7 +363,7 @@ void StatusBar::RenderToBuffer() {
     if (!shm_buffer_) {
         shm_buffer_ = ShmBuffer::Create(bar_width_, bar_height_);
         if (!shm_buffer_) {
-            LOG_ERROR("Failed to create SHM buffer for status bar");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create SHM buffer for status bar");
             return;
         }
         
@@ -373,7 +380,7 @@ void StatusBar::RenderToBuffer() {
         
         cairo_ = cairo_create(cairo_surface_);
         
-        LOG_INFO_FMT("Created Cairo surface {}x{} with SHM buffer", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created Cairo surface {}x{} with SHM buffer", 
                  bar_width_, bar_height_);
     }
     
@@ -446,19 +453,19 @@ void StatusBar::RenderToBuffer() {
     static bool saved_debug = false;
     if (!saved_debug) {
         cairo_surface_write_to_png(cairo_surface_, "/tmp/statusbar_debug.png");
-        LOG_INFO("Saved status bar rendering to /tmp/statusbar_debug.png for debugging");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Saved status bar rendering to /tmp/statusbar_debug.png for debugging");
         saved_debug = true;
     }
 }
 
 void StatusBar::UploadToTexture() {
     if (!buffer_data_ || !scene_buffer_) {
-        LOG_WARN("Cannot upload texture - buffer_data or scene_buffer is null");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Cannot upload texture - buffer_data or scene_buffer is null");
         return;
     }
     
     if (!shm_buffer_) {
-        LOG_ERROR("No SHM buffer available");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No SHM buffer available");
         return;
     }
     
@@ -476,14 +483,14 @@ void StatusBar::UploadToTexture() {
             struct wlr_output* output = layer_manager_->GetOutput();
             if (output && output->renderer) {
                 renderer_ = output->renderer;
-                LOG_DEBUG("Got renderer from output");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Got renderer from output");
             } else {
-                LOG_ERROR("Cannot get renderer from output");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Cannot get renderer from output");
                 return;
             }
         }
         
-        LOG_INFO("Attaching SHM buffer to scene_buffer (first time)");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Attaching SHM buffer to scene_buffer (first time)");
         buffer_attached_ = true;
     }
     
@@ -494,7 +501,7 @@ void StatusBar::UploadToTexture() {
     // Net effect: reference count stays at 1 (held by scene_buffer)
     wlr_scene_buffer_set_buffer(scene_buffer_, wlr_buf);
     
-    //LOG_DEBUG_FMT("Buffer set on scene (locks={})", wlr_buf->n_locks);
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Buffer set on scene (locks={})", wlr_buf->n_locks);
 }
 
 void StatusBar::Render() {
@@ -509,7 +516,7 @@ void StatusBar::Render() {
     }
     UI::Plugin::SetCurrentRenderScreen(screen);
     
-    //LOG_DEBUG_FMT("StatusBar::Render() called for '{}'", config_.name);
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "StatusBar::Render() called for '{}'", config_.name);
     RenderToBuffer();
     UploadToTexture();
     // Don't render popovers on every render - only when explicitly needed (on click)
@@ -557,70 +564,39 @@ int StatusBar::GetWidth() const {
 }
 
 void StatusBar::CheckDirtyWidgets() {
-    bool needs_render = false;
-    
-    // Helper lambda to recursively check for dirty widgets
-    auto check_dirty = [&needs_render](const std::shared_ptr<UI::Widget>& widget, auto& self) -> void {
-        if (widget->IsDirty()) {
-            needs_render = true;
-            return;
-        }
-        
-        // Recursively check children if this is a container
-        if (auto container = std::dynamic_pointer_cast<UI::Container>(widget)) {
-            for (const auto& child : container->GetChildren()) {
-                self(child, self);
-                if (needs_render) return;  // Early exit
-            }
-        }
-    };
-    
-    // Check all widgets in the root container
-    if (root_container_) {
-        check_dirty(root_container_, check_dirty);
+    if (!widget_tree_) {
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No widget tree available for dirty checking");
+        return;
     }
     
-    // If any widget needs re-rendering, trigger a full render
-    if (needs_render) {
-        //LOG_DEBUG_FMT("Dirty widgets detected, triggering re-render for '{}'", config_.name);
+    // Use the WidgetTree to check for dirty widgets and render if needed
+    if (widget_tree_->NeedsRender()) {
+        //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Dirty widgets detected ({}), triggering re-render for '{}'", 
+        //              widget_tree_->CountDirtyWidgets(), config_.name);
         Render();
         
-        // Helper lambda to recursively clear dirty flags
-        auto clear_dirty = [](const std::shared_ptr<UI::Widget>& widget, auto& self) -> void {
-            widget->ClearDirty();
-            
-            // Recursively clear children if this is a container
-            if (auto container = std::dynamic_pointer_cast<UI::Container>(widget)) {
-                for (const auto& child : container->GetChildren()) {
-                    self(child, self);
-                }
-            }
-        };
-        
-        // Clear dirty flags after rendering
-        if (root_container_) {
-            clear_dirty(root_container_, clear_dirty);
-        }
+        // Clear all dirty flags after successful render
+        widget_tree_->ClearAllDirty();
     }
 }
 
 void StatusBar::SetupDirtyCheckTimer() {
     if (!event_loop_) {
-        LOG_WARN("No event loop available for dirty check timer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No event loop available for dirty check timer");
         return;
     }
     
     // Check for dirty widgets every 100ms (10 times per second)
     dirty_check_timer_ = wl_event_loop_add_timer(event_loop_, OnDirtyCheckTimer, this);
     if (!dirty_check_timer_) {
-        LOG_ERROR("Failed to create dirty check timer for status bar");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create dirty check timer for status bar");
         return;
     }
     
     // Start the timer
     wl_event_source_timer_update(dirty_check_timer_, 100);  // 100ms
     
-    LOG_DEBUG("Status bar dirty check timer created (interval: 100ms)");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Status bar dirty check timer created (interval: 100ms)");
 }
 
 int StatusBar::OnDirtyCheckTimer(void* data) {
@@ -636,7 +612,7 @@ int StatusBar::OnDirtyCheckTimer(void* data) {
 }
 
 bool StatusBar::HandleClick(int x, int y) {
-    LOG_DEBUG_FMT("StatusBar::HandleClick at ({}, {})", x, y);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "StatusBar::HandleClick at ({}, {})", x, y);
     
     // Check if click is within bar bounds
     if (x < pos_x_ || x > pos_x_ + bar_width_ ||
@@ -685,7 +661,7 @@ bool StatusBar::HandleClick(int x, int y) {
     if (root_container_) {
         bool handled = handle_click_recursive(root_container_, handle_click_recursive);
         if (needs_render) {
-            LOG_DEBUG("Widget handled click, triggering render");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Widget handled click, triggering render");
             Render();
             // Let LayerManager handle popover rendering globally
             if (layer_manager_) {
@@ -741,6 +717,82 @@ bool StatusBar::HandleClick(int x, int y) {
     }
     
     return false;
+}
+
+std::string StatusBar::GetWidgetTreeString() const {
+    std::string result;
+    
+    // Helper lambda to recursively build tree string
+    std::function<void(const std::shared_ptr<UI::Widget>&, int, std::string&)> build_tree = 
+        [&](const std::shared_ptr<UI::Widget>& widget, int depth, std::string& output) {
+        if (!widget) return;
+        
+        // Add indentation
+        for (int i = 0; i < depth; i++) {
+            output += "  ";
+        }
+        
+        // Determine widget type and name
+        std::string widget_type = "Widget";
+        std::string widget_name = "";
+        
+        if (auto plugin = std::dynamic_pointer_cast<UI::WidgetPlugin>(widget)) {
+            widget_type = "Plugin";
+            widget_name = plugin->GetMetadata().name;
+        } else if (auto container = std::dynamic_pointer_cast<UI::Container>(widget)) {
+            // Check specific container types
+            if (std::dynamic_pointer_cast<UI::HBox>(widget)) {
+                widget_type = "HBox";
+            } else if (std::dynamic_pointer_cast<UI::VBox>(widget)) {
+                widget_type = "VBox";
+            } else {
+                widget_type = "Container";
+            }
+        }
+        
+        // Add widget info
+        output += widget_type;
+        if (!widget_name.empty()) {
+            output += " (" + widget_name + ")";
+        }
+        output += " [x=" + std::to_string(widget->GetX()) + 
+                  ", y=" + std::to_string(widget->GetY()) + 
+                  ", abs_x=" + std::to_string(widget->GetAbsoluteX()) + 
+                  ", abs_y=" + std::to_string(widget->GetAbsoluteY()) + 
+                  ", w=" + std::to_string(widget->GetWidth()) + 
+                  ", h=" + std::to_string(widget->GetHeight()) + 
+                  ", visible=" + (widget->IsVisible() ? "true" : "false") + "]\n";
+        
+        // Recursively process children if it's a container
+        if (auto container = std::dynamic_pointer_cast<UI::Container>(widget)) {
+            for (const auto& child : container->GetChildren()) {
+                build_tree(child, depth + 1, output);
+            }
+        }
+    };
+    
+    result = "StatusBar Widget Tree:\n";
+    
+    // Convert position enum to string
+    std::string position_str;
+    switch (config_.position) {
+        case StatusBarConfig::Position::Top: position_str = "top"; break;
+        case StatusBarConfig::Position::Bottom: position_str = "bottom"; break;
+        case StatusBarConfig::Position::Left: position_str = "left"; break;
+        case StatusBarConfig::Position::Right: position_str = "right"; break;
+    }
+    
+    result += "  Position: " + position_str + "\n";
+    result += "  Bounds: [x=" + std::to_string(pos_x_) + ", y=" + std::to_string(pos_y_) + 
+              ", w=" + std::to_string(bar_width_) + ", h=" + std::to_string(bar_height_) + "]\n\n";
+    
+    if (root_container_) {
+        build_tree(root_container_, 0, result);
+    } else {
+        result += "No root container\n";
+    }
+    
+    return result;
 }
 
 } // namespace Leviathan

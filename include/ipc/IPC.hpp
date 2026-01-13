@@ -21,10 +21,25 @@ enum class CommandType {
     GET_LAYOUT,         // Get current layout mode
     GET_VERSION,        // Get compositor version
     GET_PLUGIN_STATS,   // Get plugin memory statistics
+    GET_WIDGET_TREE,    // Get status bar widget tree for debugging
     PING,              // Simple ping/pong for testing
     SHUTDOWN,          // Gracefully shutdown the compositor (requires UID match)
     EXECUTE_ACTION,    // Execute an action by name
+    SUBSCRIBE_EVENTS,  // Subscribe to event broadcasts
     UNKNOWN
+};
+
+enum class EventType {
+    TAG_SWITCHED,
+    CLIENT_ADDED,
+    CLIENT_REMOVED,
+    TILING_MODE_CHANGED,
+    UNKNOWN
+};
+
+struct EventMessage {
+    EventType type;
+    std::map<std::string, std::string> data;
 };
 
 struct TagInfo {
@@ -93,10 +108,14 @@ public:
     // Get UID of currently processing client (for security checks)
     int GetCurrentClientUid() const { return current_client_uid_; }
     
+    // Broadcast an event to all subscribed clients
+    void BroadcastEvent(const EventMessage& event);
+    
 private:
     int socket_fd;
     std::string socket_path;
     std::vector<int> client_fds;
+    std::vector<int> event_subscriber_fds;  // Clients subscribed to events (persistent connections)
     CommandProcessor command_processor_;
     int current_client_uid_;  // UID of client being processed
     
@@ -123,7 +142,10 @@ private:
 // Helper functions
 std::string CommandTypeToString(CommandType type);
 CommandType StringToCommandType(const std::string& str);
+std::string EventTypeToString(EventType type);
+EventType StringToEventType(const std::string& str);
 std::string SerializeResponse(const Response& response);
+std::string SerializeEvent(const EventMessage& event);
 std::optional<Response> DeserializeResponse(const std::string& json);
 
 } // namespace IPC

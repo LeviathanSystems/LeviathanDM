@@ -6,7 +6,6 @@ namespace Leviathan {
 namespace UI {
 
 void Label::CalculateSize(int available_width, int available_height) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     // Create a temporary cairo surface to measure text
     cairo_surface_t* temp_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
@@ -39,18 +38,20 @@ void Label::CalculateSize(int available_width, int available_height) {
 void Label::Render(cairo_t* cr) {
     if (!IsVisible()) return;
     
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
-    //LOG_DEBUG_FMT("Label::Render - text='{}' at ({}, {}) size={}x{}", 
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Label::Render - text='{}' at ({}, {}) size={}x{}", 
     //    text_, x_, y_, width_, height_);
     
     // Save cairo state
     cairo_save(cr);
     
+    // Translate to widget's position (parent already established coordinate system)
+    cairo_translate(cr, x_, y_);
+    
     // Draw background if not transparent
     if (bg_color_[3] > 0.0) {
         cairo_set_source_rgba(cr, bg_color_[0], bg_color_[1], bg_color_[2], bg_color_[3]);
-        cairo_rectangle(cr, x_, y_, width_, height_);
+        cairo_rectangle(cr, 0, 0, width_, height_);
         cairo_fill(cr);
     }
     
@@ -66,9 +67,9 @@ void Label::Render(cairo_t* cr) {
     cairo_font_extents_t font_extents;
     cairo_font_extents(cr, &font_extents);
     
-    // Position text using font baseline for proper vertical centering
-    double text_x = x_ + padding_;
-    double text_y = y_ + padding_ + font_extents.ascent;
+    // Position text using font baseline for proper vertical centering (in local coordinates)
+    double text_x = padding_;
+    double text_y = padding_ + font_extents.ascent;
     
     cairo_set_source_rgba(cr, text_color_[0], text_color_[1], text_color_[2], text_color_[3]);
     cairo_move_to(cr, text_x, text_y);

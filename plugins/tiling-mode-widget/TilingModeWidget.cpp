@@ -169,6 +169,10 @@ void TilingModeWidget::CalculateSize(int available_width, int available_height) 
 }
 
 void TilingModeWidget::Render(cairo_t* cr) {
+    // Save and translate to widget position
+    cairo_save(cr);
+    cairo_translate(cr, x_, y_);
+    
     // Draw background
     double bg_r, bg_g, bg_b, bg_a;
     if (ParseColor(bg_color_, bg_r, bg_g, bg_b, bg_a)) {
@@ -211,6 +215,8 @@ void TilingModeWidget::Render(cairo_t* cr) {
     
     cairo_move_to(cr, text_x, text_y);
     cairo_show_text(cr, display_text.c_str());
+    
+    cairo_restore(cr);
 }
 
 bool TilingModeWidget::HandleClick(int click_x, int click_y) {
@@ -253,4 +259,5 @@ bool TilingModeWidget::ParseColor(const std::string& hex, double& r, double& g, 
 extern "C" {
     EXPORT_PLUGIN_CREATE(TilingModeWidget)
     EXPORT_PLUGIN_DESTROY(TilingModeWidget)
+    EXPORT_PLUGIN_METADATA(TilingModeWidget)
 }

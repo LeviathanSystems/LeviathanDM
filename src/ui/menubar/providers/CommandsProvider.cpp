@@ -50,9 +50,9 @@ void CustomCommandMenuItem::Execute() {
             execl("/bin/sh", "sh", "-c", command_.c_str(), nullptr);
             exit(1);
         } else if (pid < 0) {
-            LOG_ERROR_FMT("Failed to fork process for command: {}", name_);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to fork process for command: {}", name_);
         } else {
-            LOG_INFO_FMT("Executed command: {} (PID: {})", name_, pid);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Executed command: {} (PID: {})", name_, pid);
         }
     }
 }

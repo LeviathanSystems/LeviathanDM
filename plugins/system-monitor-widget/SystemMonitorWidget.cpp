@@ -186,11 +186,11 @@ protected:
             }
         }
         
-        dirty_ = true;
+        MarkNeedsPaint();  // Flutter-style dirty tracking
     }
     
     void CalculateSize(int available_width, int available_height) override {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        // No lock needed - main thread only
         
         if (container) {
             container->CalculateSize(available_width, available_height);
@@ -202,7 +202,7 @@ protected:
     void Render(cairo_t* cr) override {
         if (!IsVisible() || !container) return;
         
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        // No lock needed - main thread only
         
         container->SetPosition(x_, y_);
         container->Render(cr);

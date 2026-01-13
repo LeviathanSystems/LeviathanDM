@@ -112,12 +112,14 @@ bool TagsWidget::InitializeImpl(const std::map<std::string, std::string>& config
     );
     
     // Also subscribe to client added/removed to update occupied state
+    // TEMPORARILY DISABLED TO DEBUG CRASH
     UI::Plugin::SubscribeToEvent(
         UI::Plugin::EventType::ClientAdded,
         [this](const UI::Plugin::Event& event) {
             OnCompositorEvent(event);
         }
     );
+    
     
     UI::Plugin::SubscribeToEvent(
         UI::Plugin::EventType::ClientRemoved,
@@ -141,22 +143,37 @@ void TagsWidget::UpdateData() {
 
 void TagsWidget::OnCompositorEvent(const UI::Plugin::Event& event) {
     // Any tag-related event means we should refresh
-    FetchTagsFromCompositor();
-    RebuildTagButtons();
-    RequestRender();
+    try {
+        //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TagsWidget", "Handling event type {}", static_cast<int>(event.type));
+        FetchTagsFromCompositor();
+        //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TagsWidget", "Tags fetched successfully");
+        RebuildTagButtons();
+        //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TagsWidget", "Buttons rebuilt successfully");
+        RequestRender();
+        //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TagsWidget", "Render requested successfully");
+    } catch (const std::exception& e) {
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "TagsWidget", "OnCompositorEvent: Exception: {}", e.what());
+    } catch (...) {
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "TagsWidget", "OnCompositorEvent: Unknown exception");
+    }
 }
 
 void TagsWidget::FetchTagsFromCompositor() {
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TagsWidget", "FetchTagsFromCompositor - Start");
+    
     auto* compositor = UI::GetCompositorState();
     if (!compositor) {
         // Compositor is not available
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "TagsWidget", "Compositor state not available");
         return;
     }
     
-    // Lock before clearing to prevent race conditions
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    // No lock needed - tags_ only accessed on main thread
+    // Background events trigger fetch, but execution is serialized
     
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TagsWidget", "Clearing {} existing tags", tags_.size());
     tags_.clear();
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "TagsWidget", "Tags cleared");
     
     // Get all tags from compositor
     auto tags = compositor->GetTags();
@@ -193,7 +210,7 @@ void TagsWidget::FetchTagsFromCompositor() {
 }
 
 void TagsWidget::RebuildTagButtons() {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    // No lock needed - only called from main thread (event handlers run on main thread)
     
     // Clear existing buttons
     tag_buttons_.clear();
@@ -289,7 +306,6 @@ void TagsWidget::OnTagClicked(int tag_id) {
 }
 
 void TagsWidget::CalculateSize(int available_width, int available_height) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     // Calculate total width needed from all buttons
     int total_width = 0;
@@ -317,7 +333,9 @@ void TagsWidget::CalculateSize(int available_width, int available_height) {
 void TagsWidget::Render(cairo_t* cr) {
     if (!IsVisible()) return;
     
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    // Translate to widget position
+    cairo_save(cr);
+    cairo_translate(cr, x_, y_);
     
     int x_offset = 0;
     
@@ -340,10 +358,11 @@ void TagsWidget::Render(cairo_t* cr) {
         // Update offset for next button
         x_offset += button->GetWidth() + tag_spacing_;
     }
+    
+    cairo_restore(cr);
 }
 
 bool TagsWidget::HandleClick(int click_x, int click_y) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     // Check if click is within widget bounds
     if (click_x < GetX() || click_x > GetX() + GetWidth() ||

@@ -61,7 +61,7 @@ void Popover::CalculateSize() {
 void Popover::Render(cairo_t* cr) {
     if (!visible_) return;
     
-    LOG_DEBUG_FMT("Popover::Render - content_widget_ is {}", content_widget_ ? "NOT NULL" : "NULL");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Popover::Render - content_widget_ is {}", content_widget_ ? "NOT NULL" : "NULL");
     
     cairo_save(cr);
     
@@ -85,7 +85,7 @@ void Popover::Render(cairo_t* cr) {
         content_widget_->SetPosition(padding_, padding_);
         
         // Recalculate the entire container tree with relative positions
-        LOG_DEBUG_FMT("Popover::Render - Recalculating widget tree at ({}, {})", x_, y_);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Popover::Render - Recalculating widget tree at ({}, {})", x_, y_);
         RecalculateContainerTree(content_widget_.get());
         
         // Translate to popover's position, then render content
@@ -97,7 +97,7 @@ void Popover::Render(cairo_t* cr) {
         return;
     }
     
-    LOG_DEBUG("Popover::Render - No content widget, using legacy PopoverItem rendering");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Popover::Render - No content widget, using legacy PopoverItem rendering");
     // Fallback to legacy PopoverItem rendering
     int current_y = y_ + padding_;
     for (size_t i = 0; i < items_.size(); i++) {

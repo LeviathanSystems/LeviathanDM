@@ -103,23 +103,32 @@ void ActionRegistry::RegisterBuiltinActions() {
         .params = {}
     });
     
-    LOG_INFO_FMT("Registered {} built-in actions", actions_.size());
+    // Debug/Testing actions
+    RegisterAction({
+        .name = "test-watchdog-freeze",
+        .description = "[DEBUG] Simulate compositor freeze to test watchdog",
+        .category = "Debug",
+        .type = ActionType::TEST_WATCHDOG_FREEZE,
+        .params = {}
+    });
+    
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Registered {} built-in actions", actions_.size());
 }
 
 void ActionRegistry::RegisterAction(const Action& action) {
     actions_[action.name] = action;
-    //LOG_DEBUG_FMT("Registered action: {} - {}", action.name, action.description);
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Registered action: {} - {}", action.name, action.description);
 }
 
 bool ActionRegistry::ExecuteAction(const std::string& action_name) {
     auto it = actions_.find(action_name);
     if (it == actions_.end()) {
-        LOG_WARN_FMT("Action not found: {}", action_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Action not found: {}", action_name);
         return false;
     }
     
     const Action& action = it->second;
-    LOG_DEBUG_FMT("Executing action: {}", action_name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Executing action: {}", action_name);
     
     // If it's a custom action with a function, call it
     if (action.custom_function) {
@@ -201,7 +210,7 @@ void ActionRegistry::ExecuteBuiltinAction(const Action& action) {
             }
             if (tag_index >= 0) {
                 // TODO: Implement move to tag when tag API is updated
-                LOG_WARN_FMT("Move to tag not yet implemented (requested tag: {})", tag_index);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Move to tag not yet implemented (requested tag: {})", tag_index);
             }
             break;
         }
@@ -224,9 +233,9 @@ void ActionRegistry::ExecuteBuiltinAction(const Action& action) {
                     execl("/bin/sh", "/bin/sh", "-c", command.c_str(), nullptr);
                     _exit(1);
                 } else if (pid > 0) {
-                    LOG_INFO_FMT("Spawned command: {} (PID: {})", command, pid);
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Spawned command: {} (PID: {})", command, pid);
                 } else {
-                    LOG_ERROR_FMT("Failed to fork for command: {}", command);
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to fork for command: {}", command);
                 }
             }
             break;
@@ -248,9 +257,9 @@ void ActionRegistry::ExecuteBuiltinAction(const Action& action) {
         }
         
         case ActionType::RELOAD_CONFIG: {
-            LOG_INFO("Reloading configuration...");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Reloading configuration...");
             // TODO: Implement config reload
-            LOG_WARN("Config reload not yet implemented");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Config reload not yet implemented");
             break;
         }
         
@@ -271,8 +280,21 @@ void ActionRegistry::ExecuteBuiltinAction(const Action& action) {
             break;
         }
         
+        case ActionType::TEST_WATCHDOG_FREEZE: {
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "=== SIMULATING COMPOSITOR FREEZE ===");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Watchdog should kill compositor in 5 seconds...");
+            
+            // Infinite loop to simulate a freeze
+            // The watchdog timer won't be pet, so it should kill us
+            volatile int x = 0;
+            while (true) {
+                x++;  // Prevent compiler optimization
+            }
+            break;
+        }
+        
         case ActionType::CUSTOM:
-            LOG_WARN("Custom action type without function handler");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Custom action type without function handler");
             break;
     }
 }

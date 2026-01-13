@@ -109,7 +109,7 @@ public:
         }
     }
 
-    void Log(LogLevel level, const std::string& message) {
+    void Log(LogLevel level, const std::string& message, const std::string& category = "") {
         if (level < min_level_) return;
         
         auto now = std::chrono::system_clock::now();
@@ -122,14 +122,20 @@ public:
         
         std::ostringstream oss;
         
-        // Console format: [HH:MM:SS.mmm] [level] message
+        // Console format: [HH:MM:SS.mmm] [level] [category] message
         oss << "[" 
             << std::setfill('0') << std::setw(2) << tm_buf.tm_hour << ":"
             << std::setfill('0') << std::setw(2) << tm_buf.tm_min << ":"
             << std::setfill('0') << std::setw(2) << tm_buf.tm_sec << "."
             << std::setfill('0') << std::setw(3) << now_ms.count()
-            << "] [" << LevelToString(level) << "] "
-            << message;
+            << "] [" << LevelToString(level) << "]";
+        
+        // Add category if provided
+        if (!category.empty()) {
+            oss << " [" << category << "]";
+        }
+        
+        oss << " " << message;
         
         std::string log_line = oss.str();
         

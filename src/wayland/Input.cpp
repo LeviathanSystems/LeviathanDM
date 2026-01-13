@@ -189,7 +189,7 @@ void InputManager::HandleNewInput(Server* server, struct wlr_input_device* devic
             // Set pointer acceleration (range: -1 to 1)
             if (libinput_device_config_accel_is_available(libinput_dev)) {
                 libinput_device_config_accel_set_speed(libinput_dev, mouse_speed);
-                LOG_INFO_FMT("Set pointer speed to {} for device: {}", mouse_speed, device->name);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Set pointer speed to {} for device: {}", mouse_speed, device->name);
             }
             
             // Enable pointer acceleration profile

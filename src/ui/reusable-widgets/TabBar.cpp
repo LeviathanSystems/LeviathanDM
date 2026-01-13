@@ -16,7 +16,7 @@ TabBar::TabBar(const TabBarConfig& config)
 void TabBar::AddTab(const Tab& tab) {
     // Check for duplicate IDs
     if (HasTab(tab.id)) {
-        LOG_WARN_FMT("Tab with ID '{}' already exists", tab.id);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Tab with ID '{}' already exists", tab.id);
         return;
     }
     

@@ -42,14 +42,14 @@ MenuBarManager::~MenuBarManager() {
 
 void MenuBarManager::Initialize(struct wl_event_loop* event_loop) {
     if (initialized_) {
-        LOG_WARN("MenuBarManager already initialized");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "MenuBarManager already initialized");
         return;
     }
     
     event_loop_ = event_loop;
     initialized_ = true;
     
-    LOG_INFO("MenuBarManager initialized");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBarManager initialized");
 }
 
 void MenuBarManager::RegisterMenuBar(struct wlr_output* output,
@@ -58,18 +58,18 @@ void MenuBarManager::RegisterMenuBar(struct wlr_output* output,
                                      uint32_t output_height)
 {
     if (!initialized_) {
-        LOG_ERROR("MenuBarManager not initialized");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "MenuBarManager not initialized");
         return;
     }
     
     if (!output || !layer_manager) {
-        LOG_ERROR("Invalid output or layer_manager for menubar registration");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Invalid output or layer_manager for menubar registration");
         return;
     }
     
     // Check if menubar already exists for this output
     if (menubars_.find(output) != menubars_.end()) {
-        LOG_WARN("MenuBar already registered for output");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "MenuBar already registered for output");
         return;
     }
     
@@ -97,7 +97,7 @@ void MenuBarManager::RegisterMenuBar(struct wlr_output* output,
     
     menubars_[output] = std::move(data);
     
-    LOG_INFO_FMT("MenuBar registered for output: {}x{}", output_width, output_height);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBar registered for output: {}x{}", output_width, output_height);
 }
 
 void MenuBarManager::UnregisterMenuBar(struct wlr_output* output) {
@@ -107,13 +107,13 @@ void MenuBarManager::UnregisterMenuBar(struct wlr_output* output) {
     }
     
     menubars_.erase(it);
-    LOG_INFO("MenuBar unregistered for output");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBar unregistered for output");
 }
 
 void MenuBarManager::ShowOnOutput(struct wlr_output* output) {
     auto it = menubars_.find(output);
     if (it == menubars_.end()) {
-        LOG_WARN("No menubar found for output");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No menubar found for output");
         return;
     }
     
@@ -136,7 +136,7 @@ void MenuBarManager::HideOnOutput(struct wlr_output* output) {
 void MenuBarManager::ToggleOnOutput(struct wlr_output* output) {
     auto it = menubars_.find(output);
     if (it == menubars_.end()) {
-        LOG_WARN("No menubar found for output");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No menubar found for output");
         return;
     }
     
@@ -259,7 +259,7 @@ void MenuBarManager::SetConfig(const MenuBarConfig& config) {
     
     // Update all existing menubars with new config
     // Note: This would require recreating them or adding a SetConfig method to MenuBar
-    LOG_INFO("MenuBar configuration updated (requires menubar recreation)");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBar configuration updated (requires menubar recreation)");
 }
 
 void MenuBarManager::AddProvider(std::shared_ptr<IMenuItemProvider> provider) {
@@ -270,7 +270,7 @@ void MenuBarManager::AddProvider(std::shared_ptr<IMenuItemProvider> provider) {
         data.menubar->AddProvider(provider);
     }
     
-    LOG_INFO_FMT("Added menu item provider: {}", provider->GetName());
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Added menu item provider: {}", provider->GetName());
 }
 
 void MenuBarManager::RemoveProvider(const std::string& provider_name) {
@@ -304,7 +304,7 @@ void MenuBarManager::Shutdown() {
     menubars_.clear();
     providers_.clear();
     initialized_ = false;
-    LOG_INFO("MenuBarManager shutdown");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBarManager shutdown");
 }
 
 } // namespace UI

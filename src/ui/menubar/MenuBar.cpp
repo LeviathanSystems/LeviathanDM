@@ -123,7 +123,7 @@ MenuBar::MenuBar(const MenuBarConfig& config,
     // Create buffer
     shm_buffer_ = ShmBuffer::Create(bar_width_, bar_height_);
     if (!shm_buffer_) {
-        LOG_ERROR("Failed to create ShmBuffer for menubar");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create ShmBuffer for menubar");
         return;
     }
     buffer_data_ = reinterpret_cast<uint32_t*>(shm_buffer_->GetData());
@@ -140,7 +140,7 @@ MenuBar::MenuBar(const MenuBarConfig& config,
     
     CreateSceneNodes();
     
-    LOG_INFO_FMT("MenuBar created: {}x{}", bar_width_, bar_height_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBar created: {}x{}", bar_width_, bar_height_);
 }
 
 MenuBar::~MenuBar() {
@@ -154,7 +154,7 @@ MenuBar::~MenuBar() {
         shm_buffer_ = nullptr;
     }
     
-    LOG_INFO("MenuBar destroyed");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBar destroyed");
 }
 
 void MenuBar::CreateSceneNodes() {
@@ -201,7 +201,7 @@ void MenuBar::Show() {
     
     Render();
     
-    LOG_INFO("MenuBar shown");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBar shown");
 }
 
 void MenuBar::Hide() {
@@ -214,7 +214,7 @@ void MenuBar::Hide() {
     wlr_scene_node_set_enabled(&scene_rect_->node, false);
     wlr_scene_node_set_enabled(&scene_buffer_->node, false);
     
-    LOG_INFO("MenuBar hidden");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "MenuBar hidden");
 }
 
 void MenuBar::Toggle() {
@@ -239,7 +239,7 @@ void MenuBar::AddProvider(std::shared_ptr<IMenuItemProvider> provider) {
         active_provider_index_ = 0;
     }
     
-    LOG_INFO_FMT("Added menu item provider: {}", provider->GetName());
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Added menu item provider: {}", provider->GetName());
 }
 
 void MenuBar::RemoveProvider(const std::string& provider_name) {
@@ -293,9 +293,9 @@ void MenuBar::RefreshItems() {
         try {
             auto items = provider->LoadItems();
             all_items_.insert(all_items_.end(), items.begin(), items.end());
-            LOG_DEBUG_FMT("Loaded {} items from active provider '{}'", items.size(), provider->GetName());
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Loaded {} items from active provider '{}'", items.size(), provider->GetName());
         } catch (const std::exception& e) {
-            LOG_ERROR_FMT("Failed to load items from provider '{}': {}", provider->GetName(), e.what());
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load items from provider '{}': {}", provider->GetName(), e.what());
         }
     } else {
         // Load from all providers
@@ -303,9 +303,9 @@ void MenuBar::RefreshItems() {
             try {
                 auto items = provider->LoadItems();
                 all_items_.insert(all_items_.end(), items.begin(), items.end());
-                LOG_DEBUG_FMT("Loaded {} items from provider '{}'", items.size(), provider->GetName());
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Loaded {} items from provider '{}'", items.size(), provider->GetName());
             } catch (const std::exception& e) {
-                LOG_ERROR_FMT("Failed to load items from provider '{}': {}", provider->GetName(), e.what());
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load items from provider '{}': {}", provider->GetName(), e.what());
             }
         }
     }
@@ -319,7 +319,7 @@ void MenuBar::RefreshItems() {
             return a->GetDisplayName() < b->GetDisplayName();
         });
     
-    LOG_INFO_FMT("Loaded {} total menu items from {} provider(s)", all_items_.size(), 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded {} total menu items from {} provider(s)", all_items_.size(), 
                  providers_.size() > 1 ? 1 : providers_.size());
 }
 
@@ -435,13 +435,13 @@ void MenuBar::EnsureSelectionVisible() {
 void MenuBar::ExecuteSelectedItem() {
     if (selected_index_ >= 0 && selected_index_ < static_cast<int>(filtered_items_.size())) {
         auto& item = filtered_items_[selected_index_];
-        LOG_INFO_FMT("Executing menu item: {}", item->GetDisplayName());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Executing menu item: {}", item->GetDisplayName());
         
         try {
             item->Execute();
             Hide();
         } catch (const std::exception& e) {
-            LOG_ERROR_FMT("Failed to execute menu item '{}': {}", item->GetDisplayName(), e.what());
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to execute menu item '{}': {}", item->GetDisplayName(), e.what());
         }
     }
 }
@@ -611,9 +611,9 @@ void MenuBar::UploadToTexture() {
         struct wlr_output* output = layer_manager_->GetOutput();
         if (output && output->renderer) {
             renderer_ = output->renderer;
-            LOG_DEBUG("Got renderer from output for menubar");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Got renderer from output for menubar");
         } else {
-            LOG_ERROR("Cannot get renderer from output for menubar");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Cannot get renderer from output for menubar");
             return;
         }
     }
@@ -621,13 +621,13 @@ void MenuBar::UploadToTexture() {
     // Get wlr_buffer from ShmBuffer
     struct wlr_buffer* wlr_buf = shm_buffer_->GetWlrBuffer();
     if (!wlr_buf) {
-        LOG_ERROR("Failed to get wlr_buffer from ShmBuffer for menubar");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to get wlr_buffer from ShmBuffer for menubar");
         return;
     }
     
     // Set buffer on scene (using same approach as StatusBar)
     if (!buffer_attached_) {
-        LOG_DEBUG("Attaching menubar SHM buffer to scene_buffer (first time)");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Attaching menubar SHM buffer to scene_buffer (first time)");
         buffer_attached_ = true;
     }
     
@@ -639,7 +639,7 @@ void MenuBar::HandleKeyPress(uint32_t key, uint32_t modifiers) {
     if (!is_visible_) return;
     
     // Debug: Log key presses
-    LOG_DEBUG_FMT("MenuBar received key: 0x{:x} (modifiers: {})", key, modifiers);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "MenuBar received key: 0x{:x} (modifiers: {})", key, modifiers);
     
     // Handle special keys that TextField doesn't handle
     if (key == XKB_KEY_Escape) {
@@ -652,10 +652,10 @@ void MenuBar::HandleKeyPress(uint32_t key, uint32_t modifiers) {
         HandleArrowDown();
         return;
     } else if (key == XKB_KEY_Tab || key == XKB_KEY_ISO_Left_Tab) {
-        LOG_INFO_FMT("Tab key pressed! Providers: {}", providers_.size());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Tab key pressed! Providers: {}", providers_.size());
         // Switch to next provider tab if multiple providers
         if (providers_.size() > 1) {
-            LOG_INFO("Switching to next tab...");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Switching to next tab...");
             tab_bar_->SelectNext();
             // Tab change callback will update active_provider_index_ and refresh
         }

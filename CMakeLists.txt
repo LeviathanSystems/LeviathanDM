@@ -248,6 +248,7 @@ set(SOURCES
     src/ui/StatusBar.cpp
     src/ui/ShmBuffer.cpp
     src/ui/Popover.cpp
+    src/ui/WidgetTree.cpp
     src/ui/reusable-widgets/Container.cpp
     src/ui/reusable-widgets/HBox.cpp
     src/ui/reusable-widgets/VBox.cpp

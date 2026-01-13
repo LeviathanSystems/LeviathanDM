@@ -18,29 +18,26 @@ public:
     virtual ~Container() = default;
     
     void AddChild(std::shared_ptr<Widget> child) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         child->SetParent(this);
         children_.push_back(child);
-        dirty_ = true;
+        MarkNeedsPaint();  // Use Flutter-style marking (propagates to all children)
     }
     
     void RemoveChild(std::shared_ptr<Widget> child) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         auto it = std::find(children_.begin(), children_.end(), child);
         if (it != children_.end()) {
             (*it)->SetParent(nullptr);
             children_.erase(it);
-            dirty_ = true;
+            MarkNeedsPaint();  // Use Flutter-style marking
         }
     }
     
     void ClearChildren() {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         for (auto& child : children_) {
             child->SetParent(nullptr);
         }
         children_.clear();
-        dirty_ = true;
+        MarkNeedsPaint();  // Use Flutter-style marking
     }
     
     const std::vector<std::shared_ptr<Widget>>& GetChildren() const {
@@ -48,12 +45,14 @@ public:
     }
     
     void SetSpacing(int spacing) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         spacing_ = spacing;
-        dirty_ = true;
+        MarkNeedsPaint();  // Use Flutter-style marking
     }
     
     void Render(cairo_t* cr) override;
+    
+    // Flutter-style: When container needs paint, ALL children must repaint
+    void MarkNeedsPaint() override;
     
     // Override HandleClick to transform coordinates to local space
     // This matches the rendering coordinate system (cairo_translate)

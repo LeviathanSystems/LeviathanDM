@@ -104,7 +104,7 @@ void KeybindingHelpModal::BuildWidgetContent() {
 void KeybindingHelpModal::PopulateKeybindings() {
     auto* keybindings = KeyBindings::Instance();
     if (!keybindings) {
-        LOG_ERROR("KeyBindings instance not available");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "KeyBindings instance not available");
         return;
     }
     

@@ -1,47 +1,58 @@
 #pragma once
 
+#include "SimpleLogger.hpp"
+#include "LogLevel.hpp"
 #include <string>
 #include <sstream>
-#include <vector>
 
 namespace Leviathan {
 
-// Simple string formatting utility
-class LogFormat {
+// Unified logging interface
+class Log {
 public:
+    // Simple message
+    static void WriteToLog(LogLevel level, const std::string& message) {
+        SimpleLogger::Instance().Log(level, message);
+    }
+    
+    // Formatted message (variadic template for 1+ arguments)
     template<typename... Args>
-    static std::string Format(const std::string& format_str, Args... args) {
-        std::ostringstream oss;
-        FormatImpl(oss, format_str, args...);
-        return oss.str();
+    static void WriteToLog(LogLevel level, const std::string& format, Args&&... args) {
+        SimpleLogger::Instance().Log(level, Format(format, std::forward<Args>(args)...));
     }
 
 private:
-    // Base case: no more arguments
-    static void FormatImpl(std::ostringstream& oss, const std::string& format_str) {
-        oss << format_str;
+    // Helper to convert std::string to const char* for formatting
+    template<typename T>
+    static auto ToFormattable(T&& value) -> decltype(std::forward<T>(value)) {
+        return std::forward<T>(value);
     }
-
-    // Recursive case: process one argument at a time
+    
+    static const char* ToFormattable(const std::string& str) {
+        return str.c_str();
+    }
+    
+    static const char* ToFormattable(std::string& str) {
+        return str.c_str();
+    }
+    
+    // Format helper
+    static std::string Format(const std::string& format_str) {
+        return format_str;
+    }
+    
     template<typename T, typename... Args>
-    static void FormatImpl(std::ostringstream& oss, const std::string& format_str, 
-                          T value, Args... args) {
+    static std::string Format(const std::string& format_str, T value, Args... args) {
         size_t pos = format_str.find("{}");
         if (pos != std::string::npos) {
-            oss << format_str.substr(0, pos) << value;
-            FormatImpl(oss, format_str.substr(pos + 2), args...);
-        } else {
-            oss << format_str;
+            std::ostringstream oss;
+            oss << format_str.substr(0, pos) << ToFormattable(value);
+            return oss.str() + Format(format_str.substr(pos + 2), args...);
         }
+        // No more placeholders, just return format string
+        return format_str;
     }
 };
 
 } // namespace Leviathan
 
-// Enhanced macros with formatting support
-#define LOG_TRACE_FMT(fmt, ...) LOG_TRACE(Leviathan::LogFormat::Format(fmt, __VA_ARGS__))
-#define LOG_DEBUG_FMT(fmt, ...) LOG_DEBUG(Leviathan::LogFormat::Format(fmt, __VA_ARGS__))
-#define LOG_INFO_FMT(fmt, ...) LOG_INFO(Leviathan::LogFormat::Format(fmt, __VA_ARGS__))
-#define LOG_WARN_FMT(fmt, ...) LOG_WARN(Leviathan::LogFormat::Format(fmt, __VA_ARGS__))
-#define LOG_ERROR_FMT(fmt, ...) LOG_ERROR(Leviathan::LogFormat::Format(fmt, __VA_ARGS__))
-#define LOG_CRITICAL_FMT(fmt, ...) LOG_CRITICAL(Leviathan::LogFormat::Format(fmt, __VA_ARGS__))

@@ -23,9 +23,11 @@ std::string CommandTypeToString(CommandType type) {
         case CommandType::GET_LAYOUT: return "get_layout";
         case CommandType::GET_VERSION: return "get_version";
         case CommandType::GET_PLUGIN_STATS: return "get_plugin_stats";
+        case CommandType::GET_WIDGET_TREE: return "get_widget_tree";
         case CommandType::PING: return "ping";
         case CommandType::SHUTDOWN: return "shutdown";
         case CommandType::EXECUTE_ACTION: return "execute_action";
+        case CommandType::SUBSCRIBE_EVENTS: return "subscribe_events";
         default: return "unknown";
     }
 }
@@ -39,10 +41,38 @@ CommandType StringToCommandType(const std::string& str) {
     if (str == "get_layout") return CommandType::GET_LAYOUT;
     if (str == "get_version") return CommandType::GET_VERSION;
     if (str == "get_plugin_stats") return CommandType::GET_PLUGIN_STATS;
+    if (str == "get_widget_tree") return CommandType::GET_WIDGET_TREE;
     if (str == "ping") return CommandType::PING;
     if (str == "shutdown") return CommandType::SHUTDOWN;
     if (str == "execute_action") return CommandType::EXECUTE_ACTION;
+    if (str == "subscribe_events") return CommandType::SUBSCRIBE_EVENTS;
     return CommandType::UNKNOWN;
+}
+
+std::string EventTypeToString(EventType type) {
+    switch (type) {
+        case EventType::TAG_SWITCHED: return "tag_switched";
+        case EventType::CLIENT_ADDED: return "client_added";
+        case EventType::CLIENT_REMOVED: return "client_removed";
+        case EventType::TILING_MODE_CHANGED: return "tiling_mode_changed";
+        default: return "unknown";
+    }
+}
+
+EventType StringToEventType(const std::string& str) {
+    if (str == "tag_switched") return EventType::TAG_SWITCHED;
+    if (str == "client_added") return EventType::CLIENT_ADDED;
+    if (str == "client_removed") return EventType::CLIENT_REMOVED;
+    if (str == "tiling_mode_changed") return EventType::TILING_MODE_CHANGED;
+    return EventType::UNKNOWN;
+}
+
+std::string SerializeEvent(const EventMessage& event) {
+    json j;
+    j["type"] = "event";
+    j["event_type"] = EventTypeToString(event.type);
+    j["data"] = event.data;
+    return j.dump() + "\n";
 }
 
 std::string SerializeResponse(const Response& response) {
@@ -157,7 +187,7 @@ bool Server::Initialize() {
     
     socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (socket_fd < 0) {
-        LOG_ERROR_FMT("Failed to create IPC socket: {}", strerror(errno));
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create IPC socket: {}", strerror(errno));
         return false;
     }
     
@@ -171,20 +201,20 @@ bool Server::Initialize() {
     strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
     
     if (bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        LOG_ERROR_FMT("Failed to bind IPC socket: {}", strerror(errno));
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to bind IPC socket: {}", strerror(errno));
         close(socket_fd);
         socket_fd = -1;
         return false;
     }
     
     if (listen(socket_fd, 5) < 0) {
-        LOG_ERROR_FMT("Failed to listen on IPC socket: {}", strerror(errno));
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to listen on IPC socket: {}", strerror(errno));
         close(socket_fd);
         socket_fd = -1;
         return false;
     }
     
-    LOG_INFO_FMT("IPC server listening on {}", socket_path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "IPC server listening on {}", socket_path);
     return true;
 }
 
@@ -196,7 +226,7 @@ void Server::AcceptClient() {
     int client_fd = accept(socket_fd, nullptr, nullptr);
     if (client_fd < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            LOG_ERROR_FMT("Failed to accept IPC client: {}", strerror(errno));
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to accept IPC client: {}", strerror(errno));
         }
         return;
     }
@@ -206,7 +236,7 @@ void Server::AcceptClient() {
     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
     
     client_fds.push_back(client_fd);
-    LOG_DEBUG_FMT("IPC client connected (fd={})", client_fd);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "IPC client connected (fd={})", client_fd);
 }
 
 void Server::HandleClient(int client_fd) {
@@ -215,9 +245,10 @@ void Server::HandleClient(int client_fd) {
     
     if (n <= 0) {
         if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-            LOG_DEBUG_FMT("IPC client disconnected (fd={})", client_fd);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "IPC client disconnected (fd={})", client_fd);
             close(client_fd);
             client_fds.erase(std::remove(client_fds.begin(), client_fds.end(), client_fd), client_fds.end());
+            event_subscriber_fds.erase(std::remove(event_subscriber_fds.begin(), event_subscriber_fds.end(), client_fd), event_subscriber_fds.end());
         }
         return;
     }
@@ -225,13 +256,35 @@ void Server::HandleClient(int client_fd) {
     buffer[n] = '\0';
     std::string command(buffer);
     
+    // Check if this is a subscribe_events command
+    try {
+        json j = json::parse(command);
+        if (j.contains("command") && j["command"] == "subscribe_events") {
+            // Move this client to event subscribers (persistent connection)
+            event_subscriber_fds.push_back(client_fd);
+            client_fds.erase(std::remove(client_fds.begin(), client_fds.end(), client_fd), client_fds.end());
+            
+            // Send confirmation
+            Response response;
+            response.success = true;
+            response.data["message"] = "Subscribed to events";
+            std::string response_str = SerializeResponse(response);
+            write(client_fd, response_str.c_str(), response_str.length());
+            
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "IPC client (fd={}) subscribed to events", client_fd);
+            return;
+        }
+    } catch (...) {
+        // Not JSON or not subscribe_events, continue normal processing
+    }
+    
     // Get peer UID for security checks
     uid_t peer_uid;
     if (GetPeerUid(client_fd, peer_uid)) {
         current_client_uid_ = static_cast<int>(peer_uid);
     } else {
         current_client_uid_ = -1;
-        LOG_WARN("Failed to get peer UID for IPC client");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Failed to get peer UID for IPC client");
     }
     
     // Process command and send response
@@ -254,9 +307,48 @@ void Server::HandleEvents() {
     // Accept new clients
     AcceptClient();
     
-    // Handle existing clients
-    for (int client_fd : client_fds) {
-        HandleClient(client_fd);
+    // Handle existing clients (copy vector to avoid iterator invalidation)
+    auto clients_copy = client_fds;
+    for (int client_fd : clients_copy) {
+        // Check if still in list (might have been removed)
+        if (std::find(client_fds.begin(), client_fds.end(), client_fd) != client_fds.end()) {
+            HandleClient(client_fd);
+        }
+    }
+    
+    // Handle event subscribers (check for disconnections)
+    for (auto it = event_subscriber_fds.begin(); it != event_subscriber_fds.end(); ) {
+        char buffer[1];
+        ssize_t n = recv(*it, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
+        if (n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
+            // Client disconnected
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Event subscriber disconnected (fd={})", *it);
+            close(*it);
+            it = event_subscriber_fds.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void Server::BroadcastEvent(const EventMessage& event) {
+    if (event_subscriber_fds.empty()) {
+        return;  // No subscribers
+    }
+    
+    std::string event_str = SerializeEvent(event);
+    
+    // Send to all subscribers
+    for (auto it = event_subscriber_fds.begin(); it != event_subscriber_fds.end(); ) {
+        ssize_t sent = write(*it, event_str.c_str(), event_str.length());
+        if (sent < 0) {
+            // Client disconnected or error
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Failed to send event to subscriber (fd={}), removing", *it);
+            close(*it);
+            it = event_subscriber_fds.erase(it);
+        } else {
+            ++it;
+        }
     }
 }
 
@@ -320,6 +412,11 @@ void Server::Cleanup() {
         close(fd);
     }
     client_fds.clear();
+    
+    for (int fd : event_subscriber_fds) {
+        close(fd);
+    }
+    event_subscriber_fds.clear();
     
     if (socket_fd >= 0) {
         close(socket_fd);

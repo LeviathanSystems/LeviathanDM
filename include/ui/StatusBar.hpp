@@ -10,6 +10,7 @@
 #include "ui/reusable-widgets/HBox.hpp"
 #include "ui/reusable-widgets/VBox.hpp"
 #include "ui/ShmBuffer.hpp"
+#include "ui/WidgetTree.hpp"
 
 namespace Leviathan {
 
@@ -57,6 +58,9 @@ public:
     
     // Get root container for popover search
     std::shared_ptr<UI::Container> GetRootContainer() const { return root_container_; }
+    
+    // Get widget tree as string for debugging
+    std::string GetWidgetTreeString() const;
 
 private:
     void CreateSceneNodes();
@@ -98,6 +102,9 @@ private:
     std::shared_ptr<UI::HBox> left_container_;       // Left section (legacy)
     std::shared_ptr<UI::HBox> center_container_;     // Center section (legacy)
     std::shared_ptr<UI::HBox> right_container_;      // Right section (legacy)
+    
+    // Widget tree for dirty tracking and rendering
+    std::unique_ptr<UI::WidgetTree> widget_tree_;
     
     // Ownership of built-in widgets
     std::vector<std::unique_ptr<UI::Widget>> owned_widgets_;

@@ -219,7 +219,6 @@ private:
         while (running_) {
             // Lock mutex and call UpdateData()
             {
-                std::lock_guard<std::recursive_mutex> lock(mutex_);
                 UpdateData();
             }
             

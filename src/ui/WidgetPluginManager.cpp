@@ -14,7 +14,7 @@ WidgetPluginManager::~WidgetPluginManager() {
 }
 
 bool WidgetPluginManager::LoadPlugin(const std::string& plugin_path) {
-    LOG_INFO_FMT("Loading widget plugin: {}", plugin_path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loading widget plugin: {}", plugin_path);
     
     // Measure memory BEFORE loading plugin
     size_t baseline_rss, baseline_virtual;
@@ -23,7 +23,7 @@ bool WidgetPluginManager::LoadPlugin(const std::string& plugin_path) {
     // Open the shared library
     void* handle = dlopen(plugin_path.c_str(), RTLD_LAZY | RTLD_LOCAL);
     if (!handle) {
-        LOG_ERROR_FMT("Failed to load plugin {}: {}", plugin_path, dlerror());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load plugin {}: {}", plugin_path, dlerror());
         return false;
     }
     
@@ -37,7 +37,7 @@ bool WidgetPluginManager::LoadPlugin(const std::string& plugin_path) {
     
     const char* dlsym_error = dlerror();
     if (dlsym_error || !create_func || !destroy_func || !metadata_func) {
-        LOG_ERROR_FMT("Failed to load plugin symbols from {}: {}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to load plugin symbols from {}: {}", 
                   plugin_path, dlsym_error ? dlsym_error : "Missing required functions");
         dlclose(handle);
         return false;
@@ -54,7 +54,7 @@ bool WidgetPluginManager::LoadPlugin(const std::string& plugin_path) {
     
     // Validate API version
     if (!ValidatePlugin(descriptor)) {
-        LOG_ERROR_FMT("Plugin {} has incompatible API version {}, expected {}",
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Plugin {} has incompatible API version {}, expected {}",
                   metadata.name, metadata.api_version, WIDGET_API_VERSION);
         dlclose(handle);
         return false;
@@ -62,7 +62,7 @@ bool WidgetPluginManager::LoadPlugin(const std::string& plugin_path) {
     
     // Check if plugin with same name already loaded
     if (IsPluginLoaded(metadata.name)) {
-        LOG_WARN_FMT("Plugin {} already loaded, unloading old version", metadata.name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Plugin {} already loaded, unloading old version", metadata.name);
         UnloadPlugin(metadata.name);
     }
     
@@ -83,10 +83,10 @@ bool WidgetPluginManager::LoadPlugin(const std::string& plugin_path) {
     size_t delta_rss = after_rss > baseline_rss ? after_rss - baseline_rss : 0;
     size_t delta_virtual = after_virtual > baseline_virtual ? after_virtual - baseline_virtual : 0;
     
-    LOG_INFO_FMT("Successfully loaded plugin: {} v{} by {}",
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Successfully loaded plugin: {} v{} by {}",
              metadata.name, metadata.version, metadata.author);
-    LOG_DEBUG_FMT("Plugin description: {}", metadata.description);
-    LOG_DEBUG_FMT("Memory delta - RSS: {} KB, Virtual: {} KB", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Plugin description: {}", metadata.description);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Memory delta - RSS: {} KB, Virtual: {} KB", 
              delta_rss / 1024, delta_virtual / 1024);
     
     return true;
@@ -95,11 +95,11 @@ bool WidgetPluginManager::LoadPlugin(const std::string& plugin_path) {
 void WidgetPluginManager::UnloadPlugin(const std::string& plugin_name) {
     auto it = plugins_.find(plugin_name);
     if (it == plugins_.end()) {
-        LOG_WARN_FMT("Attempted to unload plugin {} which is not loaded", plugin_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Attempted to unload plugin {} which is not loaded", plugin_name);
         return;
     }
     
-    LOG_INFO_FMT("Unloading plugin: {}", plugin_name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Unloading plugin: {}", plugin_name);
     
     LoadedPlugin& loaded = it->second;
     
@@ -119,7 +119,7 @@ void WidgetPluginManager::UnloadPlugin(const std::string& plugin_name) {
 }
 
 void WidgetPluginManager::UnloadAll() {
-    LOG_INFO("Unloading all widget plugins");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Unloading all widget plugins");
     
     auto plugin_names = GetLoadedPlugins();
     for (const auto& name : plugin_names) {
@@ -133,7 +133,7 @@ std::shared_ptr<WidgetPlugin> WidgetPluginManager::CreatePluginWidget(
     
     auto it = plugins_.find(plugin_name);
     if (it == plugins_.end()) {
-        LOG_ERROR_FMT("Cannot create widget: plugin {} not loaded", plugin_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Cannot create widget: plugin {} not loaded", plugin_name);
         return nullptr;
     }
     
@@ -142,13 +142,13 @@ std::shared_ptr<WidgetPlugin> WidgetPluginManager::CreatePluginWidget(
     // Create instance
     WidgetPlugin* instance = loaded.descriptor.create();
     if (!instance) {
-        LOG_ERROR_FMT("Plugin {} create function returned nullptr", plugin_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Plugin {} create function returned nullptr", plugin_name);
         return nullptr;
     }
     
     // Initialize with config
     if (!instance->Initialize(config)) {
-        LOG_ERROR_FMT("Failed to initialize plugin widget {}", plugin_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to initialize plugin widget {}", plugin_name);
         loaded.descriptor.destroy(instance);
         return nullptr;
     }
@@ -158,7 +158,7 @@ std::shared_ptr<WidgetPlugin> WidgetPluginManager::CreatePluginWidget(
     
     // Get metadata from the instance
     auto metadata = instance->GetMetadata();
-    LOG_INFO_FMT("Created instance of plugin widget: {} v{}", plugin_name, metadata.version);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created instance of plugin widget: {} v{}", plugin_name, metadata.version);
     
     // Return as shared_ptr with custom deleter
     return std::shared_ptr<WidgetPlugin>(instance, [this, plugin_name](WidgetPlugin* ptr) {
@@ -174,10 +174,10 @@ std::shared_ptr<WidgetPlugin> WidgetPluginManager::CreatePluginWidget(
 }
 
 void WidgetPluginManager::DiscoverPlugins(const std::string& plugin_dir) {
-    LOG_INFO_FMT("Discovering widget plugins in: {}", plugin_dir);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Discovering widget plugins in: {}", plugin_dir);
     
     if (!std::filesystem::exists(plugin_dir)) {
-        LOG_WARN_FMT("Plugin directory does not exist: {}", plugin_dir);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Plugin directory does not exist: {}", plugin_dir);
         return;
     }
     
@@ -196,7 +196,7 @@ void WidgetPluginManager::DiscoverPlugins(const std::string& plugin_dir) {
         }
     }
     
-    LOG_INFO_FMT("Discovered and loaded {} widget plugins from {}", loaded_count, plugin_dir);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Discovered and loaded {} widget plugins from {}", loaded_count, plugin_dir);
 }
 
 std::vector<std::string> WidgetPluginManager::GetLoadedPlugins() const {

@@ -35,6 +35,9 @@ enum class ActionType {
     SHUTDOWN,
     SHOW_HELP,      // Show keybinding help modal
     
+    // Debug/Testing actions
+    TEST_WATCHDOG_FREEZE,  // Simulate compositor freeze for testing watchdog
+    
     // Custom action (for future extensibility)
     CUSTOM
 };

@@ -40,10 +40,10 @@ bool ConfigParser::Load(const std::string& config_path) {
         }
         
         if (config["wallpapers"]) {
-            LOG_DEBUG("Found wallpapers section in config");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Found wallpapers section in config");
             ParseWallpapers(config["wallpapers"]);
         } else {
-            LOG_WARN("No wallpapers section found in config");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No wallpapers section found in config");
         }
         
         if (config["window-decorations"]) {
@@ -54,13 +54,13 @@ bool ConfigParser::Load(const std::string& config_path) {
             ParseWindowRules(config["window-rules"]);
         }
         
-        LOG_INFO_FMT("Loaded configuration from: {}", config_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded configuration from: {}", config_path);
         return true;
     } catch (const YAML::Exception& e) {
-        LOG_ERROR_FMT("Failed to parse config file {}: {}", config_path, e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to parse config file {}: {}", config_path, e.what());
         return false;
     } catch (const std::exception& e) {
-        LOG_ERROR_FMT("Error loading config file {}: {}", config_path, e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Error loading config file {}: {}", config_path, e.what());
         return false;
     }
 }
@@ -71,7 +71,7 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
     try {
         std::filesystem::path config_path(main_config);
         if (!std::filesystem::exists(config_path)) {
-            LOG_WARN_FMT("Config file not found: {}, using defaults", main_config);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Config file not found: {}, using defaults", main_config);
             return false;
         }
         
@@ -93,7 +93,7 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
         }
         
         if (config["night_light"]) {
-            LOG_INFO("Found night_light section in config (LoadWithIncludes)");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Found night_light section in config (LoadWithIncludes)");
             ParseNightLight(config["night_light"]);
         }
         
@@ -110,10 +110,10 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
         }
         
         if (config["wallpapers"]) {
-            LOG_DEBUG("Found wallpapers section in config (LoadWithIncludes)");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Found wallpapers section in config (LoadWithIncludes)");
             ParseWallpapers(config["wallpapers"]);
         } else {
-            LOG_WARN("No wallpapers section found in config (LoadWithIncludes)");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No wallpapers section found in config (LoadWithIncludes)");
         }
         
         if (config["window-decorations"]) {
@@ -124,13 +124,13 @@ bool ConfigParser::LoadWithIncludes(const std::string& main_config) {
             ParseWindowRules(config["window-rules"]);
         }
         
-        LOG_INFO_FMT("Loaded configuration with includes from: {}", main_config);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded configuration with includes from: {}", main_config);
         return true;
     } catch (const YAML::Exception& e) {
-        LOG_ERROR_FMT("Failed to parse config: {}", e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to parse config: {}", e.what());
         return false;
     } catch (const std::exception& e) {
-        LOG_ERROR_FMT("Error loading config: {}", e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Error loading config: {}", e.what());
         return false;
     }
 }
@@ -142,7 +142,7 @@ void ConfigParser::ProcessIncludes(const YAML::Node& include_node, const std::st
             std::filesystem::path include_path = std::filesystem::path(base_path) / include_node.as<std::string>();
             
             if (!std::filesystem::exists(include_path)) {
-                LOG_WARN_FMT("Include file not found: {}", include_path.string());
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Include file not found: {}", include_path.string());
                 return;
             }
             
@@ -150,7 +150,7 @@ void ConfigParser::ProcessIncludes(const YAML::Node& include_node, const std::st
             
             // Check for circular includes
             if (std::find(loaded_files_.begin(), loaded_files_.end(), canonical_path) != loaded_files_.end()) {
-                LOG_WARN_FMT("Circular include detected, skipping: {}", canonical_path);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Circular include detected, skipping: {}", canonical_path);
                 return;
             }
             
@@ -164,7 +164,7 @@ void ConfigParser::ProcessIncludes(const YAML::Node& include_node, const std::st
             }
         }
     } catch (const std::exception& e) {
-        LOG_ERROR_FMT("Error processing includes: {}", e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Error processing includes: {}", e.what());
     }
 }
 
@@ -176,7 +176,7 @@ void ConfigParser::ParseLibInput(const YAML::Node& node) {
             double speed = mouse["speed"].as<double>();
             // Clamp to valid range
             libinput.mouse.speed = std::clamp(speed, -1.0, 1.0);
-            LOG_DEBUG_FMT("Mouse speed: {}", libinput.mouse.speed);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Mouse speed: {}", libinput.mouse.speed);
         }
         if (mouse["natural_scroll"]) {
             libinput.mouse.natural_scroll = mouse["natural_scroll"].as<bool>();
@@ -222,7 +222,7 @@ void ConfigParser::ParseLibInput(const YAML::Node& node) {
 void ConfigParser::ParseGeneral(const YAML::Node& node) {
     if (node["terminal"]) {
         general.terminal = node["terminal"].as<std::string>();
-        LOG_DEBUG_FMT("Terminal: {}", general.terminal);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Terminal: {}", general.terminal);
     }
     if (node["auto_launch_terminal"]) {
         general.auto_launch_terminal = node["auto_launch_terminal"].as<bool>();
@@ -253,7 +253,7 @@ void ConfigParser::ParseGeneral(const YAML::Node& node) {
             // Only add if name is not empty
             if (!tag.name.empty()) {
                 general.tags.push_back(tag);
-                LOG_DEBUG_FMT("Tag {}: {} {}", tag.id, tag.icon.empty() ? "" : tag.icon, tag.name);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Tag {}: {} {}", tag.id, tag.icon.empty() ? "" : tag.icon, tag.name);
             }
         }
     }
@@ -299,15 +299,15 @@ void ConfigParser::ParseGeneral(const YAML::Node& node) {
 }
 
 void ConfigParser::ParseNightLight(const YAML::Node& node) {
-    LOG_INFO("=== ParseNightLight called ===");
-    LOG_INFO_FMT("Node type: {}, defined: {}, IsMap: {}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "=== ParseNightLight called ===");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Node type: {}, defined: {}, IsMap: {}", 
                  static_cast<int>(node.Type()), node.IsDefined(), node.IsMap());
     
     if (node["enabled"]) {
         night_light.enabled = node["enabled"].as<bool>();
-        LOG_INFO_FMT("Night light enabled (parsed): {}", night_light.enabled);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Night light enabled (parsed): {}", night_light.enabled);
     } else {
-        LOG_WARN("No 'enabled' field found in night_light config!");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No 'enabled' field found in night_light config!");
     }
     
     // Parse start time (format: "HH:MM")
@@ -317,7 +317,7 @@ void ConfigParser::ParseNightLight(const YAML::Node& node) {
         if (colon != std::string::npos) {
             night_light.start_hour = std::stoi(time_str.substr(0, colon));
             night_light.start_minute = std::stoi(time_str.substr(colon + 1));
-            LOG_DEBUG_FMT("Night light start: {:02d}:{:02d}", 
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Night light start: {:02d}:{:02d}", 
                          night_light.start_hour, night_light.start_minute);
         }
     }
@@ -329,7 +329,7 @@ void ConfigParser::ParseNightLight(const YAML::Node& node) {
         if (colon != std::string::npos) {
             night_light.end_hour = std::stoi(time_str.substr(0, colon));
             night_light.end_minute = std::stoi(time_str.substr(colon + 1));
-            LOG_DEBUG_FMT("Night light end: {:02d}:{:02d}", 
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Night light end: {:02d}:{:02d}", 
                          night_light.end_hour, night_light.end_minute);
         }
     }
@@ -338,28 +338,28 @@ void ConfigParser::ParseNightLight(const YAML::Node& node) {
         night_light.temperature = node["temperature"].as<float>();
         // Clamp between 1000K (candle) and 6500K (daylight)
         night_light.temperature = std::max(1000.0f, std::min(6500.0f, night_light.temperature));
-        LOG_DEBUG_FMT("Night light temperature: {}K", night_light.temperature);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Night light temperature: {}K", night_light.temperature);
     }
     
     if (node["strength"]) {
         night_light.strength = node["strength"].as<float>();
         // Clamp between 0.0 and 1.0
         night_light.strength = std::max(0.0f, std::min(1.0f, night_light.strength));
-        LOG_DEBUG_FMT("Night light strength: {:.2f}", night_light.strength);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Night light strength: {:.2f}", night_light.strength);
     }
     
     if (node["transition_duration"]) {
         night_light.transition_duration = node["transition_duration"].as<int>();
         // Clamp between 0 and 7200 seconds (2 hours)
         night_light.transition_duration = std::max(0, std::min(7200, night_light.transition_duration));
-        LOG_DEBUG_FMT("Night light transition: {}s", night_light.transition_duration);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Night light transition: {}s", night_light.transition_duration);
     }
     
     if (node["smooth_transition"]) {
         night_light.smooth_transition = node["smooth_transition"].as<bool>();
     }
     
-    LOG_INFO("=== ParseNightLight complete ===");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "=== ParseNightLight complete ===");
 }
 
 void ConfigParser::ParsePlugins(const YAML::Node& node) {
@@ -385,7 +385,7 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
         // 3. Distribution plugins
         plugins.plugin_paths.push_back("/usr/lib/leviathan/plugins");
         
-        LOG_DEBUG("Using default plugin paths");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Using default plugin paths");
     } else {
         // User specified custom paths
         plugins.plugin_paths.clear();
@@ -402,7 +402,7 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
                 }
                 
                 plugins.plugin_paths.push_back(path_str);
-                LOG_DEBUG_FMT("Plugin path: {}", path_str);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Plugin path: {}", path_str);
             }
         } else if (node["plugin_paths"].IsScalar()) {
             std::string path_str = node["plugin_paths"].as<std::string>();
@@ -416,13 +416,13 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
             }
             
             plugins.plugin_paths.push_back(path_str);
-            LOG_DEBUG_FMT("Plugin path: {}", path_str);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Plugin path: {}", path_str);
         }
     }
     
     // Log all plugin paths
     for (const auto& path : plugins.plugin_paths) {
-        LOG_INFO_FMT("Plugin search path: {}", path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Plugin search path: {}", path);
     }
     
     // Parse plugins list
@@ -435,9 +435,9 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
                 // Plugin name is required
                 if (plugin_node["name"]) {
                     plugin_config.name = plugin_node["name"].as<std::string>();
-                    LOG_DEBUG_FMT("Plugin: {}", plugin_config.name);
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Plugin: {}", plugin_config.name);
                 } else {
-                    LOG_WARN("Plugin entry missing 'name', skipping");
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Plugin entry missing 'name', skipping");
                     continue;
                 }
                 
@@ -449,7 +449,7 @@ void ConfigParser::ParsePlugins(const YAML::Node& node) {
                             std::string key = kv.first.as<std::string>();
                             std::string value = kv.second.as<std::string>();
                             plugin_config.config[key] = value;
-                            LOG_DEBUG_FMT("  {}: {}", key, value);
+                            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  {}: {}", key, value);
                         }
                     }
                 }
@@ -495,10 +495,10 @@ void ConfigParser::HexToRGBA(const std::string& hex, float rgba[4]) {
             rgba[2] = b / 255.0f;
             rgba[3] = a / 255.0f;
         } else {
-            LOG_WARN_FMT("Invalid hex color format: {}, using black", hex);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Invalid hex color format: {}, using black", hex);
         }
     } catch (const std::exception& e) {
-        LOG_ERROR_FMT("Failed to parse hex color '{}': {}", hex, e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to parse hex color '{}': {}", hex, e.what());
     }
 }
 
@@ -507,7 +507,7 @@ static WidgetConfig ParseWidget(const YAML::Node& widget_node) {
     WidgetConfig widget;
     
     if (!widget_node["type"]) {
-        LOG_WARN("Widget missing 'type', skipping");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Widget missing 'type', skipping");
         return widget;
     }
     
@@ -541,7 +541,7 @@ static WidgetConfig ParseWidget(const YAML::Node& widget_node) {
 
 void ConfigParser::ParseStatusBars(const YAML::Node& node) {
     if (!node.IsSequence()) {
-        LOG_WARN("status-bars should be a sequence");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "status-bars should be a sequence");
         return;
     }
     
@@ -554,7 +554,7 @@ void ConfigParser::ParseStatusBars(const YAML::Node& node) {
         if (bar_node["name"]) {
             bar.name = bar_node["name"].as<std::string>();
         } else {
-            LOG_WARN("Status bar missing 'name', skipping");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Status bar missing 'name', skipping");
             continue;
         }
         
@@ -570,7 +570,7 @@ void ConfigParser::ParseStatusBars(const YAML::Node& node) {
             } else if (pos == "right") {
                 bar.position = StatusBarConfig::Position::Right;
             } else {
-                LOG_WARN_FMT("Unknown status bar position '{}', using top", pos);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Unknown status bar position '{}', using top", pos);
             }
         }
         
@@ -620,7 +620,7 @@ void ConfigParser::ParseStatusBars(const YAML::Node& node) {
                     if (widget_node["type"]) {
                         widget.type = widget_node["type"].as<std::string>();
                     } else {
-                        LOG_WARN("Widget missing 'type', skipping");
+                        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Widget missing 'type', skipping");
                         continue;
                     }
                     
@@ -647,15 +647,15 @@ void ConfigParser::ParseStatusBars(const YAML::Node& node) {
         }
         
         status_bars.bars.push_back(bar);
-        LOG_DEBUG_FMT("Loaded status bar config: '{}'", bar.name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Loaded status bar config: '{}'", bar.name);
     }
     
-    LOG_INFO_FMT("Loaded {} status bar configuration(s)", status_bars.bars.size());
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded {} status bar configuration(s)", status_bars.bars.size());
 }
 
 void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
     if (!node.IsSequence()) {
-        LOG_WARN("monitor-groups should be a sequence");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "monitor-groups should be a sequence");
         return;
     }
     
@@ -668,7 +668,7 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
         if (group_node["name"]) {
             group.name = group_node["name"].as<std::string>();
         } else {
-            LOG_WARN("Monitor group missing 'name', skipping");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Monitor group missing 'name', skipping");
             continue;
         }
         
@@ -677,7 +677,7 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
             group.is_default = group_node["default"].as<bool>();
             if (group.is_default) {
                 if (has_default) {
-                    LOG_WARN("Multiple default monitor groups defined, using first one");
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Multiple default monitor groups defined, using first one");
                     group.is_default = false;
                 } else {
                     has_default = true;
@@ -688,7 +688,7 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
         // Special case: "Default" name is always default
         if (group.name == "Default") {
             if (has_default && !group.is_default) {
-                LOG_WARN("Group named 'Default' found but another default already set");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Group named 'Default' found but another default already set");
             } else {
                 group.is_default = true;
                 has_default = true;
@@ -706,7 +706,7 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
                 } else if (mon_node["id"]) {
                     mon.identifier = mon_node["id"].as<std::string>();
                 } else {
-                    LOG_WARN("Monitor config missing 'display' or 'id', skipping");
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Monitor config missing 'display' or 'id', skipping");
                     continue;
                 }
                 
@@ -738,7 +738,7 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
                             int y = std::stoi(pos_str.substr(x_pos + 1));
                             mon.position = {x, y};
                         } catch (const std::exception& e) {
-                            LOG_WARN_FMT("Invalid position format '{}': {}", pos_str, e.what());
+                            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Invalid position format '{}': {}", pos_str, e.what());
                         }
                     }
                 }
@@ -767,14 +767,14 @@ void ConfigParser::ParseMonitorGroups(const YAML::Node& node) {
         }
         
         monitor_groups.groups.push_back(group);
-        LOG_INFO_FMT("Loaded monitor group '{}' with {} monitors{}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded monitor group '{}' with {} monitors{}", 
                  group.name, group.monitors.size(), 
                  group.is_default ? " (default)" : "");
     }
     
     // Ensure we have a default group
     if (!has_default && !monitor_groups.groups.empty()) {
-        LOG_WARN("No default monitor group specified, using first group as default");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No default monitor group specified, using first group as default");
         monitor_groups.groups[0].is_default = true;
     }
 }
@@ -852,10 +852,10 @@ const MonitorGroup* MonitorGroupsConfig::FindMatchingGroup(
 }
 
 void ConfigParser::ParseWallpapers(const YAML::Node& node) {
-    LOG_DEBUG("Parsing wallpapers section");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Parsing wallpapers section");
     
     if (!node.IsSequence()) {
-        LOG_WARN("wallpapers should be a sequence");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "wallpapers should be a sequence");
         return;
     }
     
@@ -867,7 +867,7 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
         if (wp_node["name"]) {
             wp.name = wp_node["name"].as<std::string>();
         } else {
-            LOG_WARN("Wallpaper config missing 'name', skipping");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Wallpaper config missing 'name', skipping");
             continue;
         }
         
@@ -880,10 +880,10 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
                 wp.type = WallpaperType::StaticImage;
             } else if (type_str == "wallpaper_engine" || type_str == "wallpaperengine" || type_str == "we") {
                 // WallpaperEngine support disabled for now
-                LOG_WARN("WallpaperEngine support is currently disabled, using static image instead");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "WallpaperEngine support is currently disabled, using static image instead");
                 wp.type = WallpaperType::StaticImage;
             } else {
-                LOG_WARN_FMT("Unknown wallpaper type '{}', defaulting to static image", type_str);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Unknown wallpaper type '{}', defaulting to static image", type_str);
                 wp.type = WallpaperType::StaticImage;
             }
         } else {
@@ -922,7 +922,7 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
             // For Wallpaper Engine, paths should point to project.json files or directories
             if (wp.type == WallpaperType::StaticImage && std::filesystem::is_directory(fs_path)) {
                 // It's a folder, scan for image files
-                LOG_INFO_FMT("Scanning wallpaper folder: {}", fs_path.string());
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Scanning wallpaper folder: {}", fs_path.string());
                 try {
                     for (const auto& entry : std::filesystem::directory_iterator(fs_path)) {
                         if (entry.is_regular_file()) {
@@ -936,13 +936,13 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
                         }
                     }
                 } catch (const std::filesystem::filesystem_error& e) {
-                    LOG_ERROR_FMT("Failed to read wallpaper folder {}: {}", fs_path.string(), e.what());
+                    Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to read wallpaper folder {}: {}", fs_path.string(), e.what());
                 }
             } else if (std::filesystem::exists(fs_path)) {
                 // It's a file or Wallpaper Engine project directory
                 expanded_wallpapers.push_back(fs_path.string());
             } else {
-                LOG_WARN_FMT("Wallpaper path does not exist: {}", path);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Wallpaper path does not exist: {}", path);
             }
         }
         
@@ -958,7 +958,7 @@ void ConfigParser::ParseWallpapers(const YAML::Node& node) {
         }
         
         const char* type_name = (wp.type == WallpaperType::StaticImage) ? "static" : "wallpaper_engine";
-        LOG_INFO_FMT("Loaded wallpaper config '{}' (type: {}) with {} wallpaper(s), change interval: {}s", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded wallpaper config '{}' (type: {}) with {} wallpaper(s), change interval: {}s", 
                      wp.name, type_name, wp.wallpapers.size(), wp.change_interval_seconds);
         
         wallpapers.wallpapers.push_back(wp);
@@ -985,7 +985,7 @@ const StatusBarConfig* StatusBarsConfig::FindByName(const std::string& name) con
 
 void ConfigParser::ParseWindowDecorations(const YAML::Node& node) {
     if (!node.IsSequence()) {
-        LOG_WARN("window-decorations should be a sequence/list");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "window-decorations should be a sequence/list");
         return;
     }
     
@@ -995,7 +995,7 @@ void ConfigParser::ParseWindowDecorations(const YAML::Node& node) {
         if (decoration_node["name"]) {
             decoration.name = decoration_node["name"].as<std::string>();
         } else {
-            LOG_WARN("Window decoration group missing 'name', skipping");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Window decoration group missing 'name', skipping");
             continue;
         }
         
@@ -1055,7 +1055,7 @@ void ConfigParser::ParseWindowDecorations(const YAML::Node& node) {
             decoration.dim_amount = std::max(0.0f, std::min(1.0f, decoration.dim_amount));
         }
         
-        LOG_INFO_FMT("Loaded window decoration group '{}': border_width={}, opacity={}, border_radius={}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded window decoration group '{}': border_width={}, opacity={}, border_radius={}", 
                      decoration.name, decoration.border_width, decoration.opacity, decoration.border_radius);
         
         window_decorations.decorations.push_back(decoration);
@@ -1064,7 +1064,7 @@ void ConfigParser::ParseWindowDecorations(const YAML::Node& node) {
 
 void ConfigParser::ParseWindowRules(const YAML::Node& node) {
     if (!node.IsSequence()) {
-        LOG_WARN("window-rules should be a sequence/list");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "window-rules should be a sequence/list");
         return;
     }
     
@@ -1096,7 +1096,7 @@ void ConfigParser::ParseWindowRules(const YAML::Node& node) {
         // Must have at least one match criterion
         if (rule.app_id.empty() && rule.title.empty() && rule.class_name.empty() && 
             !rule.match_floating && !rule.match_tiled) {
-            LOG_WARN("Window rule has no match criteria, skipping");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Window rule has no match criteria, skipping");
             continue;
         }
         
@@ -1118,9 +1118,8 @@ void ConfigParser::ParseWindowRules(const YAML::Node& node) {
         }
         
         std::string rule_desc = rule.name.empty() ? "unnamed" : rule.name;
-        LOG_INFO_FMT("Loaded window rule '{}': app_id='{}', title='{}', decoration_group='{}'",
-                     rule_desc, rule.app_id, rule.title, rule.decoration_group);
-        
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loaded window rule '{}': app_id='{}', title='{}', decoration_group='{}'",
+                         rule_desc, rule.app_id, rule.title, rule.decoration_group);
         window_rules.rules.push_back(rule);
     }
 }

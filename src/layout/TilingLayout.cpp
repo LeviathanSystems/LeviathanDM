@@ -123,7 +123,7 @@ void TilingLayout::ApplyGrid(std::vector<View*>& views,
 void TilingLayout::MoveResizeView(View* view,
                                  int x, int y,
                                  int width, int height) {
-    LOG_DEBUG_FMT("MoveResizeView: view={}, pos=({},{}), size=({},{})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "MoveResizeView: view={}, pos=({},{}), size=({},{})", 
               static_cast<void*>(view), x, y, width, height);
     
     view->x = x;
@@ -133,9 +133,9 @@ void TilingLayout::MoveResizeView(View* view,
     
     if (view->scene_tree) {
         wlr_scene_node_set_position(&view->scene_tree->node, x, y);
-        LOG_DEBUG("  - Set scene node position");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - Set scene node position");
     } else {
-        LOG_DEBUG("  - WARNING: scene_tree is NULL!");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - WARNING: scene_tree is NULL!");
     }
     
     // Use appropriate resize method based on window type
@@ -143,13 +143,13 @@ void TilingLayout::MoveResizeView(View* view,
         // X11 window - use xwayland_surface configure
         if (view->xwayland_surface) {
             wlr_xwayland_surface_configure(view->xwayland_surface, x, y, width, height);
-            LOG_DEBUG("  - Configured XWayland surface");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - Configured XWayland surface");
         }
     } else {
         // Wayland native window - use xdg_toplevel
         if (view->xdg_toplevel) {
             wlr_xdg_toplevel_set_size(view->xdg_toplevel, width, height);
-            LOG_DEBUG("  - Set toplevel size");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - Set toplevel size");
         }
     }
     

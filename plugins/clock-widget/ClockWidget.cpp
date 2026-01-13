@@ -41,12 +41,11 @@ protected:
         
         if (time_str_ != buffer) {
             time_str_ = buffer;
-            dirty_ = true;  // Tell StatusBar we need re-render
+            MarkNeedsPaint();  // Flutter-style dirty tracking
         }
     }
     
     void CalculateSize(int available_width, int available_height) override {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
         
         // Use helper method from PeriodicWidget base class
         int text_width, text_height;
@@ -59,7 +58,7 @@ protected:
     void Render(cairo_t* cr) override {
         if (!IsVisible()) return;
         
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        // No lock needed - main thread only reads cached time_str_
         
         cairo_save(cr);
         

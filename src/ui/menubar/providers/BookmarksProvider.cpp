@@ -49,9 +49,9 @@ void BookmarkMenuItem::Execute() {
         execl("/bin/sh", "sh", "-c", command.c_str(), nullptr);
         exit(1);
     } else if (pid < 0) {
-        LOG_ERROR_FMT("Failed to open bookmark: {}", name_);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to open bookmark: {}", name_);
     } else {
-        LOG_INFO_FMT("Opened bookmark: {}", name_);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Opened bookmark: {}", name_);
     }
 }
 

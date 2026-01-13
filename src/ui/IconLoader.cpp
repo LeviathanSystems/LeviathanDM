@@ -70,7 +70,7 @@ cairo_surface_t* IconLoader::LoadIcon(const std::string& icon_name, int size) {
     }
     
     if (icon_path.empty()) {
-        LOG_DEBUG_FMT("Icon not found: {}", icon_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Icon not found: {}", icon_name);
         cache_[key] = nullptr;
         return nullptr;
     }
@@ -141,13 +141,13 @@ cairo_surface_t* IconLoader::LoadIconFromFile(const std::string& filepath, int s
     );
     
     if (error) {
-        LOG_WARN_FMT("Failed to load icon {}: {}", filepath, error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Failed to load icon {}: {}", filepath, error->message);
         g_error_free(error);
         return nullptr;
     }
     
     if (!pixbuf) {
-        LOG_WARN_FMT("Failed to load icon: {}", filepath);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Failed to load icon: {}", filepath);
         return nullptr;
     }
     
@@ -196,7 +196,7 @@ cairo_surface_t* IconLoader::LoadIconFromFile(const std::string& filepath, int s
     cairo_surface_mark_dirty(surface);
     g_object_unref(pixbuf);
     
-    LOG_DEBUG_FMT("Loaded icon: {} ({}x{})", filepath, width, height);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Loaded icon: {} ({}x{})", filepath, width, height);
     return surface;
 }
 

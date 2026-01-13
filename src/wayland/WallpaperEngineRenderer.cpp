@@ -37,36 +37,36 @@ WallpaperEngineRenderer::WallpaperEngineRenderer(struct wlr_scene_tree* backgrou
     , wlr_renderer_(renderer)
     , width_(width)
     , height_(height) {
-    LOG_DEBUG_FMT("Created WallpaperEngineRenderer with dimensions: {}x{}", width, height);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created WallpaperEngineRenderer with dimensions: {}x{}", width, height);
     
     // Initialize EGL for offscreen rendering
     if (!InitializeEGL()) {
-        LOG_ERROR("Failed to initialize EGL context for WallpaperEngine");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to initialize EGL context for WallpaperEngine");
         return;
     }
     
-    LOG_INFO("WallpaperEngine renderer initialized successfully");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "WallpaperEngine renderer initialized successfully");
 }
 
 WallpaperEngineRenderer::~WallpaperEngineRenderer() {
     UnloadWallpaper();
     CleanupEGL();
-    LOG_DEBUG("Destroyed WallpaperEngineRenderer");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Destroyed WallpaperEngineRenderer");
 }
 
 bool WallpaperEngineRenderer::LoadWallpaper(const std::string& project_path) {
-    LOG_INFO_FMT("Loading Wallpaper Engine project: {}", project_path);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Loading Wallpaper Engine project: {}", project_path);
     
     // Verify project path exists
     if (!std::filesystem::exists(project_path)) {
-        LOG_ERROR_FMT("WallpaperEngine project path does not exist: {}", project_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "WallpaperEngine project path does not exist: {}", project_path);
         return false;
     }
     
     // Check for project.json
     std::filesystem::path project_json = std::filesystem::path(project_path) / "project.json";
     if (!std::filesystem::exists(project_json)) {
-        LOG_ERROR_FMT("No project.json found in: {}", project_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No project.json found in: {}", project_path);
         return false;
     }
     
@@ -86,7 +86,7 @@ bool WallpaperEngineRenderer::LoadWallpaper(const std::string& project_path) {
         we_context_ = std::make_unique<WallpaperEngine::Application::ApplicationContext>(args);
         
         if (!we_context_) {
-            LOG_ERROR("Failed to create WallpaperEngine application context");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create WallpaperEngine application context");
             return false;
         }
         
@@ -94,7 +94,7 @@ bool WallpaperEngineRenderer::LoadWallpaper(const std::string& project_path) {
         we_app_ = std::make_unique<WallpaperEngine::Application::WallpaperApplication>(*we_context_);
         
         if (!we_app_) {
-            LOG_ERROR("Failed to create WallpaperEngine application");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create WallpaperEngine application");
             we_context_.reset();
             return false;
         }
@@ -103,16 +103,16 @@ bool WallpaperEngineRenderer::LoadWallpaper(const std::string& project_path) {
         // Note: We need to adapt this to not create actual windows
         // The actual implementation would need custom video driver integration
         
-        LOG_INFO("WallpaperEngine application initialized");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "WallpaperEngine application initialized");
         */
         
         // For now, just log that we would load it
-        LOG_WARN("WallpaperEngine loading is stubbed - linux-wallpaperengine needs to be built as a library first");
-        LOG_INFO_FMT("Would load WallpaperEngine project from: {}", project_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "WallpaperEngine loading is stubbed - linux-wallpaperengine needs to be built as a library first");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Would load WallpaperEngine project from: {}", project_path);
         
         // Create render target for offscreen rendering
         if (!CreateRenderTarget()) {
-            LOG_ERROR("Failed to create render target");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create render target");
             we_app_.reset();
             we_context_.reset();
             return false;
@@ -127,11 +127,11 @@ bool WallpaperEngineRenderer::LoadWallpaper(const std::string& project_path) {
         current_path_ = project_path;
         is_loaded_ = true;
         
-        LOG_INFO_FMT("Successfully loaded WallpaperEngine wallpaper: {}", project_path);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Successfully loaded WallpaperEngine wallpaper: {}", project_path);
         return true;
         
     } catch (const std::exception& e) {
-        LOG_ERROR_FMT("Exception loading WallpaperEngine wallpaper: {}", e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Exception loading WallpaperEngine wallpaper: {}", e.what());
         we_app_.reset();
         we_context_.reset();
         return false;
@@ -143,7 +143,7 @@ void WallpaperEngineRenderer::UnloadWallpaper() {
         return;
     }
     
-    LOG_DEBUG("Unloading Wallpaper Engine wallpaper");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Unloading Wallpaper Engine wallpaper");
     
     // Remove frame timer
     if (frame_timer_) {
@@ -190,7 +190,7 @@ void WallpaperEngineRenderer::RenderFrame() {
     // Make our EGL context current
     if (!eglMakeCurrent(egl_context_.display, egl_context_.surface, 
                         egl_context_.surface, egl_context_.context)) {
-        LOG_ERROR("Failed to make EGL context current");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to make EGL context current");
         return;
     }
     
@@ -214,7 +214,7 @@ void WallpaperEngineRenderer::RenderFrame() {
         }
         
     } catch (const std::exception& e) {
-        LOG_ERROR_FMT("Exception during WallpaperEngine render: {}", e.what());
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Exception during WallpaperEngine render: {}", e.what());
     }
     
     // Unbind framebuffer
@@ -233,7 +233,7 @@ void WallpaperEngineRenderer::SetPaused(bool paused) {
     }
     
     is_paused_ = paused;
-    LOG_DEBUG_FMT("WallpaperEngine renderer {}", paused ? "paused" : "resumed");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "WallpaperEngine renderer {}", paused ? "paused" : "resumed");
     
     // Pause/unpause WallpaperEngine rendering
     if (we_wallpaper_) {
@@ -250,23 +250,23 @@ int WallpaperEngineRenderer::FrameCallback(void* data) {
 }
 
 bool WallpaperEngineRenderer::InitializeEGL() {
-    LOG_DEBUG("Initializing EGL context for WallpaperEngine offscreen rendering");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Initializing EGL context for WallpaperEngine offscreen rendering");
     
     // Get EGL display
     egl_context_.display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (egl_context_.display == EGL_NO_DISPLAY) {
-        LOG_ERROR("Failed to get EGL display");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to get EGL display");
         return false;
     }
     
     // Initialize EGL
     EGLint major, minor;
     if (!eglInitialize(egl_context_.display, &major, &minor)) {
-        LOG_ERROR("Failed to initialize EGL");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to initialize EGL");
         return false;
     }
     
-    LOG_DEBUG_FMT("EGL version: {}.{}", major, minor);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "EGL version: {}.{}", major, minor);
     
     // Choose EGL config
     EGLint config_attribs[] = {
@@ -282,14 +282,14 @@ bool WallpaperEngineRenderer::InitializeEGL() {
     
     EGLint num_configs;
     if (!eglChooseConfig(egl_context_.display, config_attribs, &egl_context_.config, 1, &num_configs) || num_configs == 0) {
-        LOG_ERROR("Failed to choose EGL config");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to choose EGL config");
         eglTerminate(egl_context_.display);
         return false;
     }
     
     // Bind OpenGL API
     if (!eglBindAPI(EGL_OPENGL_API)) {
-        LOG_ERROR("Failed to bind OpenGL API");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to bind OpenGL API");
         eglTerminate(egl_context_.display);
         return false;
     }
@@ -304,7 +304,7 @@ bool WallpaperEngineRenderer::InitializeEGL() {
     
     egl_context_.context = eglCreateContext(egl_context_.display, egl_context_.config, EGL_NO_CONTEXT, context_attribs);
     if (egl_context_.context == EGL_NO_CONTEXT) {
-        LOG_ERROR("Failed to create EGL context");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create EGL context");
         eglTerminate(egl_context_.display);
         return false;
     }
@@ -318,7 +318,7 @@ bool WallpaperEngineRenderer::InitializeEGL() {
     
     egl_context_.surface = eglCreatePbufferSurface(egl_context_.display, egl_context_.config, pbuffer_attribs);
     if (egl_context_.surface == EGL_NO_SURFACE) {
-        LOG_ERROR("Failed to create EGL pbuffer surface");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create EGL pbuffer surface");
         eglDestroyContext(egl_context_.display, egl_context_.context);
         eglTerminate(egl_context_.display);
         return false;
@@ -326,7 +326,7 @@ bool WallpaperEngineRenderer::InitializeEGL() {
     
     // Make context current to initialize GLEW
     if (!eglMakeCurrent(egl_context_.display, egl_context_.surface, egl_context_.surface, egl_context_.context)) {
-        LOG_ERROR("Failed to make EGL context current");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to make EGL context current");
         eglDestroySurface(egl_context_.display, egl_context_.surface);
         eglDestroyContext(egl_context_.display, egl_context_.context);
         eglTerminate(egl_context_.display);
@@ -336,7 +336,7 @@ bool WallpaperEngineRenderer::InitializeEGL() {
     // Initialize GLEW
     GLenum glew_err = glewInit();
     if (glew_err != GLEW_OK) {
-        LOG_ERROR_FMT("Failed to initialize GLEW: {}", reinterpret_cast<const char*>(glewGetErrorString(glew_err)));
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to initialize GLEW: {}", reinterpret_cast<const char*>(glewGetErrorString(glew_err)));
         eglMakeCurrent(egl_context_.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         eglDestroySurface(egl_context_.display, egl_context_.surface);
         eglDestroyContext(egl_context_.display, egl_context_.context);
@@ -344,22 +344,22 @@ bool WallpaperEngineRenderer::InitializeEGL() {
         return false;
     }
     
-    LOG_INFO_FMT("OpenGL version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-    LOG_INFO_FMT("GLSL version: {}", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "OpenGL version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "GLSL version: {}", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
     
     // Clear context
     eglMakeCurrent(egl_context_.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     
-    LOG_INFO("EGL context initialized successfully");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "EGL context initialized successfully");
     return true;
 }
 
 bool WallpaperEngineRenderer::CreateRenderTarget() {
-    LOG_DEBUG_FMT("Creating render target: {}x{}", width_, height_);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Creating render target: {}x{}", width_, height_);
     
     // Make context current
     if (!eglMakeCurrent(egl_context_.display, egl_context_.surface, egl_context_.surface, egl_context_.context)) {
-        LOG_ERROR("Failed to make EGL context current");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to make EGL context current");
         return false;
     }
     
@@ -380,7 +380,7 @@ bool WallpaperEngineRenderer::CreateRenderTarget() {
     // Check framebuffer status
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
-        LOG_ERROR_FMT("Framebuffer incomplete: 0x{:x}", status);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Framebuffer incomplete: 0x{:x}", status);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         eglMakeCurrent(egl_context_.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         return false;
@@ -389,7 +389,7 @@ bool WallpaperEngineRenderer::CreateRenderTarget() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     eglMakeCurrent(egl_context_.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     
-    LOG_INFO("Render target created successfully");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Render target created successfully");
     return true;
 }
 
@@ -408,14 +408,14 @@ bool WallpaperEngineRenderer::ImportTextureToWlroots() {
     // - wlr_dmabuf_v1_buffer_from_params()
     // - Proper synchronization between GL and wlroots
     
-    LOG_WARN("Texture import to wlroots not yet fully implemented");
-    LOG_WARN("This requires DMA-BUF export/import which is complex");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Texture import to wlroots not yet fully implemented");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "This requires DMA-BUF export/import which is complex");
     
     return false;
 }
 
 void WallpaperEngineRenderer::CleanupEGL() {
-    LOG_DEBUG("Cleaning up EGL resources");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Cleaning up EGL resources");
     
     if (egl_context_.display != EGL_NO_DISPLAY) {
         eglMakeCurrent(egl_context_.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);

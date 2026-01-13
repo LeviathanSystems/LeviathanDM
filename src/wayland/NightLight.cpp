@@ -18,10 +18,10 @@ NightLight::NightLight(struct wlr_scene_tree* parent_layer, const NightLightConf
     , current_strength_(0.0f)
     , last_update_(0)
 {
-    LOG_INFO("=== NightLight Constructor ===");
-    LOG_INFO_FMT("Config - enabled: {}, temp: {}, strength: {}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "=== NightLight Constructor ===");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Config - enabled: {}, temp: {}, strength: {}", 
                  config_.enabled, config_.temperature, config_.strength);
-    LOG_INFO_FMT("Schedule: {:02d}:{:02d} - {:02d}:{:02d}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Schedule: {:02d}:{:02d} - {:02d}:{:02d}", 
                  config_.start_hour, config_.start_minute,
                  config_.end_hour, config_.end_minute);
     
@@ -30,7 +30,7 @@ NightLight::NightLight(struct wlr_scene_tree* parent_layer, const NightLightConf
     night_light_tree_ = wlr_scene_tree_create(parent_layer_);
     
     if (night_light_tree_) {
-        LOG_INFO("Created night light scene tree in NightLight layer");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Created night light scene tree in NightLight layer");
         
         // Create the overlay rectangle
         CreateOverlay();
@@ -38,9 +38,9 @@ NightLight::NightLight(struct wlr_scene_tree* parent_layer, const NightLightConf
         // Initial update
         Update();
         
-        LOG_INFO("NightLight initialization complete");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "NightLight initialization complete");
     } else {
-        LOG_ERROR("Failed to create night light scene tree");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create night light scene tree");
     }
 }
 
@@ -68,7 +68,7 @@ void NightLight::SetOutputDimensions(int width, int height) {
         }
     }
     
-    LOG_DEBUG_FMT("Night light output dimensions: {}x{}", width, height);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Night light output dimensions: {}x{}", width, height);
 }
 
 void NightLight::Update() {
@@ -77,7 +77,7 @@ void NightLight::Update() {
     
     // Log every 60 updates (once per minute if called every second)
     if (update_counter % 60 == 1) {
-        LOG_DEBUG_FMT("NightLight::Update() - enabled: {}, active: {}, strength: {:.2f}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "NightLight::Update() - enabled: {}, active: {}, strength: {:.2f}", 
                      config_.enabled, is_active_, current_strength_);
     }
     
@@ -87,7 +87,7 @@ void NightLight::Update() {
             is_active_ = false;
             current_strength_ = 0.0f;
             ApplyEffect(0.0f);
-            LOG_INFO("Night light disabled");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Night light disabled");
         }
         return;
     }
@@ -119,7 +119,7 @@ void NightLight::Update() {
         struct tm* timeinfo = localtime(&now);
         char time_str[16];
         strftime(time_str, sizeof(time_str), "%H:%M:%S", timeinfo);
-        LOG_INFO_FMT("Night light {} at {} (should_be_active: {}, target_strength: {:.2f})", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Night light {} at {} (should_be_active: {}, target_strength: {:.2f})", 
                     is_active_ ? "activated" : "deactivated",
                     time_str, should_be_active, target_strength);
     }
@@ -130,7 +130,7 @@ void NightLight::Update() {
         ApplyEffect(current_strength_);
         
         if (current_strength_ > 0.0f) {
-            LOG_INFO_FMT("Applying night light effect - strength: {:.2f}", current_strength_);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Applying night light effect - strength: {:.2f}", current_strength_);
         }
     }
 }
@@ -244,10 +244,10 @@ void NightLight::CreateOverlay() {
     if (overlay_rect_) {
         // Initially invisible
         wlr_scene_node_set_enabled(&overlay_rect_->node, false);
-        LOG_DEBUG_FMT("Created night light overlay rectangle: {}x{}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created night light overlay rectangle: {}x{}", 
                      output_width_, output_height_);
     } else {
-        LOG_ERROR("Failed to create night light overlay rectangle");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create night light overlay rectangle");
     }
 }
 
@@ -260,14 +260,14 @@ void NightLight::DestroyOverlay() {
 
 void NightLight::ApplyEffect(float strength) {
     if (!overlay_rect_) {
-        LOG_ERROR("ApplyEffect called but overlay_rect_ is NULL!");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "ApplyEffect called but overlay_rect_ is NULL!");
         return;
     }
     
     if (strength <= 0.0f) {
         // Disable overlay
         wlr_scene_node_set_enabled(&overlay_rect_->node, false);
-        LOG_DEBUG("Disabled night light overlay (strength = 0)");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Disabled night light overlay (strength = 0)");
         return;
     }
     
@@ -284,7 +284,7 @@ void NightLight::ApplyEffect(float strength) {
     float tint_g = g * strength * 0.7f;  // Reduce green slightly
     float tint_b = b * strength * 0.3f;  // Significantly reduce blue
     
-    LOG_INFO_FMT("Applying night light: temp={:.0f}K, RGB=({:.2f},{:.2f},{:.2f}), "
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Applying night light: temp={:.0f}K, RGB=({:.2f},{:.2f},{:.2f}), "
                  "tinted=({:.2f},{:.2f},{:.2f}), alpha={:.2f}",
                  config_.temperature, r, g, b, tint_r, tint_g, tint_b, alpha);
     
@@ -298,7 +298,7 @@ void NightLight::ApplyEffect(float strength) {
     // Ensure it's on top
     wlr_scene_node_raise_to_top(&overlay_rect_->node);
     
-    LOG_INFO("Night light overlay enabled and raised to top");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Night light overlay enabled and raised to top");
 }
 
 void NightLight::TemperatureToRGB(float temperature, float& r, float& g, float& b) {

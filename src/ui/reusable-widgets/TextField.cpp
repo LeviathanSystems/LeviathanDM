@@ -7,7 +7,6 @@ namespace Leviathan {
 namespace UI {
 
 void TextField::CalculateSize(int available_width, int available_height) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     // Create temporary cairo surface to measure text
     cairo_surface_t* temp_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
@@ -57,7 +56,6 @@ void TextField::CalculateSize(int available_width, int available_height) {
 void TextField::Render(cairo_t* cr) {
     if (!IsVisible()) return;
     
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     cairo_save(cr);
     
@@ -207,7 +205,6 @@ void TextField::Render(cairo_t* cr) {
 }
 
 bool TextField::HandleClick(int x, int y) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     // Check if click is within bounds
     if (x >= x_ && x <= x_ + width_ && y >= y_ && y <= y_ + height_) {
@@ -232,7 +229,6 @@ bool TextField::HandleClick(int x, int y) {
 bool TextField::HandleKeyPress(uint32_t key, uint32_t modifiers) {
     if (!is_focused_) return false;
     
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     bool ctrl = modifiers & 4;  // Control key
     bool shift = modifiers & 1; // Shift key
@@ -316,7 +312,6 @@ bool TextField::HandleKeyPress(uint32_t key, uint32_t modifiers) {
 void TextField::HandleTextInput(const std::string& text) {
     if (!is_focused_) return;
     
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     // Delete any selected text first
     if (HasSelection()) {
@@ -334,7 +329,6 @@ void TextField::HandleTextInput(const std::string& text) {
 }
 
 void TextField::UpdateCursorBlink(uint32_t current_time) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     
     if (!is_focused_) return;
     

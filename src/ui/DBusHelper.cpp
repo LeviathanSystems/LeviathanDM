@@ -21,7 +21,7 @@ bool DBusHelper::ConnectToSystemBus() {
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     
     if (connection_) {
-        LOG_WARN("Already connected to DBus");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Already connected to DBus");
         return true;
     }
     
@@ -29,12 +29,12 @@ bool DBusHelper::ConnectToSystemBus() {
     connection_ = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
     
     if (error) {
-        LOG_ERROR_FMT("Failed to connect to system bus: {}", error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to connect to system bus: {}", error->message);
         g_error_free(error);
         return false;
     }
     
-    LOG_INFO("Connected to system DBus");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Connected to system DBus");
     OnConnected();
     return true;
 }
@@ -43,7 +43,7 @@ bool DBusHelper::ConnectToSessionBus() {
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     
     if (connection_) {
-        LOG_WARN("Already connected to DBus");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Already connected to DBus");
         return true;
     }
     
@@ -51,12 +51,12 @@ bool DBusHelper::ConnectToSessionBus() {
     connection_ = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, &error);
     
     if (error) {
-        LOG_ERROR_FMT("Failed to connect to session bus: {}", error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to connect to session bus: {}", error->message);
         g_error_free(error);
         return false;
     }
     
-    LOG_INFO("Connected to session DBus");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Connected to session DBus");
     OnConnected();
     return true;
 }
@@ -87,7 +87,7 @@ void DBusHelper::Disconnect() {
         connection_ = nullptr;
     }
     
-    LOG_DEBUG("Disconnected from DBus");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Disconnected from DBus");
 }
 
 bool DBusHelper::CreateProxy(const std::string& bus_name,
@@ -96,7 +96,7 @@ bool DBusHelper::CreateProxy(const std::string& bus_name,
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     
     if (!connection_) {
-        LOG_ERROR("Not connected to DBus - call ConnectToSystemBus() or ConnectToSessionBus() first");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Not connected to DBus - call ConnectToSystemBus() or ConnectToSessionBus() first");
         return false;
     }
     
@@ -123,7 +123,7 @@ bool DBusHelper::CreateProxy(const std::string& bus_name,
     );
     
     if (error) {
-        LOG_ERROR_FMT("Failed to create DBus proxy for {}: {}", bus_name, error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create DBus proxy for {}: {}", bus_name, error->message);
         g_error_free(error);
         return false;
     }
@@ -136,7 +136,7 @@ bool DBusHelper::CreateProxy(const std::string& bus_name,
         this
     );
     
-    LOG_DEBUG_FMT("Created DBus proxy: {} {} {}", bus_name, object_path, interface_name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created DBus proxy: {} {} {}", bus_name, object_path, interface_name);
     return true;
 }
 
@@ -144,7 +144,7 @@ guint DBusHelper::SubscribeToSignal(const std::string& signal_name, DBusSignalCa
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     
     if (!connection_) {
-        LOG_ERROR("Not connected to DBus");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Not connected to DBus");
         return 0;
     }
     
@@ -164,9 +164,9 @@ guint DBusHelper::SubscribeToSignal(const std::string& signal_name, DBusSignalCa
     
     if (subscription_id > 0) {
         signal_callbacks_[subscription_id] = callback;
-        LOG_DEBUG_FMT("Subscribed to signal '{}' (id: {})", signal_name, subscription_id);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Subscribed to signal '{}' (id: {})", signal_name, subscription_id);
     } else {
-        LOG_ERROR_FMT("Failed to subscribe to signal '{}'", signal_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to subscribe to signal '{}'", signal_name);
     }
     
     return subscription_id;
@@ -178,27 +178,27 @@ void DBusHelper::UnsubscribeFromSignal(guint subscription_id) {
     if (connection_ && subscription_id > 0) {
         g_dbus_connection_signal_unsubscribe(connection_, subscription_id);
         signal_callbacks_.erase(subscription_id);
-        LOG_DEBUG_FMT("Unsubscribed from signal (id: {})", subscription_id);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Unsubscribed from signal (id: {})", subscription_id);
     }
 }
 
 void DBusHelper::MonitorProperty(const std::string& property_name, DBusPropertyCallback callback) {
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     property_callbacks_[property_name] = callback;
-    LOG_DEBUG_FMT("Monitoring property '{}'", property_name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Monitoring property '{}'", property_name);
 }
 
 void DBusHelper::StopMonitoringProperty(const std::string& property_name) {
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     property_callbacks_.erase(property_name);
-    LOG_DEBUG_FMT("Stopped monitoring property '{}'", property_name);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Stopped monitoring property '{}'", property_name);
 }
 
 GVariant* DBusHelper::CallMethod(const std::string& method_name, GVariant* parameters) {
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     
     if (!proxy_) {
-        LOG_ERROR("No proxy created - call CreateProxy() first");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No proxy created - call CreateProxy() first");
         return nullptr;
     }
     
@@ -214,7 +214,7 @@ GVariant* DBusHelper::CallMethod(const std::string& method_name, GVariant* param
     );
     
     if (error) {
-        LOG_ERROR_FMT("Failed to call method '{}': {}", method_name, error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to call method '{}': {}", method_name, error->message);
         g_error_free(error);
         return nullptr;
     }
@@ -226,7 +226,7 @@ void DBusHelper::CallMethodAsync(const std::string& method_name,
                                 GVariant* parameters,
                                 std::function<void(GVariant*, GError*)> callback) {
     if (!proxy_) {
-        LOG_ERROR("No proxy created - call CreateProxy() first");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No proxy created - call CreateProxy() first");
         if (callback) {
             callback(nullptr, nullptr);
         }
@@ -269,14 +269,14 @@ GVariant* DBusHelper::GetProperty(const std::string& property_name) {
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     
     if (!proxy_) {
-        LOG_ERROR("No proxy created - call CreateProxy() first");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No proxy created - call CreateProxy() first");
         return nullptr;
     }
     
     GVariant* value = g_dbus_proxy_get_cached_property(proxy_, property_name.c_str());
     
     if (!value) {
-        LOG_DEBUG_FMT("Property '{}' not in cache, fetching...", property_name);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Property '{}' not in cache, fetching...", property_name);
         // Property not in cache, fetch it
         GError* error = nullptr;
         GVariant* result = g_dbus_proxy_call_sync(
@@ -290,7 +290,7 @@ GVariant* DBusHelper::GetProperty(const std::string& property_name) {
         );
         
         if (error) {
-            LOG_ERROR_FMT("Failed to get property '{}': {}", property_name, error->message);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to get property '{}': {}", property_name, error->message);
             g_error_free(error);
             return nullptr;
         }
@@ -308,7 +308,7 @@ bool DBusHelper::SetProperty(const std::string& property_name, GVariant* value) 
     std::lock_guard<std::mutex> lock(dbus_mutex_);
     
     if (!proxy_) {
-        LOG_ERROR("No proxy created - call CreateProxy() first");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No proxy created - call CreateProxy() first");
         return false;
     }
     
@@ -324,7 +324,7 @@ bool DBusHelper::SetProperty(const std::string& property_name, GVariant* value) 
     );
     
     if (error) {
-        LOG_ERROR_FMT("Failed to set property '{}': {}", property_name, error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to set property '{}': {}", property_name, error->message);
         g_error_free(error);
         return false;
     }
@@ -340,7 +340,7 @@ std::vector<std::string> DBusHelper::EnumerateObjects(const std::string& object_
     std::vector<std::string> objects;
     
     if (!connection_) {
-        LOG_ERROR("Not connected to DBus");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Not connected to DBus");
         return objects;
     }
     
@@ -362,7 +362,7 @@ std::vector<std::string> DBusHelper::EnumerateObjects(const std::string& object_
     );
     
     if (error) {
-        LOG_DEBUG_FMT("Failed to introspect {}: {}", object_path, error->message);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Failed to introspect {}: {}", object_path, error->message);
         g_error_free(error);
         return objects;
     }
@@ -400,12 +400,26 @@ void DBusHelper::OnSignalReceived(GDBusConnection* connection,
                                   GVariant* parameters,
                                   void* user_data) {
     auto* helper = static_cast<DBusHelper*>(user_data);
-    std::lock_guard<std::mutex> lock(helper->dbus_mutex_);
     
-    // Find and call appropriate callback
-    for (const auto& [subscription_id, callback] : helper->signal_callbacks_) {
-        if (callback) {
+    // Copy callbacks while holding lock, then release before calling
+    std::vector<std::function<void(const std::string&, GVariant*)>> callbacks_to_call;
+    {
+        std::lock_guard<std::mutex> lock(helper->dbus_mutex_);
+        for (const auto& [subscription_id, callback] : helper->signal_callbacks_) {
+            if (callback) {
+                callbacks_to_call.push_back(callback);
+            }
+        }
+    } // Release mutex before calling callbacks
+    
+    // Call callbacks without holding lock
+    for (const auto& callback : callbacks_to_call) {
+        try {
             callback(signal_name, parameters);
+        } catch (const std::exception& e) {
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "DBusHelper: Exception in signal callback: {}", e.what());
+        } catch (...) {
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "DBusHelper: Unknown exception in signal callback");
         }
     }
 }
@@ -416,21 +430,45 @@ void DBusHelper::OnPropertiesChanged(GDBusProxy* proxy,
                                     const char* const* invalidated_properties,
                                     void* user_data) {
     auto* helper = static_cast<DBusHelper*>(user_data);
-    std::lock_guard<std::mutex> lock(helper->dbus_mutex_);
     
-    // Iterate over changed properties
-    GVariantIter iter;
-    const char* property_name;
-    GVariant* property_value;
+    // Build list of callbacks to call while holding lock
+    std::vector<std::pair<std::string, std::function<void(const std::string&, GVariant*)>>> callbacks_to_call;
+    std::vector<GVariant*> refs_to_unref;
     
-    g_variant_iter_init(&iter, changed_properties);
-    while (g_variant_iter_next(&iter, "{&sv}", &property_name, &property_value)) {
-        // Check if we're monitoring this property
-        auto it = helper->property_callbacks_.find(property_name);
-        if (it != helper->property_callbacks_.end() && it->second) {
-            it->second(property_name, property_value);
+    {
+        std::lock_guard<std::mutex> lock(helper->dbus_mutex_);
+        
+        // Iterate over changed properties
+        GVariantIter iter;
+        const char* property_name;
+        GVariant* property_value;
+        
+        g_variant_iter_init(&iter, changed_properties);
+        while (g_variant_iter_next(&iter, "{&sv}", &property_name, &property_value)) {
+            // Check if we're monitoring this property
+            auto it = helper->property_callbacks_.find(property_name);
+            if (it != helper->property_callbacks_.end() && it->second) {
+                callbacks_to_call.push_back({property_name, it->second});
+                // Add extra reference to keep variant alive after releasing mutex
+                // g_variant_iter_next already gave us one reference, keep it for callback
+                refs_to_unref.push_back(property_value);
+            } else {
+                // Unref immediately if we're not using it
+                g_variant_unref(property_value);
+            }
         }
-        g_variant_unref(property_value);
+    } // Release mutex before calling callbacks
+    
+    // Call callbacks without holding lock
+    for (size_t i = 0; i < callbacks_to_call.size(); ++i) {
+        try {
+            callbacks_to_call[i].second(callbacks_to_call[i].first, refs_to_unref[i]);
+        } catch (const std::exception& e) {
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "DBusHelper: Exception in property change callback: {}", e.what());
+        } catch (...) {
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "DBusHelper: Unknown exception in property change callback");
+        }
+        g_variant_unref(refs_to_unref[i]);
     }
 }
 

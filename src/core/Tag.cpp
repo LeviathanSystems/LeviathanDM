@@ -31,15 +31,15 @@ void Tag::SetVisible(bool visible) {
     
     visible_ = visible;
     
-    LOG_INFO_FMT("Tag '{}' visibility changed to: {}", name_, visible);
-    LOG_DEBUG_FMT("Tag has {} clients", clients_.size());
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Tag '{}' visibility changed to: {}", name_, visible);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Tag has {} clients", clients_.size());
     
     // Show/hide all clients in this tag
     for (auto* client : clients_) {
         auto* view = client->GetView();
         if (view && view->scene_tree) {
             wlr_scene_node_set_enabled(&view->scene_tree->node, visible);
-            LOG_DEBUG_FMT("  - Set scene node enabled={} for view={}", 
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - Set scene node enabled={} for view={}", 
                      visible, static_cast<void*>(view));
         }
     }
@@ -50,21 +50,35 @@ void Tag::SetVisible(bool visible) {
 }
 
 void Tag::AddClient(Client* client) {
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Tag::AddClient - Adding client {:p} to tag '{}'", static_cast<void*>(client), name_);
+    
     clients_.push_back(client);
-    LOG_INFO_FMT("Added client to tag '{}' (total clients: {})", name_, clients_.size());
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Added client to tag '{}' (total clients: {})", name_, clients_.size());
     
     // If tag is visible, make sure the new client is visible too
     if (visible_) {
         auto* view = client->GetView();
         if (view && view->scene_tree) {
             wlr_scene_node_set_enabled(&view->scene_tree->node, true);
-            LOG_DEBUG("  - Enabled scene node for new client (tag is visible)");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - Enabled scene node for new client (tag is visible)");
         }
     }
     
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Tag::AddClient - About to publish ClientAddedEvent");
+    
     // Fire client added event
-    ClientAddedEvent event(client, this);
-    EventBus::Instance().Publish(event);
+    try {
+        ClientAddedEvent event(client, this);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - Event created: client={:p}, tag={:p}", static_cast<void*>(client), static_cast<void*>(this));
+        EventBus::Instance().Publish(event);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  - ClientAddedEvent published successfully");
+    } catch (const std::exception& e) {
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Tag::AddClient: Exception publishing event: {}", e.what());
+    } catch (...) {
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Tag::AddClient: Unknown exception publishing event");
+    }
+    
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Tag::AddClient - Completed");
 }
 
 void Tag::RemoveClient(Client* client) {

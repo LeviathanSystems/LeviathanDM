@@ -33,7 +33,7 @@ void LayerSurfaceManager::HandleNewLayerSurface(struct wl_listener* listener, vo
     struct wlr_layer_surface_v1* wlr_layer_surface = 
         static_cast<struct wlr_layer_surface_v1*>(data);
     
-    LOG_INFO_FMT("New layer surface: namespace={}, layer={}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "New layer surface: namespace={}, layer={}", 
              wlr_layer_surface->namespace_ ? wlr_layer_surface->namespace_ : "null",
              (int)wlr_layer_surface->current.layer);
     
@@ -68,9 +68,9 @@ void LayerSurfaceManager::HandleNewLayerSurface(struct wl_listener* listener, vo
         if (output) {
             wlr_layer_surface->output = output;
             layer_surface->output = output;
-            LOG_DEBUG("Assigned output to layer surface");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Assigned output to layer surface");
         } else {
-            LOG_ERROR("No output available for layer surface!");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No output available for layer surface!");
         }
     }
     
@@ -82,7 +82,7 @@ void LayerSurfaceManager::HandleNewLayerSurface(struct wl_listener* listener, vo
 void LayerSurfaceManager::HandleMap(struct wl_listener* listener, void* data) {
     LayerSurface* layer_surface = wl_container_of(listener, layer_surface, map);
     
-    LOG_INFO_FMT("Layer surface mapped: namespace={}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Layer surface mapped: namespace={}", 
              layer_surface->wlr_layer_surface->namespace_ ? 
              layer_surface->wlr_layer_surface->namespace_ : "null");
     
@@ -97,9 +97,9 @@ void LayerSurfaceManager::HandleMap(struct wl_listener* listener, void* data) {
         wlr_output = wlr_output_layout_output_at(layout, 0, 0);
         if (wlr_output) {
             wlr_layer_surface_v1_configure(wlr_ls, wlr_output->width, wlr_output->height);
-            LOG_DEBUG("Assigned layer surface to output");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Assigned layer surface to output");
         } else {
-            LOG_WARN("No output available for layer surface!");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No output available for layer surface!");
             return;
         }
     }
@@ -108,7 +108,7 @@ void LayerSurfaceManager::HandleMap(struct wl_listener* listener, void* data) {
     Output* output = server->FindOutput(wlr_output);
     
     if (!output || !output->layer_manager) {
-        LOG_WARN("No Output or LayerManager found for layer surface");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "No Output or LayerManager found for layer surface");
         return;
     }
     
@@ -135,12 +135,12 @@ void LayerSurfaceManager::HandleMap(struct wl_listener* listener, void* data) {
             wlr_scene_layer_surface_v1_create(parent_tree, wlr_ls);
         
         if (layer_surface->scene_layer_surface) {
-            LOG_DEBUG("Layer surface added to scene graph");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Layer surface added to scene graph");
         } else {
-            LOG_ERROR("Failed to create scene layer surface!");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Failed to create scene layer surface!");
         }
     } else {
-        LOG_ERROR("No parent tree found for layer surface!");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "No parent tree found for layer surface!");
     }
     
     // Trigger arrangement
@@ -153,7 +153,7 @@ void LayerSurfaceManager::HandleMap(struct wl_listener* listener, void* data) {
 void LayerSurfaceManager::HandleUnmap(struct wl_listener* listener, void* data) {
     LayerSurface* layer_surface = wl_container_of(listener, layer_surface, unmap);
     
-    LOG_INFO("Layer surface unmapped");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Layer surface unmapped");
     
     // Scene node is automatically destroyed with the surface
     layer_surface->scene_layer_surface = nullptr;
@@ -162,7 +162,7 @@ void LayerSurfaceManager::HandleUnmap(struct wl_listener* listener, void* data) 
 void LayerSurfaceManager::HandleDestroy(struct wl_listener* listener, void* data) {
     LayerSurface* layer_surface = wl_container_of(listener, layer_surface, destroy);
     
-    LOG_INFO("Layer surface destroyed");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Layer surface destroyed");
     
     // Remove listeners
     wl_list_remove(&layer_surface->map.link);
@@ -192,15 +192,15 @@ void LayerSurfaceManager::HandleCommit(struct wl_listener* listener, void* data)
             if (height == 0) height = wlr_ls->output->height;
             
             wlr_layer_surface_v1_configure(wlr_ls, width, height);
-            LOG_DEBUG_FMT("Sent initial configure to layer surface: {}x{}", width, height);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Sent initial configure to layer surface: {}x{}", width, height);
         } else {
-            LOG_ERROR("Layer surface initialized but has no output!");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Layer surface initialized but has no output!");
         }
     }
     
     // Check if layer changed
     if (wlr_ls->current.committed & WLR_LAYER_SURFACE_V1_STATE_LAYER) {
-        LOG_DEBUG("Layer surface layer changed");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Layer surface layer changed");
         // Would need to move to different scene tree
     }
     
@@ -212,14 +212,14 @@ void LayerSurfaceManager::HandleCommit(struct wl_listener* listener, void* data)
 
 void LayerSurfaceManager::HandleNewPopup(struct wl_listener* listener, void* data) {
     // TODO: Handle xdg_popup for layer surfaces if needed
-    LOG_DEBUG("Layer surface popup (not implemented yet)");
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Layer surface popup (not implemented yet)");
 }
 
 void LayerSurfaceManager::ArrangeLayer(struct wlr_output* output, 
                                        enum zwlr_layer_shell_v1_layer layer) {
     // This would implement the layer-shell exclusive zone logic
     // For now, wlroots scene graph handles basic positioning
-    LOG_DEBUG_FMT("Arranging layer {} on output", (int)layer);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Arranging layer {} on output", (int)layer);
     
     // The scene layer surface automatically handles positioning based on
     // the layer surface's anchor and exclusive zone

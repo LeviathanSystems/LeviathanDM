@@ -5,6 +5,15 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <queue>
+#include <atomic>
+
+// Forward declare IPC::Server
+namespace Leviathan {
+namespace IPC {
+    class Server;
+}
+}
 
 namespace Leviathan {
 namespace Core {
@@ -157,6 +166,7 @@ public:
     
     /**
      * Publish an event to all subscribers
+     * Events are queued and processed serially to prevent re-entry
      * Can be called from any thread
      */
     void Publish(const Event& event);
@@ -166,8 +176,20 @@ public:
      */
     void Clear();
     
+    /**
+     * Set IPC server for broadcasting events
+     * When set, events will be broadcast via IPC instead of calling listeners directly
+     */
+    void SetIPCServer(IPC::Server* server) { ipc_server_ = server; }
+
 private:
-    EventBus() : next_id_(1) {}
+    /**
+     * Process queued events one at a time
+     * Called internally by Publish
+     */
+    void ProcessEventQueue();
+    
+    EventBus() : next_id_(1), processing_queue_(false) {}
     ~EventBus() = default;
     
     // Delete copy/move constructors
@@ -183,6 +205,13 @@ private:
     std::vector<Subscription> subscriptions_;
     std::mutex mutex_;
     int next_id_;
+    
+    // Event queue for serialized processing
+    std::queue<std::shared_ptr<Event>> event_queue_;
+    std::atomic<bool> processing_queue_;
+    
+    // IPC server for broadcasting events (optional)
+    IPC::Server* ipc_server_ = nullptr;
 };
 
 } // namespace Core

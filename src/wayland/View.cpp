@@ -138,19 +138,19 @@ View::View(struct ::wlr_xwayland_surface* xwayland_surf, Server* srv)
         surface_destroy.notify = view_handle_surface_destroy;
         wl_signal_add(&surface->events.destroy, &surface_destroy);
         
-        LOG_DEBUG("XWayland view created with surface already associated");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "XWayland view created with surface already associated");
     } else {
         // Initialize the wl_list links so wl_list_remove() in destructor is safe
         wl_list_init(&commit.link);
         wl_list_init(&map.link);
         wl_list_init(&unmap.link);
         wl_list_init(&surface_destroy.link);
-        LOG_DEBUG("XWayland view created, waiting for surface association");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "XWayland view created, waiting for surface association");
     }
 }
 
 View::~View() {
-    LOG_DEBUG_FMT("View destructor called for {}", static_cast<void*>(this));
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "View destructor called for {}", static_cast<void*>(this));
     
     // Clean up borders and shadows
     DestroyBorders();
@@ -182,7 +182,7 @@ View::~View() {
 static void view_handle_surface_destroy(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, surface_destroy);
     
-    LOG_DEBUG_FMT("wl_surface destroyed for X11 view={}, removing surface listeners", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "wl_surface destroyed for X11 view={}, removing surface listeners", 
                  static_cast<void*>(view));
     
     // Remove listeners that were attached to the wl_surface
@@ -203,7 +203,7 @@ static void view_handle_surface_destroy(struct wl_listener* listener, void* data
 void view_handle_associate(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, associate);
     
-    LOG_DEBUG_FMT("XWayland surface associated! view={}, now adding surface listeners", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "XWayland surface associated! view={}, now adding surface listeners", 
                  static_cast<void*>(view));
     
     // Now the wl_surface is available, so we can add the surface-related listeners
@@ -231,16 +231,16 @@ void view_handle_associate(struct wl_listener* listener, void* data) {
         view->surface_destroy.notify = view_handle_surface_destroy;
         wl_signal_add(&view->surface->events.destroy, &view->surface_destroy);
         
-        LOG_DEBUG("Added commit, map, unmap, and surface_destroy listeners to XWayland surface");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Added commit, map, unmap, and surface_destroy listeners to XWayland surface");
         
         // Check if the surface is already mapped (can happen with X11 windows)
         // If so, we need to manually trigger the map handler
         if (wlr_surface_has_buffer(view->surface)) {
-            LOG_DEBUG("Surface already has buffer, manually triggering map handler");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Surface already has buffer, manually triggering map handler");
             view_handle_map(&view->map, view->surface);
         }
     } else {
-        LOG_ERROR("Associate event fired but surface is still NULL!");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::ERROR, "Associate event fired but surface is still NULL!");
     }
 }
 
@@ -258,7 +258,7 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
             // Only update if the surface size has actually changed
             if (surface_width > 0 && surface_height > 0 &&
                 (surface_width != view->width || surface_height != view->height)) {
-                LOG_DEBUG_FMT("X11 surface size changed from {}x{} to {}x{}, updating borders",
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "X11 surface size changed from {}x{} to {}x{}, updating borders",
                              view->width, view->height, surface_width, surface_height);
                 
                 // Update view dimensions to match surface
@@ -270,11 +270,11 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
     }
     
     // XDG toplevel handling
-    //LOG_DEBUG_FMT("Commit handler called! view={}, xdg_toplevel={}, base={}", 
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Commit handler called! view={}, xdg_toplevel={}, base={}", 
     //          static_cast<void*>(view),
     //          static_cast<void*>(view->xdg_toplevel),
     //          static_cast<void*>(view->xdg_toplevel->base));
-    //LOG_DEBUG_FMT("  initial_commit={}, initialized={}, mapped={}", 
+    //Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  initial_commit={}, initialized={}, mapped={}", 
     //          view->xdg_toplevel->base->initial_commit,
     //          view->xdg_toplevel->base->initialized,
     //          view->mapped);
@@ -283,7 +283,7 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
     // The compositor MUST send a configure event in response to initial_commit
     // or the client will never map the surface
     if (view->xdg_toplevel->base->initial_commit) {
-        LOG_INFO_FMT("Initial commit received for view={}, sending configure", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Initial commit received for view={}, sending configure", 
                  static_cast<void*>(view));
         
         // Disable client-side decorations (no titlebar)
@@ -302,11 +302,11 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
             if (remove_titlebars) {
                 wlr_xdg_toplevel_decoration_v1_set_mode(view->decoration,
                     WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-                LOG_INFO("Set decoration mode to SERVER_SIDE (no client decorations)");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Set decoration mode to SERVER_SIDE (no client decorations)");
             } else {
                 wlr_xdg_toplevel_decoration_v1_set_mode(view->decoration,
                     WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
-                LOG_INFO("Set decoration mode to CLIENT_SIDE (client draws decorations)");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Set decoration mode to CLIENT_SIDE (client draws decorations)");
             }
         }
     } else {
@@ -319,7 +319,7 @@ static void view_handle_commit(struct wl_listener* listener, void* data) {
             // Only update if the surface size has actually changed
             if (surface_width > 0 && surface_height > 0 &&
                 (surface_width != view->width || surface_height != view->height)) {
-                LOG_DEBUG_FMT("Surface size changed from {}x{} to {}x{}, updating borders",
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Surface size changed from {}x{} to {}x{}, updating borders",
                              view->width, view->height, surface_width, surface_height);
                 
                 // Update view dimensions to match surface
@@ -341,14 +341,14 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
     
     if (view->is_xwayland) {
         // X11 window
-        LOG_INFO_FMT("X11 View mapped! view={}, xwayland_surface={}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "X11 View mapped! view={}, xwayland_surface={}", 
                  static_cast<void*>(view),
                  static_cast<void*>(view->xwayland_surface));
         
         app_id = XWAYLAND_CLASS(view->xwayland_surface) ? XWAYLAND_CLASS(view->xwayland_surface) : "";
         title = XWAYLAND_TITLE(view->xwayland_surface) ? XWAYLAND_TITLE(view->xwayland_surface) : "";
         
-        LOG_DEBUG_FMT("X11 window mapped - class='{}', title='{}'", app_id, title);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "X11 window mapped - class='{}', title='{}'", app_id, title);
         
         // Create scene tree for X11 window now that it's mapped
         if (!view->scene_tree && view->server) {
@@ -358,25 +358,25 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
             Output* first_output = view->server->GetFirstOutput();
             if (first_output && first_output->layer_manager) {
                 parent_layer = first_output->layer_manager->GetLayer(Layer::WorkingArea);
-                LOG_DEBUG("Adding X11 window to WorkingArea layer");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Adding X11 window to WorkingArea layer");
             }
             
             view->scene_tree = wlr_scene_subsurface_tree_create(parent_layer, view->surface);
             if (view->scene_tree) {
                 view->scene_tree->node.data = view;
-                LOG_DEBUG("Created scene tree for mapped X11 window");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created scene tree for mapped X11 window");
             }
         }
     } else {
         // Wayland native (XDG) window
-        LOG_INFO_FMT("View mapped! view={}, xdg_toplevel={}", 
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "View mapped! view={}, xdg_toplevel={}", 
                  static_cast<void*>(view),
                  static_cast<void*>(view->xdg_toplevel));
         
         app_id = view->xdg_toplevel->app_id ? view->xdg_toplevel->app_id : "";
         title = view->xdg_toplevel->title ? view->xdg_toplevel->title : "";
         
-        LOG_DEBUG_FMT("Window mapped - app_id='{}', title='{}'", app_id, title);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Window mapped - app_id='{}', title='{}'", app_id, title);
     }
     
     // Apply window decorations based on rules (works for both XDG and X11)
@@ -385,7 +385,7 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
     );
     
     if (rule) {
-        LOG_INFO_FMT("Matched window rule: '{}' for app_id='{}'", rule->name, app_id);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Matched window rule: '{}' for app_id='{}'", rule->name, app_id);
         
         // Apply decoration group if specified
         if (!rule->decoration_group.empty()) {
@@ -395,34 +395,34 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
             
             if (decoration) {
                 view->ApplyDecorationConfig(*decoration, true);  // true = focused
-                LOG_INFO_FMT("Applied decoration group '{}' to window", rule->decoration_group);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "Applied decoration group '{}' to window", rule->decoration_group);
             } else {
-                LOG_WARN_FMT("Decoration group '{}' not found", rule->decoration_group);
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Decoration group '{}' not found", rule->decoration_group);
             }
         }
         
         // Apply other rule actions
         if (rule->force_floating && !view->is_floating) {
             view->is_floating = true;
-            LOG_DEBUG_FMT("Forced window '{}' to float", app_id);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Forced window '{}' to float", app_id);
         }
         if (rule->force_tiled && view->is_floating) {
             view->is_floating = false;
-            LOG_DEBUG_FMT("Forced window '{}' to tile", app_id);
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Forced window '{}' to tile", app_id);
         }
         if (rule->opacity_override.has_value()) {
             float opacity = rule->opacity_override.value() / 100.0f;
             view->SetOpacity(opacity);
-            LOG_DEBUG_FMT("Overrode opacity to {}%", rule->opacity_override.value());
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Overrode opacity to {}%", rule->opacity_override.value());
         }
     } else {
-        LOG_DEBUG_FMT("No matching rule found for app_id='{}', title='{}'", app_id, title);
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "No matching rule found for app_id='{}', title='{}'", app_id, title);
         
         // Apply default decoration if available
         const auto* default_decoration = Leviathan::Config().window_decorations.GetDefault();
         if (default_decoration) {
             view->ApplyDecorationConfig(*default_decoration, true);
-            LOG_DEBUG("Applied default decoration");
+            Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Applied default decoration");
         }
     }
     
@@ -430,13 +430,13 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
     if (view->scene_tree) {
         wlr_scene_node_raise_to_top(&view->scene_tree->node);
         wlr_scene_node_set_enabled(&view->scene_tree->node, true);
-        LOG_DEBUG("Raised scene tree to top and enabled it");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Raised scene tree to top and enabled it");
     }
     
     // Give keyboard focus to the newly mapped view
     if (view->server) {
         view->server->FocusView(view);
-        LOG_DEBUG("Gave keyboard focus to newly mapped view");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Gave keyboard focus to newly mapped view");
         
         // Trigger auto-tiling on the focused screen's LayerManager
         // This will create borders via MoveResizeView after setting dimensions
@@ -445,7 +445,7 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
             auto* layer_mgr = view->server->GetLayerManagerForScreen(focused_screen);
             if (layer_mgr) {
                 layer_mgr->AutoTile();
-                LOG_DEBUG("Triggered auto-tile after view mapped");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Triggered auto-tile after view mapped");
             }
         }
     }
@@ -454,7 +454,7 @@ static void view_handle_map(struct wl_listener* listener, void* data) {
 static void view_handle_unmap(struct wl_listener* listener, void* data) {
     View* view = wl_container_of(listener, view, unmap);
     view->mapped = false;
-    LOG_INFO_FMT("View unmapped! view={}", static_cast<void*>(view));
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::INFO, "View unmapped! view={}", static_cast<void*>(view));
     
     // Trigger auto-tiling to reorganize remaining views
     if (view->server) {
@@ -463,7 +463,7 @@ static void view_handle_unmap(struct wl_listener* listener, void* data) {
             auto* layer_mgr = view->server->GetLayerManagerForScreen(focused_screen);
             if (layer_mgr) {
                 layer_mgr->AutoTile();
-                LOG_DEBUG("Triggered auto-tile after view unmapped");
+                Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Triggered auto-tile after view unmapped");
             }
         }
     }
@@ -498,7 +498,7 @@ static void view_handle_request_fullscreen(struct wl_listener* listener, void* d
     if (view->is_xwayland) {
         // XWayland fullscreen handling
         // TODO: Implement XWayland fullscreen support
-        LOG_DEBUG("XWayland fullscreen request (not yet implemented)");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "XWayland fullscreen request (not yet implemented)");
         return;
     }
     
@@ -548,39 +548,39 @@ void View::CreateBorders(int border_width, const float color[4]) {
     // Destroy existing borders first
     DestroyBorders();
     
-    LOG_DEBUG_FMT("CreateBorders: view={}, width={}, height={}, border_width={}", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "CreateBorders: view={}, width={}, height={}, border_width={}", 
                   static_cast<void*>(this), width, height, border_width);
     
     // Create 4 border rectangles around the view
     // Use scene_tree->node.parent to add borders as siblings, not children
     auto* parent = scene_tree->node.parent;
     if (!parent) {
-        LOG_WARN("Cannot create borders: scene_tree has no parent");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Cannot create borders: scene_tree has no parent");
         return;
     }
     
     // Top border
     border_top = wlr_scene_rect_create(parent, width + 2 * border_width, border_width, color);
     wlr_scene_node_set_position(&border_top->node, -border_width, -border_width);
-    LOG_DEBUG_FMT("  Created top border: size={}x{}, pos=({},{})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Created top border: size={}x{}, pos=({},{})", 
                   width + 2 * border_width, border_width, -border_width, -border_width);
     
     // Right border
     border_right = wlr_scene_rect_create(parent, border_width, height, color);
     wlr_scene_node_set_position(&border_right->node, width, 0);
-    LOG_DEBUG_FMT("  Created right border: size={}x{}, pos=({},{})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Created right border: size={}x{}, pos=({},{})", 
                   border_width, height, width, 0);
     
     // Bottom border
     border_bottom = wlr_scene_rect_create(parent, width + 2 * border_width, border_width, color);
     wlr_scene_node_set_position(&border_bottom->node, -border_width, height);
-    LOG_DEBUG_FMT("  Created bottom border: size={}x{}, pos=({},{})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Created bottom border: size={}x{}, pos=({},{})", 
                   width + 2 * border_width, border_width, -border_width, height);
     
     // Left border
     border_left = wlr_scene_rect_create(parent, border_width, height, color);
     wlr_scene_node_set_position(&border_left->node, -border_width, 0);
-    LOG_DEBUG_FMT("  Created left border: size={}x{}, pos=({},{})", 
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "  Created left border: size={}x{}, pos=({},{})", 
                   border_width, height, -border_width, 0);
 }
 
@@ -654,7 +654,7 @@ void View::SetOpacity(float new_opacity) {
         }
     }
     
-    LOG_DEBUG_FMT("Set window opacity to {}", opacity);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Set window opacity to {}", opacity);
 }
 
 void View::SetBorderRadius(int radius) {
@@ -666,7 +666,7 @@ void View::SetBorderRadius(int radius) {
     // 2. Custom scene graph nodes
     // 3. Or use client-side decorations with rounded corners
     
-    LOG_DEBUG_FMT("Set border radius to {} (rendering not yet implemented)", border_radius);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Set border radius to {} (rendering not yet implemented)", border_radius);
 }
 
 void View::CreateShadows(int shadow_size, const float color[4], float shadow_opacity) {
@@ -688,7 +688,7 @@ void View::CreateShadows(int shadow_size, const float color[4], float shadow_opa
     // Use scene_tree->node.parent to add shadows as siblings
     auto* parent = scene_tree->node.parent;
     if (!parent) {
-        LOG_WARN("Cannot create shadows: scene_tree has no parent");
+        Leviathan::Log::WriteToLog(Leviathan::LogLevel::WARN, "Cannot create shadows: scene_tree has no parent");
         return;
     }
     
@@ -713,7 +713,7 @@ void View::CreateShadows(int shadow_size, const float color[4], float shadow_opa
     wlr_scene_node_set_position(&shadow_left->node, -shadow_size, 0);
     wlr_scene_node_lower_to_bottom(&shadow_left->node);
     
-    LOG_DEBUG_FMT("Created shadows with size={}, opacity={}", shadow_size, shadow_opacity);
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Created shadows with size={}, opacity={}", shadow_size, shadow_opacity);
 }
 
 void View::DestroyShadows() {
@@ -763,7 +763,7 @@ void View::ApplyDecorationConfig(const Leviathan::WindowDecorationConfig& config
         DestroyShadows();
     }
     
-    LOG_DEBUG_FMT("Applied decoration to window: opacity={}, border_width={}, border_radius={}",
+    Leviathan::Log::WriteToLog(Leviathan::LogLevel::DEBUG, "Applied decoration to window: opacity={}, border_width={}, border_radius={}",
                   target_opacity, config.border_width, config.border_radius);
 }
 
